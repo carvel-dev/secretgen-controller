@@ -1,0 +1,33 @@
+#@ load("@ytt:data", "data")
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: secretgen-controller-sa
+  namespace: #@ data.values.namespace
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: secretgen-controller-cluster-role
+rules:
+- apiGroups: ["secretgen.k14s.io"]
+  resources: ["*"]
+  verbs: ["*"]
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["*"]
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: secretgen-controller-cluster-role-binding
+subjects:
+- kind: ServiceAccount
+  name: secretgen-controller-sa
+  namespace: #@ data.values.namespace
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: secretgen-controller-cluster-role

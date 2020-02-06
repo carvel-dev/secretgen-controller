@@ -1,0 +1,5 @@
+apiVersion: secretgen.k14s.io/v1alpha1
+kind: RSAKey
+metadata:
+  name: rsa-key1
+spec: {}

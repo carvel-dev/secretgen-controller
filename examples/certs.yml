@@ -1,0 +1,35 @@
+apiVersion: secretgen.k14s.io/v1alpha1
+kind: Certificate
+metadata:
+  name: ca-cert
+spec:
+  isCA: true
+---
+apiVersion: secretgen.k14s.io/v1alpha1
+kind: Certificate
+metadata:
+  name: inter-ca-cert
+spec:
+  isCA: true
+  caRef:
+    name: ca-cert
+---
+apiVersion: secretgen.k14s.io/v1alpha1
+kind: Certificate
+metadata:
+  name: app1-cert
+spec:
+  caRef:
+    name: inter-ca-cert
+  alternativeNames:
+  - app1.svc.cluster.local
+---
+apiVersion: secretgen.k14s.io/v1alpha1
+kind: Certificate
+metadata:
+  name: app2-cert
+spec:
+  caRef:
+    name: inter-ca-cert
+  alternativeNames:
+  - app2.svc.cluster.local

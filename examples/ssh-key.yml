@@ -1,0 +1,5 @@
+apiVersion: secretgen.k14s.io/v1alpha1
+kind: SSHKey
+metadata:
+  name: ssh-key1
+spec: {}

@@ -1,0 +1,7 @@
+#@data/values
+---
+namespace: secretgen-controller
+create_namespace: true
+
+push_images: false
+image_repo: docker.io/k14s/secretgen-controller-test

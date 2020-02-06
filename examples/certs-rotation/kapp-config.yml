@@ -1,0 +1,23 @@
+apiVersion: kapp.k14s.io/v1alpha1
+kind: Config
+
+templateRules:
+# CA certificate references
+- resourceMatchers:
+  - apiVersionKindMatcher: {apiVersion: secretgen.k14s.io/v1alpha1, kind: Certificate}
+  affectedResources:
+    objectReferences:
+    - path: [spec, caRef]
+      resourceMatchers:
+      - apiVersionKindMatcher: {apiVersion: secretgen.k14s.io/v1alpha1, kind: Certificate}
+
+# Certificates used by applications
+- resourceMatchers:
+  - apiVersionKindMatcher: {apiVersion: secretgen.k14s.io/v1alpha1, kind: Certificate}
+  affectedResources:
+    objectReferences:
+    # TODO other references
+    - path: [spec, volumes, {allIndexes: true}, secret]
+      resourceMatchers:
+      - apiVersionKindMatcher: {apiVersion: v1, kind: Pod}
+      nameKey: secretName

@@ -1,0 +1,17 @@
+---
+platform: linux
+
+image_resource:
+  type: docker-image
+  source:
+    repository: bosh/go-dep-bumper
+
+inputs:
+- name: bosh-utils
+
+outputs:
+- name: bumped-bosh-utils
+
+run:
+  path: bosh-utils/ci/tasks/bump-deps.sh
+

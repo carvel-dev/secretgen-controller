@@ -1,0 +1,27 @@
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: certificates.secretgen.k14s.io
+spec:
+  group: secretgen.k14s.io
+  names:
+    kind: Certificate
+    listKind: CertificateList
+    plural: certificates
+    singular: certificate
+  scope: Namespaced
+  subresources:
+    status: {}
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+  additionalPrinterColumns:
+  - name: Description
+    type: string
+    description: Friendly description
+    JSONPath: .status.friendlyDescription
+  - name: Age
+    type: date
+    description: Time passed since creation
+    JSONPath: .metadata.creationTimestamp
