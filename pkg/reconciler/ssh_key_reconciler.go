@@ -7,12 +7,9 @@ import (
 	"github.com/go-logr/logr"
 	sgv1alpha1 "github.com/k14s/secretgen-controller/pkg/apis/secretgen/v1alpha1"
 	sgclient "github.com/k14s/secretgen-controller/pkg/client/clientset/versioned"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/kubernetes/scheme"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -74,22 +71,27 @@ func (r *SSHKeyReconciler) createSecret(sshKey *sgv1alpha1.SSHKey) (reconcile.Re
 		return reconcile.Result{Requeue: true}, err
 	}
 
-	newSecret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:        sshKey.Name,
-			Namespace:   sshKey.Namespace,
-			Labels:      sshKey.Labels,
-			Annotations: sshKey.Annotations,
-		},
-		Type: sgv1alpha1.SSHKeySecretType,
-		Data: map[string][]byte{
-			sgv1alpha1.SSHKeySecretPrivateKeyKey:    []byte(sshKeyResult.PrivateKey),
-			sgv1alpha1.SSHKeySecretAuthorizedKeyKey: []byte(sshKeyResult.PublicKey),
-			// TODO add fingerprint?
+	values := map[string][]byte{
+		sgv1alpha1.SSHKeySecretPrivateKeyKey:    []byte(sshKeyResult.PrivateKey),
+		sgv1alpha1.SSHKeySecretAuthorizedKeyKey: []byte(sshKeyResult.PublicKey),
+	}
+
+	secret := NewSecret(sshKey, values)
+
+	defaultTemplate := sgv1alpha1.SecretTemplate{
+		Type: sgv1alpha1.SSHKeySecretDefaultType,
+		Data: map[string]string{
+			sgv1alpha1.SSHKeySecretDefaultPrivateKeyKey:    sgv1alpha1.SSHKeySecretPrivateKeyKey,
+			sgv1alpha1.SSHKeySecretDefaultAuthorizedKeyKey: sgv1alpha1.SSHKeySecretAuthorizedKeyKey,
 		},
 	}
 
-	controllerutil.SetControllerReference(sshKey, newSecret, scheme.Scheme)
+	err = secret.ApplyTemplates(defaultTemplate, sshKey.Spec.SecretTemplate)
+	if err != nil {
+		return reconcile.Result{Requeue: true}, err
+	}
+
+	newSecret := secret.AsSecret()
 
 	_, err = r.coreClient.CoreV1().Secrets(newSecret.Namespace).Create(newSecret)
 	if err != nil {

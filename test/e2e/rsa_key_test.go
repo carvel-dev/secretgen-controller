@@ -37,7 +37,7 @@ spec: {}
 	})
 
 	logger.Section("Check secret", func() {
-		out := kubectl.Run([]string{"get", "secret", "rsa-key", "-o", "yaml"})
+		out := waitForSecret(t, kubectl, "rsa-key")
 
 		var secret corev1.Secret
 

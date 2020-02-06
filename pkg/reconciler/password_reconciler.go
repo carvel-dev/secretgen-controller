@@ -7,12 +7,9 @@ import (
 	"github.com/go-logr/logr"
 	sgv1alpha1 "github.com/k14s/secretgen-controller/pkg/apis/secretgen/v1alpha1"
 	sgclient "github.com/k14s/secretgen-controller/pkg/client/clientset/versioned"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/kubernetes/scheme"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -75,20 +72,25 @@ func (r *PasswordReconciler) createSecret(password *sgv1alpha1.Password) (reconc
 		return reconcile.Result{Requeue: true}, err
 	}
 
-	newSecret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:        password.Name,
-			Namespace:   password.Namespace,
-			Labels:      password.Labels,
-			Annotations: password.Annotations,
-		},
-		Type: sgv1alpha1.PasswordSecretType,
-		Data: map[string][]byte{
-			sgv1alpha1.PasswordSecretKey: []byte(passwordStr),
+	values := map[string][]byte{
+		sgv1alpha1.PasswordSecretKey: []byte(passwordStr),
+	}
+
+	secret := NewSecret(password, values)
+
+	defaultTemplate := sgv1alpha1.SecretTemplate{
+		Type: sgv1alpha1.PasswordSecretDefaultType,
+		Data: map[string]string{
+			sgv1alpha1.PasswordSecretDefaultKey: sgv1alpha1.PasswordSecretKey,
 		},
 	}
 
-	controllerutil.SetControllerReference(password, newSecret, scheme.Scheme)
+	err = secret.ApplyTemplates(defaultTemplate, password.Spec.SecretTemplate)
+	if err != nil {
+		return reconcile.Result{Requeue: true}, err
+	}
+
+	newSecret := secret.AsSecret()
 
 	_, err = r.coreClient.CoreV1().Secrets(newSecret.Namespace).Create(newSecret)
 	if err != nil {

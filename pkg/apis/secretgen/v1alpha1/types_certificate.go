@@ -6,9 +6,12 @@ import (
 )
 
 const (
-	CertificateSecretType           = corev1.SecretTypeOpaque
-	CertificateSecretCertificateKey = "crt.pem"
-	CertificateSecretPrivateKeyKey  = "key.pem"
+	CertificateSecretCertificateKey = "certificate"
+	CertificateSecretPrivateKeyKey  = "privateKey"
+
+	CertificateSecretDefaultType           = corev1.SecretTypeOpaque
+	CertificateSecretDefaultCertificateKey = "crt.pem"
+	CertificateSecretDefaultPrivateKeyKey  = "key.pem"
 )
 
 // +genclient
@@ -46,6 +49,8 @@ type CertificateSpec struct {
 	AlternativeNames []string `json:"alternativeNames,omitempty"`
 	ExtendedKeyUsage []string `json:"extendedKeyUsage,omitempty"`
 	Duration         int64    `json:"duration,omitempty"`
+
+	SecretTemplate *SecretTemplate `json:"secretTemplate,omitempty"`
 }
 
 type CertificateStatus struct {

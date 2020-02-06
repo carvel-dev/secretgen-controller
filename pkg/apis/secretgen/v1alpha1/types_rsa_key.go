@@ -6,9 +6,12 @@ import (
 )
 
 const (
-	RSAKeySecretType          = corev1.SecretTypeOpaque
-	RSAKeySecretPublicKeyKey  = "pub.pem"
-	RSAKeySecretPrivateKeyKey = "key.pem"
+	RSAKeySecretPublicKeyKey  = "publicKey"
+	RSAKeySecretPrivateKeyKey = "privateKey"
+
+	RSAKeySecretDefaultType          = corev1.SecretTypeOpaque
+	RSAKeySecretDefaultPublicKeyKey  = "pub.pem"
+	RSAKeySecretDefaultPrivateKeyKey = "key.pem"
 )
 
 // +genclient
@@ -36,7 +39,9 @@ type RSAKeyList struct {
 	Items []RSAKey `json:"items"`
 }
 
-type RSAKeySpec struct{}
+type RSAKeySpec struct {
+	SecretTemplate *SecretTemplate `json:"secretTemplate,omitempty"`
+}
 
 type RSAKeyStatus struct {
 	GenericStatus `json:",inline"`

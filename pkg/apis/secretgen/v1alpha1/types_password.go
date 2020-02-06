@@ -6,8 +6,10 @@ import (
 )
 
 const (
-	PasswordSecretType = corev1.SecretTypeBasicAuth
-	PasswordSecretKey  = corev1.BasicAuthPasswordKey
+	PasswordSecretKey = "value"
+
+	PasswordSecretDefaultType = corev1.SecretTypeBasicAuth
+	PasswordSecretDefaultKey  = corev1.BasicAuthPasswordKey
 )
 
 // +genclient
@@ -37,6 +39,8 @@ type PasswordList struct {
 
 type PasswordSpec struct {
 	Length int `json:"length"`
+
+	SecretTemplate *SecretTemplate `json:"secretTemplate,omitempty"`
 }
 
 type PasswordStatus struct {

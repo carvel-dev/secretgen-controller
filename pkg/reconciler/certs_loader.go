@@ -18,12 +18,12 @@ type singleCertLoader struct {
 var _ cfgtypes.CertsLoader = singleCertLoader{}
 
 func (l singleCertLoader) LoadCerts(_ string) (*x509.Certificate, *rsa.PrivateKey, error) {
-	crt, err := l.parseCertificate(string(l.caCertSecret.Data[sgv1alpha1.CertificateSecretCertificateKey]))
+	crt, err := l.parseCertificate(string(l.caCertSecret.Data[sgv1alpha1.CertificateSecretDefaultCertificateKey]))
 	if err != nil {
 		return nil, nil, err
 	}
 
-	key, err := l.parsePrivateKey(string(l.caCertSecret.Data[sgv1alpha1.CertificateSecretPrivateKeyKey]))
+	key, err := l.parsePrivateKey(string(l.caCertSecret.Data[sgv1alpha1.CertificateSecretDefaultPrivateKeyKey]))
 	if err != nil {
 		return nil, nil, err
 	}

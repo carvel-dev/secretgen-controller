@@ -3,7 +3,6 @@ package e2e
 import (
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/ghodss/yaml"
 	corev1 "k8s.io/api/core/v1"
@@ -67,9 +66,7 @@ spec:
 	})
 
 	logger.Section("Check secret", func() {
-		time.Sleep(15*time.Second)
-
-		out := kubectl.Run([]string{"get", "secret", "app2-cert", "-o", "yaml"})
+		out := waitForSecret(t, kubectl, "app2-cert")
 
 		var secret corev1.Secret
 

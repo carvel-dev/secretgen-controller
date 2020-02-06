@@ -7,12 +7,9 @@ import (
 	"github.com/go-logr/logr"
 	sgv1alpha1 "github.com/k14s/secretgen-controller/pkg/apis/secretgen/v1alpha1"
 	sgclient "github.com/k14s/secretgen-controller/pkg/client/clientset/versioned"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/kubernetes/scheme"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -74,21 +71,27 @@ func (r *RSAKeyReconciler) createSecret(rsaKey *sgv1alpha1.RSAKey) (reconcile.Re
 		return reconcile.Result{Requeue: true}, err
 	}
 
-	newSecret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:        rsaKey.Name,
-			Namespace:   rsaKey.Namespace,
-			Labels:      rsaKey.Labels,
-			Annotations: rsaKey.Annotations,
-		},
-		Type: sgv1alpha1.RSAKeySecretType,
-		Data: map[string][]byte{
-			sgv1alpha1.RSAKeySecretPublicKeyKey:  []byte(rsaKeyResult.PublicKey),
-			sgv1alpha1.RSAKeySecretPrivateKeyKey: []byte(rsaKeyResult.PrivateKey),
+	values := map[string][]byte{
+		sgv1alpha1.RSAKeySecretPublicKeyKey:  []byte(rsaKeyResult.PublicKey),
+		sgv1alpha1.RSAKeySecretPrivateKeyKey: []byte(rsaKeyResult.PrivateKey),
+	}
+
+	secret := NewSecret(rsaKey, values)
+
+	defaultTemplate := sgv1alpha1.SecretTemplate{
+		Type: sgv1alpha1.RSAKeySecretDefaultType,
+		Data: map[string]string{
+			sgv1alpha1.RSAKeySecretDefaultPublicKeyKey:  sgv1alpha1.RSAKeySecretPublicKeyKey,
+			sgv1alpha1.RSAKeySecretDefaultPrivateKeyKey: sgv1alpha1.RSAKeySecretPrivateKeyKey,
 		},
 	}
 
-	controllerutil.SetControllerReference(rsaKey, newSecret, scheme.Scheme)
+	err = secret.ApplyTemplates(defaultTemplate, rsaKey.Spec.SecretTemplate)
+	if err != nil {
+		return reconcile.Result{Requeue: true}, err
+	}
+
+	newSecret := secret.AsSecret()
 
 	_, err = r.coreClient.CoreV1().Secrets(newSecret.Namespace).Create(newSecret)
 	if err != nil {

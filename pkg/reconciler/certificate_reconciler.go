@@ -11,8 +11,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/kubernetes/scheme"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -81,23 +79,29 @@ func (r *CertificateReconciler) createSecret(params certParams, cert *sgv1alpha1
 		return reconcile.Result{Requeue: true}, err
 	}
 
-	newSecret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:        cert.Name,
-			Namespace:   cert.Namespace,
-			Labels:      cert.Labels,
-			Annotations: cert.Annotations,
-		},
-		Type: sgv1alpha1.CertificateSecretType,
-		Data: map[string][]byte{
-			sgv1alpha1.CertificateSecretCertificateKey: []byte(certResult.Certificate),
-			sgv1alpha1.CertificateSecretPrivateKeyKey:  []byte(certResult.PrivateKey),
+	values := map[string][]byte{
+		sgv1alpha1.CertificateSecretCertificateKey: []byte(certResult.Certificate),
+		sgv1alpha1.CertificateSecretPrivateKeyKey:  []byte(certResult.PrivateKey),
+	}
+
+	secret := NewSecret(cert, values)
+
+	defaultTemplate := sgv1alpha1.SecretTemplate{
+		Type: sgv1alpha1.CertificateSecretDefaultType,
+		Data: map[string]string{
+			sgv1alpha1.CertificateSecretDefaultCertificateKey: sgv1alpha1.CertificateSecretCertificateKey,
+			sgv1alpha1.CertificateSecretDefaultPrivateKeyKey:  sgv1alpha1.CertificateSecretPrivateKeyKey,
 		},
 	}
 
-	GenerateInputs{params}.Add(newSecret.Annotations)
+	err = secret.ApplyTemplates(defaultTemplate, cert.Spec.SecretTemplate)
+	if err != nil {
+		return reconcile.Result{Requeue: true}, err
+	}
 
-	controllerutil.SetControllerReference(cert, newSecret, scheme.Scheme)
+	newSecret := secret.AsSecret()
+
+	GenerateInputs{params}.Add(newSecret.Annotations)
 
 	_, err = r.coreClient.CoreV1().Secrets(newSecret.Namespace).Create(newSecret)
 	if err != nil {

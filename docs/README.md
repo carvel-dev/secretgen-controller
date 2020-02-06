@@ -5,3 +5,4 @@
   - [Password](password.md)
   - [RSA Key](rsa_key.md)
   - [SSH Key](ssh_key.md)
+- [Secret Template](secret-template.md)

@@ -6,9 +6,12 @@ import (
 )
 
 const (
-	SSHKeySecretType             = corev1.SecretTypeSSHAuth
-	SSHKeySecretPrivateKeyKey    = corev1.SSHAuthPrivateKey
-	SSHKeySecretAuthorizedKeyKey = "ssh-authorizedkey"
+	SSHKeySecretPrivateKeyKey    = "privateKey"
+	SSHKeySecretAuthorizedKeyKey = "authorizedKey"
+
+	SSHKeySecretDefaultType             = corev1.SecretTypeSSHAuth
+	SSHKeySecretDefaultPrivateKeyKey    = corev1.SSHAuthPrivateKey
+	SSHKeySecretDefaultAuthorizedKeyKey = "ssh-authorizedkey"
 )
 
 // +genclient
@@ -36,7 +39,9 @@ type SSHKeyList struct {
 	Items []SSHKey `json:"items"`
 }
 
-type SSHKeySpec struct{}
+type SSHKeySpec struct {
+	SecretTemplate *SecretTemplate `json:"secretTemplate,omitempty"`
+}
 
 type SSHKeyStatus struct {
 	GenericStatus `json:",inline"`
