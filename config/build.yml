@@ -5,6 +5,12 @@ kind: Sources
 sources:
 - image: secretgen-controller
   path: .
+  #@ if/end data.values.push_images:
+  docker:
+    build:
+      #! Always rebuild image
+      pull: true
+      noCache: true
 
 #@ if/end data.values.push_images:
 ---
