@@ -6,7 +6,7 @@ You can use `kubectl` (or another tool) to deploy YAML examples below. We've cho
 
 - Start by [installing](install.md) secretgen-controller onto cluster
 
-- Install [examples/passwords.yml](https://github.com/k14s/secretgen-controller/blob/master/examples/passwords.yml). It tells secretgen-controller to generate two passwords.
+- Install [examples/passwords.yml](https://github.com/k14s/secretgen-controller/blob/master/examples/passwords.yml). It tells secretgen-controller to generate three passwords.
 
 ```bash
 $ kapp deploy -a passwords -f https://raw.githubusercontent.com/k14s/secretgen-controller/master/examples/passwords.yml
@@ -80,7 +80,7 @@ postgresql-password   Opaque                                1      2m8s
 user-password         kubernetes.io/basic-auth              1      2m8s
 ```
 
-- Let's what is generated within `kubernetes.io/basic-auth` `Secrets`. Two `Password` custom resources were configured to generate passwords of different lengths via their `spec.length` field.
+- Let's see what is generated within `kubernetes.io/basic-auth` type secrets. Two `Password` custom resources were configured to generate passwords of different lengths via their `spec.length` field.
 
 ```bash
 $ kubectl get secret user-password -o jsonpath='{.data.password}' | base64 -D
