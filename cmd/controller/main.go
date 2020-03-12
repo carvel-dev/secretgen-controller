@@ -57,19 +57,19 @@ func main() {
 	exitIfErr(entryLog, "building secretgen client", err)
 
 	certReconciler := reconciler.NewCertificateReconciler(sgClient, coreClient, log.WithName("cert"))
-	err = registerCtrl("cert", mgr, certReconciler, &source.Kind{Type: &sgv1alpha1.Certificate{}})
+	_, err = registerCtrl("cert", mgr, certReconciler, &source.Kind{Type: &sgv1alpha1.Certificate{}})
 	exitIfErr(entryLog, "registering certificate controller", err)
 
 	passwordReconciler := reconciler.NewPasswordReconciler(sgClient, coreClient, log.WithName("password"))
-	err = registerCtrl("password", mgr, passwordReconciler, &source.Kind{Type: &sgv1alpha1.Password{}})
+	_, err = registerCtrl("password", mgr, passwordReconciler, &source.Kind{Type: &sgv1alpha1.Password{}})
 	exitIfErr(entryLog, "registering password controller", err)
 
 	rsaKeyReconciler := reconciler.NewRSAKeyReconciler(sgClient, coreClient, log.WithName("rsakey"))
-	err = registerCtrl("rsakey", mgr, rsaKeyReconciler, &source.Kind{Type: &sgv1alpha1.RSAKey{}})
+	_, err = registerCtrl("rsakey", mgr, rsaKeyReconciler, &source.Kind{Type: &sgv1alpha1.RSAKey{}})
 	exitIfErr(entryLog, "registering rsakey controller", err)
 
 	sshKeyReconciler := reconciler.NewSSHKeyReconciler(sgClient, coreClient, log.WithName("sshkey"))
-	err = registerCtrl("sshkey", mgr, sshKeyReconciler, &source.Kind{Type: &sgv1alpha1.SSHKey{}})
+	_, err = registerCtrl("sshkey", mgr, sshKeyReconciler, &source.Kind{Type: &sgv1alpha1.SSHKey{}})
 	exitIfErr(entryLog, "registering sshkey controller", err)
 
 	entryLog.Info("starting manager")
@@ -79,7 +79,7 @@ func main() {
 }
 
 func registerCtrl(desc string, mgr manager.Manager,
-	reconciler reconcile.Reconciler, src source.Source) error {
+	reconciler reconcile.Reconciler, src source.Source) (controller.Controller, error) {
 
 	ctrlOpts := controller.Options{
 		Reconciler:              reconciler,
@@ -88,15 +88,15 @@ func registerCtrl(desc string, mgr manager.Manager,
 
 	ctrl, err := controller.New("secretgen-controller-"+desc, mgr, ctrlOpts)
 	if err != nil {
-		return fmt.Errorf("unable to set up secretgen-controller-%s: %s", desc, err)
+		return ctrl, fmt.Errorf("unable to set up secretgen-controller-%s: %s", desc, err)
 	}
 
 	err = ctrl.Watch(src, &handler.EnqueueRequestForObject{})
 	if err != nil {
-		return fmt.Errorf("unable to watch %s: %s", desc, err)
+		return ctrl, fmt.Errorf("unable to watch %s: %s", desc, err)
 	}
 
-	return nil
+	return ctrl, nil
 }
 
 func exitIfErr(entryLog logr.Logger, desc string, err error) {
