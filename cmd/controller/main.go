@@ -72,6 +72,24 @@ func main() {
 	_, err = registerCtrl("sshkey", mgr, sshKeyReconciler, &source.Kind{Type: &sgv1alpha1.SSHKey{}})
 	exitIfErr(entryLog, "registering sshkey controller", err)
 
+	{
+		secretExportReconciler := reconciler.NewSecretExportReconciler(sgClient, coreClient, log.WithName("secexp"))
+		seCtrl, err := registerCtrl("secexp", mgr, secretExportReconciler, &source.Kind{Type: &sgv1alpha1.SecretExport{}})
+		exitIfErr(entryLog, "registering secexp controller", err)
+
+		err = secretExportReconciler.AttachWatches(seCtrl)
+		exitIfErr(entryLog, "registering secexp controller: secret watching", err)
+	}
+
+	{
+		secretExportApprovalReconciler := reconciler.NewSecretExportApprovalReconciler(sgClient, coreClient, log.WithName("secexpapp"))
+		seaCtrl, err := registerCtrl("secexpapp", mgr, secretExportApprovalReconciler, &source.Kind{Type: &sgv1alpha1.SecretExportApproval{}})
+		exitIfErr(entryLog, "registering secexpapp controller", err)
+
+		err = secretExportApprovalReconciler.AttachWatches(seaCtrl)
+		exitIfErr(entryLog, "registering secexpapp controller: secret watching", err)
+	}
+
 	entryLog.Info("starting manager")
 
 	err = mgr.Start(signals.SetupSignalHandler())
