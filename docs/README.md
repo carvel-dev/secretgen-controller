@@ -8,4 +8,5 @@
   - [RSA Key](rsa_key.md)
   - [SSH Key](ssh_key.md)
 - [Secret Template](secret-template.md)
+- [SecretExport and SecretExportApprovals](secret-export.md) describes how to exports secrets between namespaces
 - [`examples/` directory](../examples/)
