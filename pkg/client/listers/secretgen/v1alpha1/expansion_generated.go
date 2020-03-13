@@ -33,3 +33,19 @@ type SSHKeyListerExpansion interface{}
 // SSHKeyNamespaceListerExpansion allows custom methods to be added to
 // SSHKeyNamespaceLister.
 type SSHKeyNamespaceListerExpansion interface{}
+
+// SecretExportListerExpansion allows custom methods to be added to
+// SecretExportLister.
+type SecretExportListerExpansion interface{}
+
+// SecretExportNamespaceListerExpansion allows custom methods to be added to
+// SecretExportNamespaceLister.
+type SecretExportNamespaceListerExpansion interface{}
+
+// SecretExportApprovalListerExpansion allows custom methods to be added to
+// SecretExportApprovalLister.
+type SecretExportApprovalListerExpansion interface{}
+
+// SecretExportApprovalNamespaceListerExpansion allows custom methods to be added to
+// SecretExportApprovalNamespaceLister.
+type SecretExportApprovalNamespaceListerExpansion interface{}

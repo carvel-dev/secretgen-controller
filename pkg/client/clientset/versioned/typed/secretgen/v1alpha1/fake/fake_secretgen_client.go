@@ -28,6 +28,14 @@ func (c *FakeSecretgenV1alpha1) SSHKeys(namespace string) v1alpha1.SSHKeyInterfa
 	return &FakeSSHKeys{c, namespace}
 }
 
+func (c *FakeSecretgenV1alpha1) SecretExports(namespace string) v1alpha1.SecretExportInterface {
+	return &FakeSecretExports{c, namespace}
+}
+
+func (c *FakeSecretgenV1alpha1) SecretExportApprovals(namespace string) v1alpha1.SecretExportApprovalInterface {
+	return &FakeSecretExportApprovals{c, namespace}
+}
+
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
 func (c *FakeSecretgenV1alpha1) RESTClient() rest.Interface {
