@@ -17,6 +17,15 @@ type Status struct {
 
 func (s *Status) Result() sgv1alpha1.GenericStatus { return s.s }
 
+func (s *Status) IsReconcileSucceeded() bool {
+	for _, cond := range s.s.Conditions {
+		if cond.Type == sgv1alpha1.ReconcileSucceeded {
+			return true
+		}
+	}
+	return false
+}
+
 func (s *Status) SetReconciling(meta metav1.ObjectMeta) {
 	s.markObservedLatest(meta)
 	s.removeAllConditions()

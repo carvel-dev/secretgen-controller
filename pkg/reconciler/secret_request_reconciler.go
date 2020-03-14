@@ -74,6 +74,12 @@ func (r *SecretRequestReconciler) mapExportsToRequests(a handler.MapObject) []re
 		return nil
 	}
 
+	// Skip exports that are not fully reconciled
+	// New events will be emitted when reconciliation finishes
+	if !(&Status{s: export.Status.GenericStatus}).IsReconcileSucceeded() {
+		return nil
+	}
+
 	for _, ns := range export.StaticToNamespaces() {
 		result = append(result, reconcile.Request{
 			NamespacedName: types.NamespacedName{
