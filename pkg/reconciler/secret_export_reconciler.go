@@ -75,6 +75,12 @@ func (r *SecretExportReconciler) Reconcile(request reconcile.Request) (reconcile
 }
 
 func (r *SecretExportReconciler) reconcile(secretExport *sgv1alpha1.SecretExport) (reconcile.Result, error) {
+	err := secretExport.Validate()
+	if err != nil {
+		// Do not requeue as there is nothing this controller can do until secret export is fixed
+		return reconcile.Result{}, err
+	}
+
 	// Clear out observed resource version
 	secretExport.Status.ObservedSecretResourceVersion = ""
 

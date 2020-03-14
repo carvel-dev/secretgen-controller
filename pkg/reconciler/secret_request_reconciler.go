@@ -116,6 +116,12 @@ func (r *SecretRequestReconciler) Reconcile(request reconcile.Request) (reconcil
 func (r *SecretRequestReconciler) reconcile(
 	secretRequest *sgv1alpha1.SecretRequest) (reconcile.Result, error) {
 
+	err := secretRequest.Validate()
+	if err != nil {
+		// Do not requeue as there is nothing this controller can do until secret request is fixed
+		return reconcile.Result{}, err
+	}
+
 	notOfferedMsg := "Export was not offered (even though requested)"
 	notAllowedMsg := "Export was not allowed (even though requested)"
 

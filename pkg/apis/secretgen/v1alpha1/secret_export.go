@@ -1,6 +1,8 @@
 package v1alpha1
 
 import (
+	"fmt"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -45,4 +47,21 @@ func (e SecretExport) StaticToNamespaces() []string {
 		result = append(result, e.Spec.ToNamespace)
 	}
 	return result
+}
+
+func (e SecretExport) Validate() error {
+	var errs []error
+
+	toNses := e.StaticToNamespaces()
+
+	if len(toNses) == 0 {
+		errs = append(errs, fmt.Errorf("Expected to have at least one non-empty to namespace"))
+	}
+	for _, ns := range toNses {
+		if len(ns) == 0 {
+			errs = append(errs, fmt.Errorf("Expected to namespace to be non-empty"))
+		}
+	}
+
+	return combinedErrs("Validation errors", errs)
 }

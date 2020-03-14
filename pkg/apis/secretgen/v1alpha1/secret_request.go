@@ -1,6 +1,8 @@
 package v1alpha1
 
 import (
+	"fmt"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -35,4 +37,14 @@ type SecretRequestSpec struct {
 
 type SecretRequestStatus struct {
 	GenericStatus `json:",inline"`
+}
+
+func (r SecretRequest) Validate() error {
+	var errs []error
+
+	if len(r.Spec.FromNamespace) == 0 {
+		errs = append(errs, fmt.Errorf("Validating 'spec.fromNamespace': Expected to be non-empty"))
+	}
+
+	return combinedErrs("Validation errors", errs)
 }
