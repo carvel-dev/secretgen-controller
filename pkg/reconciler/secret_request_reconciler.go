@@ -18,32 +18,32 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-type SecretExportApprovalReconciler struct {
+type SecretRequestReconciler struct {
 	sgClient   sgclient.Interface
 	coreClient kubernetes.Interface
 	log        logr.Logger
 }
 
-var _ reconcile.Reconciler = &SecretExportApprovalReconciler{}
+var _ reconcile.Reconciler = &SecretRequestReconciler{}
 
-func NewSecretExportApprovalReconciler(sgClient sgclient.Interface,
-	coreClient kubernetes.Interface, log logr.Logger) *SecretExportApprovalReconciler {
-	return &SecretExportApprovalReconciler{sgClient, coreClient, log}
+func NewSecretRequestReconciler(sgClient sgclient.Interface,
+	coreClient kubernetes.Interface, log logr.Logger) *SecretRequestReconciler {
+	return &SecretRequestReconciler{sgClient, coreClient, log}
 }
 
-func (r *SecretExportApprovalReconciler) AttachWatches(controller controller.Controller) error {
+func (r *SecretRequestReconciler) AttachWatches(controller controller.Controller) error {
 	var errs []error
 
-	// Watch secrets and enqueue for same named SecretExportApproval
+	// Watch secrets and enqueue for same named SecretRequest
 	// to make sure imported secret is up-to-date
 	errs = append(errs, controller.Watch(&source.Kind{Type: &corev1.Secret{}}, &handler.EnqueueRequestsFromMapFunc{
-		ToRequests: handler.ToRequestsFunc(r.mapSecretToApproval),
+		ToRequests: handler.ToRequestsFunc(r.mapSecretToRequest),
 	}))
 
-	// Watch SecretExport and enqueue for related SecretExportApproval
+	// Watch SecretExport and enqueue for related SecretRequest
 	// based on export namespace configuration
 	errs = append(errs, controller.Watch(&source.Kind{Type: &sgv1alpha1.SecretExport{}}, &handler.EnqueueRequestsFromMapFunc{
-		ToRequests: handler.ToRequestsFunc(r.mapExportsToApprovals),
+		ToRequests: handler.ToRequestsFunc(r.mapExportsToRequests),
 	}))
 
 	for _, err := range errs {
@@ -54,7 +54,7 @@ func (r *SecretExportApprovalReconciler) AttachWatches(controller controller.Con
 	return nil
 }
 
-func (r *SecretExportApprovalReconciler) mapSecretToApproval(a handler.MapObject) []reconcile.Request {
+func (r *SecretRequestReconciler) mapSecretToRequest(a handler.MapObject) []reconcile.Request {
 	return []reconcile.Request{
 		{NamespacedName: types.NamespacedName{
 			Name:      a.Meta.GetName(),
@@ -63,7 +63,7 @@ func (r *SecretExportApprovalReconciler) mapSecretToApproval(a handler.MapObject
 	}
 }
 
-func (r *SecretExportApprovalReconciler) mapExportsToApprovals(a handler.MapObject) []reconcile.Request {
+func (r *SecretRequestReconciler) mapExportsToRequests(a handler.MapObject) []reconcile.Request {
 	var export sgv1alpha1.SecretExport
 	var result []reconcile.Request
 
@@ -84,47 +84,47 @@ func (r *SecretExportApprovalReconciler) mapExportsToApprovals(a handler.MapObje
 	return result
 }
 
-func (r *SecretExportApprovalReconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	secretExportApproval, err := r.sgClient.SecretgenV1alpha1().SecretExportApprovals(
+func (r *SecretRequestReconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+	secretdRequest, err := r.sgClient.SecretgenV1alpha1().SecretRequests(
 		request.Namespace).Get(request.Name, metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
-			// Do not requeue as there is nothing to do when approval is deleted
+			// Do not requeue as there is nothing to do when request is deleted
 			return reconcile.Result{}, nil
 		}
-		// Requeue to try to fetch approval again
+		// Requeue to try to fetch request again
 		return reconcile.Result{Requeue: true}, err
 	}
 
-	if secretExportApproval.DeletionTimestamp != nil {
+	if secretdRequest.DeletionTimestamp != nil {
 		// Do not requeue as there is nothing to do
 		// Associated secret has owned ref so it's going to be deleted
 		return reconcile.Result{}, nil
 	}
 
 	status := &Status{
-		secretExportApproval.Status.GenericStatus,
-		func(st sgv1alpha1.GenericStatus) { secretExportApproval.Status.GenericStatus = st },
+		secretdRequest.Status.GenericStatus,
+		func(st sgv1alpha1.GenericStatus) { secretdRequest.Status.GenericStatus = st },
 	}
 
-	status.SetReconciling(secretExportApproval.ObjectMeta)
-	defer r.updateStatus(secretExportApproval)
+	status.SetReconciling(secretdRequest.ObjectMeta)
+	defer r.updateStatus(secretdRequest)
 
-	return status.WithReconcileCompleted(r.reconcile(secretExportApproval))
+	return status.WithReconcileCompleted(r.reconcile(secretdRequest))
 }
 
-func (r *SecretExportApprovalReconciler) reconcile(
-	exportApproval *sgv1alpha1.SecretExportApproval) (reconcile.Result, error) {
+func (r *SecretRequestReconciler) reconcile(
+	secretRequest *sgv1alpha1.SecretRequest) (reconcile.Result, error) {
 
-	notOfferedMsg := "Export was not offered (even though approved)"
-	notAllowedMsg := "Export was not allowed (even though approved)"
+	notOfferedMsg := "Export was not offered (even though requested)"
+	notAllowedMsg := "Export was not allowed (even though requested)"
 
 	secretExport, err := r.sgClient.SecretgenV1alpha1().SecretExports(
-		exportApproval.Spec.FromNamespace).Get(exportApproval.Name, metav1.GetOptions{})
+		secretRequest.Spec.FromNamespace).Get(secretRequest.Name, metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// TODO Should we actually delete offered secret that we previously created?
-			err := r.deleteAssociatedSecret(exportApproval)
+			err := r.deleteAssociatedSecret(secretRequest)
 			if err != nil {
 				// Requeue to try to delete a bit later
 				return reconcile.Result{Requeue: true}, fmt.Errorf("%s: %s", notOfferedMsg, err)
@@ -136,8 +136,8 @@ func (r *SecretExportApprovalReconciler) reconcile(
 		return reconcile.Result{Requeue: true}, fmt.Errorf("Finding export: %s", err)
 	}
 
-	if !r.isExportAllowed(secretExport, exportApproval) {
-		err := r.deleteAssociatedSecret(exportApproval)
+	if !r.isExportAllowed(secretExport, secretRequest) {
+		err := r.deleteAssociatedSecret(secretRequest)
 		if err != nil {
 			// Requeue to try to delete a bit later
 			return reconcile.Result{Requeue: true}, fmt.Errorf("%s: %s", notAllowedMsg, err)
@@ -146,32 +146,32 @@ func (r *SecretExportApprovalReconciler) reconcile(
 		return reconcile.Result{}, fmt.Errorf("%s", notAllowedMsg)
 	}
 
-	return r.copyAssociatedSecret(exportApproval)
+	return r.copyAssociatedSecret(secretRequest)
 }
 
-func (r *SecretExportApprovalReconciler) isExportAllowed(
-	export *sgv1alpha1.SecretExport, exportApproval *sgv1alpha1.SecretExportApproval) bool {
+func (r *SecretRequestReconciler) isExportAllowed(
+	export *sgv1alpha1.SecretExport, secretRequest *sgv1alpha1.SecretRequest) bool {
 
-	if export.Spec.ToNamespace == exportApproval.Namespace {
+	if export.Spec.ToNamespace == secretRequest.Namespace {
 		return true
 	}
 	for _, exportNs := range export.Spec.ToNamespaces {
-		if exportNs == exportApproval.Namespace {
+		if exportNs == secretRequest.Namespace {
 			return true
 		}
 	}
 	return false
 }
 
-func (r *SecretExportApprovalReconciler) copyAssociatedSecret(
-	exportApproval *sgv1alpha1.SecretExportApproval) (reconcile.Result, error) {
+func (r *SecretRequestReconciler) copyAssociatedSecret(
+	secretRequest *sgv1alpha1.SecretRequest) (reconcile.Result, error) {
 
 	srcSecret, err := r.coreClient.CoreV1().Secrets(
-		exportApproval.Spec.FromNamespace).Get(exportApproval.Name, metav1.GetOptions{})
+		secretRequest.Spec.FromNamespace).Get(secretRequest.Name, metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// TODO Should we actually delete offered secret that we previously created?
-			err := r.deleteAssociatedSecret(exportApproval)
+			err := r.deleteAssociatedSecret(secretRequest)
 			if err != nil {
 				// Requeue to try to delete a bit later
 				return reconcile.Result{Requeue: true}, err
@@ -183,18 +183,18 @@ func (r *SecretExportApprovalReconciler) copyAssociatedSecret(
 		return reconcile.Result{Requeue: true}, fmt.Errorf("Getting exported secret: %s", err)
 	}
 
-	secret := NewSecret(exportApproval, nil)
+	secret := NewSecret(secretRequest, nil)
 	secret.ApplySecret(srcSecret)
 
-	_, err = r.coreClient.CoreV1().Secrets(exportApproval.Namespace).Create(secret.AsSecret())
+	_, err = r.coreClient.CoreV1().Secrets(secretRequest.Namespace).Create(secret.AsSecret())
 	switch {
 	case err == nil:
 		// Do not requeue since we copied secret successfully
 		return reconcile.Result{}, nil
 
 	case errors.IsAlreadyExists(err):
-		existingSecret, err := r.coreClient.CoreV1().Secrets(exportApproval.Namespace).Get(
-			exportApproval.Name, metav1.GetOptions{})
+		existingSecret, err := r.coreClient.CoreV1().Secrets(secretRequest.Namespace).Get(
+			secretRequest.Name, metav1.GetOptions{})
 		if err != nil {
 			// Requeue to try to fetch a bit later
 			return reconcile.Result{Requeue: true}, fmt.Errorf("Getting imported secret: %s", err)
@@ -202,7 +202,7 @@ func (r *SecretExportApprovalReconciler) copyAssociatedSecret(
 
 		secret.AssociteExistingSecret(existingSecret)
 
-		_, err = r.coreClient.CoreV1().Secrets(exportApproval.Namespace).Update(secret.AsSecret())
+		_, err = r.coreClient.CoreV1().Secrets(secretRequest.Namespace).Update(secret.AsSecret())
 		if err != nil {
 			// Requeue to try to update a bit later
 			return reconcile.Result{Requeue: true}, fmt.Errorf("Updating imported secret: %s", err)
@@ -217,30 +217,30 @@ func (r *SecretExportApprovalReconciler) copyAssociatedSecret(
 	}
 }
 
-func (r *SecretExportApprovalReconciler) deleteAssociatedSecret(
-	exportApproval *sgv1alpha1.SecretExportApproval) error {
+func (r *SecretRequestReconciler) deleteAssociatedSecret(
+	secretRequest *sgv1alpha1.SecretRequest) error {
 
-	err := r.coreClient.CoreV1().Secrets(exportApproval.Namespace).Delete(
-		exportApproval.Name, &metav1.DeleteOptions{})
+	err := r.coreClient.CoreV1().Secrets(secretRequest.Namespace).Delete(
+		secretRequest.Name, &metav1.DeleteOptions{})
 	if err != nil && !errors.IsNotFound(err) {
 		return fmt.Errorf("Deleting associated secret: %s", err)
 	}
 	return nil
 }
 
-func (r *SecretExportApprovalReconciler) updateStatus(
-	exportApproval *sgv1alpha1.SecretExportApproval) error {
+func (r *SecretRequestReconciler) updateStatus(
+	secretRequest *sgv1alpha1.SecretRequest) error {
 
-	existingSecretExportApproval, err := r.sgClient.SecretgenV1alpha1().SecretExportApprovals(
-		exportApproval.Namespace).Get(exportApproval.Name, metav1.GetOptions{})
+	existingSecretRequest, err := r.sgClient.SecretgenV1alpha1().SecretRequests(
+		secretRequest.Namespace).Get(secretRequest.Name, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("Fetching secret export: %s", err)
 	}
 
-	existingSecretExportApproval.Status = exportApproval.Status
+	existingSecretRequest.Status = secretRequest.Status
 
-	_, err = r.sgClient.SecretgenV1alpha1().SecretExportApprovals(
-		exportApproval.Namespace).UpdateStatus(exportApproval)
+	_, err = r.sgClient.SecretgenV1alpha1().SecretRequests(
+		secretRequest.Namespace).UpdateStatus(secretRequest)
 	if err != nil {
 		return fmt.Errorf("Updating secret export status: %s", err)
 	}

@@ -42,10 +42,10 @@ type SecretExportListerExpansion interface{}
 // SecretExportNamespaceLister.
 type SecretExportNamespaceListerExpansion interface{}
 
-// SecretExportApprovalListerExpansion allows custom methods to be added to
-// SecretExportApprovalLister.
-type SecretExportApprovalListerExpansion interface{}
+// SecretRequestListerExpansion allows custom methods to be added to
+// SecretRequestLister.
+type SecretRequestListerExpansion interface{}
 
-// SecretExportApprovalNamespaceListerExpansion allows custom methods to be added to
-// SecretExportApprovalNamespaceLister.
-type SecretExportApprovalNamespaceListerExpansion interface{}
+// SecretRequestNamespaceListerExpansion allows custom methods to be added to
+// SecretRequestNamespaceLister.
+type SecretRequestNamespaceListerExpansion interface{}

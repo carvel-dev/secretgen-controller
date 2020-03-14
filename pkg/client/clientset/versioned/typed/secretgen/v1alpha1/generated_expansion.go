@@ -12,4 +12,4 @@ type SSHKeyExpansion interface{}
 
 type SecretExportExpansion interface{}
 
-type SecretExportApprovalExpansion interface{}
+type SecretRequestExpansion interface{}

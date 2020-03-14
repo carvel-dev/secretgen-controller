@@ -32,8 +32,8 @@ func (c *FakeSecretgenV1alpha1) SecretExports(namespace string) v1alpha1.SecretE
 	return &FakeSecretExports{c, namespace}
 }
 
-func (c *FakeSecretgenV1alpha1) SecretExportApprovals(namespace string) v1alpha1.SecretExportApprovalInterface {
-	return &FakeSecretExportApprovals{c, namespace}
+func (c *FakeSecretgenV1alpha1) SecretRequests(namespace string) v1alpha1.SecretRequestInterface {
+	return &FakeSecretRequests{c, namespace}
 }
 
 // RESTClient returns a RESTClient that is used to communicate
