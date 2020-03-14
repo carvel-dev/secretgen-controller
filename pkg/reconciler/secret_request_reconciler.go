@@ -36,15 +36,17 @@ func (r *SecretRequestReconciler) AttachWatches(controller controller.Controller
 
 	// Watch secrets and enqueue for same named SecretRequest
 	// to make sure imported secret is up-to-date
-	errs = append(errs, controller.Watch(&source.Kind{Type: &corev1.Secret{}}, &handler.EnqueueRequestsFromMapFunc{
-		ToRequests: handler.ToRequestsFunc(r.mapSecretToRequest),
-	}))
+	errs = append(errs, controller.Watch(
+		&source.Kind{Type: &corev1.Secret{}},
+		&handler.EnqueueRequestsFromMapFunc{ToRequests: handler.ToRequestsFunc(r.mapSecretToRequest)},
+	))
 
 	// Watch SecretExport and enqueue for related SecretRequest
 	// based on export namespace configuration
-	errs = append(errs, controller.Watch(&source.Kind{Type: &sgv1alpha1.SecretExport{}}, &handler.EnqueueRequestsFromMapFunc{
-		ToRequests: handler.ToRequestsFunc(r.mapExportsToRequests),
-	}))
+	errs = append(errs, controller.Watch(
+		&source.Kind{Type: &sgv1alpha1.SecretExport{}},
+		&handler.EnqueueRequestsFromMapFunc{ToRequests: handler.ToRequestsFunc(r.mapExportsToRequests)},
+	))
 
 	for _, err := range errs {
 		if err != nil {
