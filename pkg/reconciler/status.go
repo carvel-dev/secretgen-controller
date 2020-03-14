@@ -2,6 +2,7 @@ package reconciler
 
 import (
 	"fmt"
+	"strings"
 
 	sgv1alpha1 "github.com/k14s/secretgen-controller/pkg/apis/secretgen/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
@@ -39,7 +40,7 @@ func (s *Status) SetReconcileCompleted(err error) {
 			Status:  corev1.ConditionTrue,
 			Message: err.Error(),
 		})
-		s.s.FriendlyDescription = fmt.Sprintf("Reconcile failed: %s", err.Error())
+		s.s.FriendlyDescription = s.friendlyErrMsg(fmt.Sprintf("Reconcile failed: %s", err))
 	} else {
 		s.s.Conditions = append(s.s.Conditions, sgv1alpha1.Condition{
 			Type:    sgv1alpha1.ReconcileSucceeded,
@@ -50,6 +51,16 @@ func (s *Status) SetReconcileCompleted(err error) {
 	}
 
 	s.updateFunc(s.s)
+}
+
+func (s *Status) friendlyErrMsg(errMsg string) string {
+	errMsgPieces := strings.Split(errMsg, "\n")
+	if len(errMsgPieces[0]) > 80 {
+		errMsgPieces[0] = errMsgPieces[0][:80] + "..."
+	} else if len(errMsgPieces) > 1 {
+		errMsgPieces[0] += "..."
+	}
+	return errMsgPieces[0]
 }
 
 func (s *Status) WithReconcileCompleted(result reconcile.Result, err error) (reconcile.Result, error) {
