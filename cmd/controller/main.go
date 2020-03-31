@@ -25,6 +25,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
+const (
+	Version = "0.1.0"
+)
+
 var (
 	log             = logf.Log.WithName("secretgen-controller")
 	ctrlConcurrency = 10
@@ -38,6 +42,7 @@ func main() {
 
 	logf.SetLogger(zap.Logger(false))
 	entryLog := log.WithName("entrypoint")
+	entryLog.Info("secretgen-controller", "version", Version)
 
 	entryLog.Info("setting up manager")
 	restConfig := config.GetConfigOrDie()
@@ -48,7 +53,7 @@ func main() {
 	mgr, err := manager.New(restConfig, manager.Options{Namespace: ctrlNamespace})
 	exitIfErr(entryLog, "unable to set up controller manager", err)
 
-	entryLog.Info("Setting up controllers")
+	entryLog.Info("setting up controllers")
 
 	coreClient, err := kubernetes.NewForConfig(restConfig)
 	exitIfErr(entryLog, "building core client", err)
