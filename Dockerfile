@@ -2,7 +2,7 @@ FROM golang:1.13
 WORKDIR /go/src/github.com/k14s/secretgen-controller/
 
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -v -o controller ./cmd/controller/...
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags=-buildid= -trimpath -o controller ./cmd/controller/...
 
 # ---
 FROM ubuntu:bionic
