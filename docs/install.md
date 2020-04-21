@@ -5,9 +5,9 @@ Grab latest copy of YAML from the [Releases page](https://github.com/k14s/secret
 Example:
 
 ```bash
-$ kapp deploy -a sg -f https://github.com/k14s/secretgen-controller/releases/download/v0.1.0/release.yml
+$ kapp deploy -a sg -f https://github.com/k14s/secretgen-controller/releases/download/v0.2.0/release.yml
 or
-$ kubectl apply -f https://github.com/k14s/secretgen-controller/releases/download/v0.1.0/release.yml
+$ kubectl apply -f https://github.com/k14s/secretgen-controller/releases/download/v0.2.0/release.yml
 ```
 
 ### Advanced
