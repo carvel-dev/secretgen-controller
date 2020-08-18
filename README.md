@@ -3,6 +3,7 @@
 - Slack: [#k14s in Kubernetes slack](https://slack.kubernetes.io)
 - [Docs](docs/README.md) with topics about installation, config, etc.
 - Install: see [Install instructions](docs/install.md)
+- Status: Experimental
 
 `secretgen-controller` provides CRDs to specify what secrets need to be on cluster (generated or not).
 
