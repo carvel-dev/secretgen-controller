@@ -1,13 +1,13 @@
 ## Install
 
-Grab latest copy of YAML from the [Releases page](https://github.com/k14s/secretgen-controller/releases) and use your favorite deployment tool (such as [kapp](https://get-kapp.io) or kubectl) to install it.
+Grab latest copy of YAML from the [Releases page](https://github.com/vmware-tanzu/carvel-secretgen-controller/releases) and use your favorite deployment tool (such as [kapp](https://get-kapp.io) or kubectl) to install it.
 
 Example:
 
 ```bash
-$ kapp deploy -a sg -f https://github.com/k14s/secretgen-controller/releases/download/v0.2.0/release.yml
+$ kapp deploy -a sg -f https://github.com/vmware-tanzu/carvel-secretgen-controller/releases/download/v0.2.0/release.yml
 or
-$ kubectl apply -f https://github.com/k14s/secretgen-controller/releases/download/v0.2.0/release.yml
+$ kubectl apply -f https://github.com/vmware-tanzu/carvel-secretgen-controller/releases/download/v0.2.0/release.yml
 ```
 
 ### Advanced

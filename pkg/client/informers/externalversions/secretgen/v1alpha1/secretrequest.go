@@ -5,10 +5,10 @@ package v1alpha1
 import (
 	time "time"
 
-	secretgenv1alpha1 "github.com/k14s/secretgen-controller/pkg/apis/secretgen/v1alpha1"
-	versioned "github.com/k14s/secretgen-controller/pkg/client/clientset/versioned"
-	internalinterfaces "github.com/k14s/secretgen-controller/pkg/client/informers/externalversions/internalinterfaces"
-	v1alpha1 "github.com/k14s/secretgen-controller/pkg/client/listers/secretgen/v1alpha1"
+	secretgenv1alpha1 "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/apis/secretgen/v1alpha1"
+	versioned "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/client/clientset/versioned"
+	internalinterfaces "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/client/informers/externalversions/internalinterfaces"
+	v1alpha1 "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/client/listers/secretgen/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"

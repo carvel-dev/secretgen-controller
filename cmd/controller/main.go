@@ -8,9 +8,9 @@ import (
 	"os"
 
 	"github.com/go-logr/logr"
-	sgv1alpha1 "github.com/k14s/secretgen-controller/pkg/apis/secretgen/v1alpha1"
-	sgclient "github.com/k14s/secretgen-controller/pkg/client/clientset/versioned"
-	"github.com/k14s/secretgen-controller/pkg/reconciler"
+	sgv1alpha1 "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/apis/secretgen/v1alpha1"
+	sgclient "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/client/clientset/versioned"
+	"github.com/vmware-tanzu/carvel-secretgen-controller/pkg/reconciler"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"

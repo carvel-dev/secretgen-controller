@@ -5,8 +5,8 @@ package v1alpha1
 import (
 	"time"
 
-	v1alpha1 "github.com/k14s/secretgen-controller/pkg/apis/secretgen/v1alpha1"
-	scheme "github.com/k14s/secretgen-controller/pkg/client/clientset/versioned/scheme"
+	v1alpha1 "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/apis/secretgen/v1alpha1"
+	scheme "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/client/clientset/versioned/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
