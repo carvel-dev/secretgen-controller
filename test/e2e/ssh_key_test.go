@@ -84,9 +84,9 @@ metadata:
 spec:
   secretTemplate:
     type: Opaque
-    data:
-      pk:	privateKey
-      ak: authorizedKey
+    stringData:
+      pk: $(privateKey)
+      ak: $(authorizedKey)
 `
 
 	name := "test-ssh-key-template"

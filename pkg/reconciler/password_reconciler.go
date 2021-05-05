@@ -7,6 +7,7 @@ import (
 	"github.com/go-logr/logr"
 	sgv1alpha1 "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/apis/secretgen/v1alpha1"
 	sgclient "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/client/clientset/versioned"
+	"github.com/vmware-tanzu/carvel-secretgen-controller/pkg/expansion"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -80,8 +81,8 @@ func (r *PasswordReconciler) createSecret(password *sgv1alpha1.Password) (reconc
 
 	defaultTemplate := sgv1alpha1.SecretTemplate{
 		Type: sgv1alpha1.PasswordSecretDefaultType,
-		Data: map[string]string{
-			sgv1alpha1.PasswordSecretDefaultKey: sgv1alpha1.PasswordSecretKey,
+		StringData: map[string]string{
+			sgv1alpha1.PasswordSecretDefaultKey: expansion.Variable(sgv1alpha1.PasswordSecretKey),
 		},
 	}
 

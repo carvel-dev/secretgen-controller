@@ -5,7 +5,7 @@ By default generated secrets have predefined set of keys. In a lot of cases `Sec
 Fields:
 
 - `type` (string; optional) Overrides secret resource type
-- `data` (map[string]string; optional) Overrides secret data. Keys are actual secret keys, and values are reference values that indicate what value should be inserted. For example `postgresql-password: value` in a password filed. See "Secret Template" section for each secret type.
+- `stringData` (map[string]string; optional) Overrides secret data. Values go through variable expansion with each type providing a set of variables that can be used. For example `postgresql-password: $(value)` for password type. See "Secret Template" section for each secret type. Available in v0.3.0+ (earlier available `data` key is removed).
 
 #### Example
 
@@ -37,8 +37,8 @@ metadata:
   name: pg-password
 spec:
   secretTemplate:
-    data:
-      postgresql-pass: value
+    stringData:
+      postgresql-pass: $(value)
 ```
 
 would produce:

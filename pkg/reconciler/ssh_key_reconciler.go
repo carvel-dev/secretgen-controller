@@ -7,6 +7,7 @@ import (
 	"github.com/go-logr/logr"
 	sgv1alpha1 "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/apis/secretgen/v1alpha1"
 	sgclient "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/client/clientset/versioned"
+	"github.com/vmware-tanzu/carvel-secretgen-controller/pkg/expansion"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -80,9 +81,9 @@ func (r *SSHKeyReconciler) createSecret(sshKey *sgv1alpha1.SSHKey) (reconcile.Re
 
 	defaultTemplate := sgv1alpha1.SecretTemplate{
 		Type: sgv1alpha1.SSHKeySecretDefaultType,
-		Data: map[string]string{
-			sgv1alpha1.SSHKeySecretDefaultPrivateKeyKey:    sgv1alpha1.SSHKeySecretPrivateKeyKey,
-			sgv1alpha1.SSHKeySecretDefaultAuthorizedKeyKey: sgv1alpha1.SSHKeySecretAuthorizedKeyKey,
+		StringData: map[string]string{
+			sgv1alpha1.SSHKeySecretDefaultPrivateKeyKey:    expansion.Variable(sgv1alpha1.SSHKeySecretPrivateKeyKey),
+			sgv1alpha1.SSHKeySecretDefaultAuthorizedKeyKey: expansion.Variable(sgv1alpha1.SSHKeySecretAuthorizedKeyKey),
 		},
 	}
 

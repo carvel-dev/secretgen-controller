@@ -6,9 +6,9 @@ import (
 
 type SecretTemplate struct {
 	// TODO custom name is not supported as it makes "finding" secrets harder
-	Metadata SecretTemplateMetadata `json:"metadata,omitempty"`
-	Type     corev1.SecretType      `json:"type,omitempty"`
-	Data     map[string]string      `json:"data,omitempty"`
+	Metadata   SecretTemplateMetadata `json:"metadata,omitempty"`
+	Type       corev1.SecretType      `json:"type,omitempty"`
+	StringData map[string]string      `json:"stringData,omitempty"`
 }
 
 type SecretTemplateMetadata struct {

@@ -9,9 +9,9 @@ Password CRD allows to generate alpha-numeric passwords of particular length.
 
 #### Secret Template
 
-Data value references:
+Available variables:
 
-- `value`
+- `$(value)`
 
 #### Examples
 
@@ -34,6 +34,6 @@ metadata:
 spec:
   length: 124
   secretTemplate:
-    data:
-      postgresql-password: value
+    stringData:
+      postgresql-password: $(value)
 ```

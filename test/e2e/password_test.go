@@ -81,8 +81,10 @@ metadata:
 spec:
   secretTemplate:
     type: Opaque
-    data:
-      val: value
+    stringData:
+      static: value
+      val: $(value)
+      valx2: $(value)$(value)
 `
 
 	name := "test-password-template"
@@ -111,7 +113,13 @@ spec:
 		if secret.Type != "Opaque" {
 			t.Fatalf("Wrong type")
 		}
+		if string(secret.Data["static"]) != "value" {
+			t.Fatalf("Failed to find password")
+		}
 		if len(secret.Data["val"]) != 40 {
+			t.Fatalf("Failed to find password")
+		}
+		if len(secret.Data["valx2"]) != 80 {
 			t.Fatalf("Failed to find password")
 		}
 	})

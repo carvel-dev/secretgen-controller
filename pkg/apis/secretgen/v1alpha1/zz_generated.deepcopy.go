@@ -654,8 +654,8 @@ func (in *SecretRequestStatus) DeepCopy() *SecretRequestStatus {
 func (in *SecretTemplate) DeepCopyInto(out *SecretTemplate) {
 	*out = *in
 	in.Metadata.DeepCopyInto(&out.Metadata)
-	if in.Data != nil {
-		in, out := &in.Data, &out.Data
+	if in.StringData != nil {
+		in, out := &in.StringData, &out.StringData
 		*out = make(map[string]string, len(*in))
 		for key, val := range *in {
 			(*out)[key] = val

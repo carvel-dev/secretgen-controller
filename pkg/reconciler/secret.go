@@ -1,9 +1,8 @@
 package reconciler
 
 import (
-	"fmt"
-
 	sgv1alpha1 "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/apis/secretgen/v1alpha1"
+	"github.com/vmware-tanzu/carvel-secretgen-controller/pkg/expansion"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -73,14 +72,12 @@ func (p *Secret) ApplyTemplate(template sgv1alpha1.SecretTemplate) error {
 		p.secret.Type = template.Type
 	}
 
-	if len(template.Data) > 0 {
+	if len(template.StringData) > 0 {
+		expandFunc := expansion.MappingFuncFor(p.valuesAsStringMap())
 		newData := map[string][]byte{}
-		for dataKey, valKey := range template.Data {
-			val, found := p.values[valKey]
-			if !found {
-				return fmt.Errorf("Expected value for key '%s' to be found, but was not", valKey)
-			}
-			newData[dataKey] = val
+
+		for dataKey, val := range template.StringData {
+			newData[dataKey] = []byte(expansion.Expand(val, expandFunc))
 		}
 		p.secret.Data = newData
 	}
@@ -129,4 +126,12 @@ func (p *Secret) ApplySecret(otherSecret *corev1.Secret) {
 func (p *Secret) AssociteExistingSecret(otherSecret *corev1.Secret) {
 	p.secret.UID = otherSecret.UID
 	p.secret.ResourceVersion = otherSecret.ResourceVersion
+}
+
+func (p *Secret) valuesAsStringMap() map[string]string {
+	result := map[string]string{}
+	for k, v := range p.values {
+		result[k] = string(v)
+	}
+	return result
 }

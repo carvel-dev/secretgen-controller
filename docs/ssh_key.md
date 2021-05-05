@@ -8,10 +8,10 @@ Please let us know in issues what kind of configurability is wanted.
 
 #### Secret Template
 
-Data value references:
+Available variables:
 
-- `privateKey`
-- `authorizedKey`
+- `$(privateKey)`
+- `$(authorizedKey)`
 
 #### Example
 

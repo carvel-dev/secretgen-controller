@@ -15,10 +15,10 @@
 
 #### Secret Template
 
-Data value references:
+Available variables:
 
-- `certificate`
-- `privateKey`
+- `$(certificate)`
+- `$(privateKey)`
 
 #### Examples
 
@@ -73,7 +73,7 @@ spec:
   alternativeNames:
   - app1.svc.cluster.local
   secretTemplate:
-    data:
-      crt: certificate
-      key: privateKey
+    stringData:
+      crt: $(certificate)
+      key: $(privateKey)
 ```
