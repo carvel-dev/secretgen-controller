@@ -11,7 +11,6 @@ import (
 	sgv1alpha1 "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/apis/secretgen/v1alpha1"
 	sgclient "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/client/clientset/versioned"
 	"github.com/vmware-tanzu/carvel-secretgen-controller/pkg/generator"
-	"github.com/vmware-tanzu/carvel-secretgen-controller/pkg/reconciler"
 	"github.com/vmware-tanzu/carvel-secretgen-controller/pkg/sharing"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -79,23 +78,27 @@ func main() {
 	_, err = registerCtrl("sshkey", mgr, sshKeyReconciler, &source.Kind{Type: &sgv1alpha1.SSHKey{}})
 	exitIfErr(entryLog, "registering sshkey controller", err)
 
+	secretExports := sharing.NewSecretExports(log.WithName("secretexports"))
+
 	{
-		secretExportReconciler := sharing.NewSecretExportReconciler(sgClient, coreClient, log.WithName("secexp"))
-		seCtrl, err := registerCtrl("secexp", mgr, secretExportReconciler, &source.Kind{Type: &sgv1alpha1.SecretExport{}})
+		secretExportReconciler := sharing.NewSecretExportReconciler(sgClient, coreClient, secretExports, log.WithName("secexp"))
+		err := registerCtrlMinimal("secexp", mgr, secretExportReconciler)
 		exitIfErr(entryLog, "registering secexp controller", err)
 
-		err = secretExportReconciler.AttachWatches(seCtrl)
-		exitIfErr(entryLog, "registering secexp controller: secret watching", err)
+		err = secretExportReconciler.WarmUp()
+		exitIfErr(entryLog, "warmingup secexp controller", err)
 	}
 
 	{
 		secretRequestReconciler := sharing.NewSecretRequestReconciler(sgClient, coreClient, log.WithName("secreq"))
-		seaCtrl, err := registerCtrl("secreq", mgr, secretRequestReconciler, &source.Kind{Type: &sgv1alpha1.SecretRequest{}})
+		err := registerCtrlMinimal("secreq", mgr, secretRequestReconciler)
 		exitIfErr(entryLog, "registering secreq controller", err)
-
-		err = secretRequestReconciler.AttachWatches(seaCtrl)
-		exitIfErr(entryLog, "registering secreq controller: secret watching", err)
 	}
+
+	// Start after warming up secret exports
+	secretReconciler := sharing.NewSecretReconciler(sgClient, coreClient, secretExports, log.WithName("secret"))
+	err = registerCtrlMinimal("secret", mgr, secretReconciler)
+	exitIfErr(entryLog, "registering secret controller", err)
 
 	entryLog.Info("starting manager")
 
@@ -122,6 +125,32 @@ func registerCtrl(desc string, mgr manager.Manager,
 	}
 
 	return ctrl, nil
+}
+
+type reconcilerWithWatches interface {
+	reconcile.Reconciler
+	AttachWatches(controller controller.Controller) error
+}
+
+func registerCtrlMinimal(desc string, mgr manager.Manager,
+	reconciler reconcilerWithWatches) error {
+
+	ctrlOpts := controller.Options{
+		Reconciler:              reconciler,
+		MaxConcurrentReconciles: ctrlConcurrency,
+	}
+
+	ctrl, err := controller.New("secretgen-controller-"+desc, mgr, ctrlOpts)
+	if err != nil {
+		return fmt.Errorf("unable to set up secretgen-controller-%s: %s", desc, err)
+	}
+
+	err = reconciler.AttachWatches(ctrl)
+	if err != nil {
+		return fmt.Errorf("unable to attaches watches", err)
+	}
+
+	return nil
 }
 
 func exitIfErr(entryLog logr.Logger, desc string, err error) {
