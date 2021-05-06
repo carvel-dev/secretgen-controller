@@ -1,6 +1,0 @@
-#!/bin/bash
-set -e
-
-bin=$(dirname $0)
-
-gofmt -w $($bin/godirs)
