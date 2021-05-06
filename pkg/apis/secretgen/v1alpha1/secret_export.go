@@ -41,6 +41,10 @@ type SecretExportStatus struct {
 	ObservedSecretResourceVersion string `json:"observedSecretResourceVersion,omitempty"`
 }
 
+const (
+	AllNamespaces = "*"
+)
+
 func (e SecretExport) StaticToNamespaces() []string {
 	result := append([]string{}, e.Spec.ToNamespaces...)
 	if len(e.Spec.ToNamespace) > 0 {

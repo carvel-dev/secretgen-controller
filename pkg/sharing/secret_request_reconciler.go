@@ -33,6 +33,11 @@ func NewSecretRequestReconciler(sgClient sgclient.Interface,
 }
 
 func (r *SecretRequestReconciler) AttachWatches(controller controller.Controller) error {
+	err := controller.Watch(&source.Kind{Type: &sgv1alpha1.SecretRequest{}}, &handler.EnqueueRequestForObject{})
+	if err != nil {
+		return fmt.Errorf("Watching secret request: %s", err)
+	}
+
 	var errs []error
 
 	// Watch secrets and enqueue for same named SecretRequest
@@ -94,6 +99,8 @@ func (r *SecretRequestReconciler) mapExportsToRequests(a handler.MapObject) []re
 }
 
 func (r *SecretRequestReconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+	log := r.log.WithValues("request", request)
+
 	secretdRequest, err := r.sgClient.SecretgenV1alpha1().SecretRequests(
 		request.Namespace).Get(request.Name, metav1.GetOptions{})
 	if err != nil {
@@ -119,17 +126,19 @@ func (r *SecretRequestReconciler) Reconcile(request reconcile.Request) (reconcil
 	status.SetReconciling(secretdRequest.ObjectMeta)
 	defer r.updateStatus(secretdRequest)
 
-	return status.WithReconcileCompleted(r.reconcile(secretdRequest))
+	return status.WithReconcileCompleted(r.reconcile(secretdRequest, log))
 }
 
 func (r *SecretRequestReconciler) reconcile(
-	secretRequest *sgv1alpha1.SecretRequest) (reconcile.Result, error) {
+	secretRequest *sgv1alpha1.SecretRequest, log logr.Logger) (reconcile.Result, error) {
 
 	err := secretRequest.Validate()
 	if err != nil {
 		// Do not requeue as there is nothing this controller can do until secret request is fixed
 		return reconcile.Result{}, err
 	}
+
+	log.Info("Reconciling")
 
 	notOfferedMsg := "Export was not offered (even though requested)"
 	notAllowedMsg := "Export was not allowed (even though requested)"

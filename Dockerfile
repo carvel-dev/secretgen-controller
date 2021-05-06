@@ -2,7 +2,7 @@ FROM golang:1.13
 WORKDIR /go/src/github.com/vmware-tanzu/carvel-secretgen-controller/
 
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags=-buildid= -trimpath -o controller ./cmd/controller/...
+RUN CGO_ENABLED=0 GOOS=linux go build -mod=vendor -ldflags=-buildid= -trimpath -o controller ./cmd/controller/...
 
 # ---
 FROM ubuntu:bionic
