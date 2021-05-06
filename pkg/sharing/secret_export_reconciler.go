@@ -1,4 +1,4 @@
-package reconciler
+package sharing
 
 import (
 	"fmt"
@@ -6,6 +6,7 @@ import (
 	"github.com/go-logr/logr"
 	sgv1alpha1 "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/apis/secretgen/v1alpha1"
 	sgclient "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/client/clientset/versioned"
+	"github.com/vmware-tanzu/carvel-secretgen-controller/pkg/reconciler"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -63,7 +64,7 @@ func (r *SecretExportReconciler) Reconcile(request reconcile.Request) (reconcile
 		return reconcile.Result{}, nil
 	}
 
-	status := &Status{
+	status := &reconciler.Status{
 		secretExport.Status.GenericStatus,
 		func(st sgv1alpha1.GenericStatus) { secretExport.Status.GenericStatus = st },
 	}

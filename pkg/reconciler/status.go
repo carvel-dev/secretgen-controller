@@ -11,14 +11,14 @@ import (
 )
 
 type Status struct {
-	s          sgv1alpha1.GenericStatus
-	updateFunc func(sgv1alpha1.GenericStatus)
+	S          sgv1alpha1.GenericStatus
+	UpdateFunc func(sgv1alpha1.GenericStatus)
 }
 
-func (s *Status) Result() sgv1alpha1.GenericStatus { return s.s }
+func (s *Status) Result() sgv1alpha1.GenericStatus { return s.S }
 
 func (s *Status) IsReconcileSucceeded() bool {
-	for _, cond := range s.s.Conditions {
+	for _, cond := range s.S.Conditions {
 		if cond.Type == sgv1alpha1.ReconcileSucceeded {
 			return true
 		}
@@ -30,36 +30,36 @@ func (s *Status) SetReconciling(meta metav1.ObjectMeta) {
 	s.markObservedLatest(meta)
 	s.removeAllConditions()
 
-	s.s.Conditions = append(s.s.Conditions, sgv1alpha1.Condition{
+	s.S.Conditions = append(s.S.Conditions, sgv1alpha1.Condition{
 		Type:   sgv1alpha1.Reconciling,
 		Status: corev1.ConditionTrue,
 	})
 
-	s.s.FriendlyDescription = "Reconciling"
+	s.S.FriendlyDescription = "Reconciling"
 
-	s.updateFunc(s.s)
+	s.UpdateFunc(s.S)
 }
 
 func (s *Status) SetReconcileCompleted(err error) {
 	s.removeAllConditions()
 
 	if err != nil {
-		s.s.Conditions = append(s.s.Conditions, sgv1alpha1.Condition{
+		s.S.Conditions = append(s.S.Conditions, sgv1alpha1.Condition{
 			Type:    sgv1alpha1.ReconcileFailed,
 			Status:  corev1.ConditionTrue,
 			Message: err.Error(),
 		})
-		s.s.FriendlyDescription = s.friendlyErrMsg(fmt.Sprintf("Reconcile failed: %s", err))
+		s.S.FriendlyDescription = s.friendlyErrMsg(fmt.Sprintf("Reconcile failed: %s", err))
 	} else {
-		s.s.Conditions = append(s.s.Conditions, sgv1alpha1.Condition{
+		s.S.Conditions = append(s.S.Conditions, sgv1alpha1.Condition{
 			Type:    sgv1alpha1.ReconcileSucceeded,
 			Status:  corev1.ConditionTrue,
 			Message: "",
 		})
-		s.s.FriendlyDescription = "Reconcile succeeded"
+		s.S.FriendlyDescription = "Reconcile succeeded"
 	}
 
-	s.updateFunc(s.s)
+	s.UpdateFunc(s.S)
 }
 
 func (s *Status) friendlyErrMsg(errMsg string) string {
@@ -78,9 +78,9 @@ func (s *Status) WithReconcileCompleted(result reconcile.Result, err error) (rec
 }
 
 func (s *Status) markObservedLatest(meta metav1.ObjectMeta) {
-	s.s.ObservedGeneration = meta.Generation
+	s.S.ObservedGeneration = meta.Generation
 }
 
 func (s *Status) removeAllConditions() {
-	s.s.Conditions = nil
+	s.S.Conditions = nil
 }

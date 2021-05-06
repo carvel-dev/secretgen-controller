@@ -1,4 +1,4 @@
-package reconciler
+package sharing
 
 import (
 	"fmt"
@@ -6,6 +6,7 @@ import (
 	"github.com/go-logr/logr"
 	sgv1alpha1 "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/apis/secretgen/v1alpha1"
 	sgclient "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/client/clientset/versioned"
+	"github.com/vmware-tanzu/carvel-secretgen-controller/pkg/reconciler"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -76,7 +77,7 @@ func (r *SecretRequestReconciler) mapExportsToRequests(a handler.MapObject) []re
 
 	// Skip exports that are not fully reconciled
 	// New events will be emitted when reconciliation finishes
-	if !(&Status{s: export.Status.GenericStatus}).IsReconcileSucceeded() {
+	if !(&reconciler.Status{S: export.Status.GenericStatus}).IsReconcileSucceeded() {
 		return nil
 	}
 
@@ -110,7 +111,7 @@ func (r *SecretRequestReconciler) Reconcile(request reconcile.Request) (reconcil
 		return reconcile.Result{}, nil
 	}
 
-	status := &Status{
+	status := &reconciler.Status{
 		secretdRequest.Status.GenericStatus,
 		func(st sgv1alpha1.GenericStatus) { secretdRequest.Status.GenericStatus = st },
 	}
@@ -197,7 +198,7 @@ func (r *SecretRequestReconciler) copyAssociatedSecret(
 		return reconcile.Result{Requeue: true}, fmt.Errorf("Getting exported secret: %s", err)
 	}
 
-	secret := NewSecret(secretRequest, nil)
+	secret := reconciler.NewSecret(secretRequest, nil)
 	secret.ApplySecret(srcSecret)
 
 	_, err = r.coreClient.CoreV1().Secrets(secretRequest.Namespace).Create(secret.AsSecret())

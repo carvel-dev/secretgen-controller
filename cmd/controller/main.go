@@ -11,6 +11,7 @@ import (
 	sgv1alpha1 "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/apis/secretgen/v1alpha1"
 	sgclient "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/client/clientset/versioned"
 	"github.com/vmware-tanzu/carvel-secretgen-controller/pkg/reconciler"
+	"github.com/vmware-tanzu/carvel-secretgen-controller/pkg/sharing"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
@@ -78,7 +79,7 @@ func main() {
 	exitIfErr(entryLog, "registering sshkey controller", err)
 
 	{
-		secretExportReconciler := reconciler.NewSecretExportReconciler(sgClient, coreClient, log.WithName("secexp"))
+		secretExportReconciler := sharing.NewSecretExportReconciler(sgClient, coreClient, log.WithName("secexp"))
 		seCtrl, err := registerCtrl("secexp", mgr, secretExportReconciler, &source.Kind{Type: &sgv1alpha1.SecretExport{}})
 		exitIfErr(entryLog, "registering secexp controller", err)
 
@@ -87,7 +88,7 @@ func main() {
 	}
 
 	{
-		secretRequestReconciler := reconciler.NewSecretRequestReconciler(sgClient, coreClient, log.WithName("secreq"))
+		secretRequestReconciler := sharing.NewSecretRequestReconciler(sgClient, coreClient, log.WithName("secreq"))
 		seaCtrl, err := registerCtrl("secreq", mgr, secretRequestReconciler, &source.Kind{Type: &sgv1alpha1.SecretRequest{}})
 		exitIfErr(entryLog, "registering secreq controller", err)
 
