@@ -1,4 +1,4 @@
-package reconciler
+package generator
 
 import (
 	"fmt"
@@ -8,6 +8,7 @@ import (
 	sgv1alpha1 "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/apis/secretgen/v1alpha1"
 	sgclient "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/client/clientset/versioned"
 	"github.com/vmware-tanzu/carvel-secretgen-controller/pkg/expansion"
+	"github.com/vmware-tanzu/carvel-secretgen-controller/pkg/reconciler"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -44,7 +45,7 @@ func (r *PasswordReconciler) Reconcile(request reconcile.Request) (reconcile.Res
 		return reconcile.Result{}, nil
 	}
 
-	status := &Status{
+	status := &reconciler.Status{
 		password.Status.GenericStatus,
 		func(st sgv1alpha1.GenericStatus) { password.Status.GenericStatus = st },
 	}
@@ -77,7 +78,7 @@ func (r *PasswordReconciler) createSecret(password *sgv1alpha1.Password) (reconc
 		sgv1alpha1.PasswordSecretKey: []byte(passwordStr),
 	}
 
-	secret := NewSecret(password, values)
+	secret := reconciler.NewSecret(password, values)
 
 	defaultTemplate := sgv1alpha1.SecretTemplate{
 		Type: sgv1alpha1.PasswordSecretDefaultType,

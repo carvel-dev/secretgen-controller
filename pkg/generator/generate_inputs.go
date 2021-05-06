@@ -1,4 +1,4 @@
-package reconciler
+package generator
 
 import (
 	"encoding/json"

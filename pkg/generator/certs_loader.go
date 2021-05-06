@@ -1,4 +1,4 @@
-package reconciler
+package generator
 
 import (
 	"crypto/rsa"

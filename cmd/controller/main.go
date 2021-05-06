@@ -10,6 +10,7 @@ import (
 	"github.com/go-logr/logr"
 	sgv1alpha1 "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/apis/secretgen/v1alpha1"
 	sgclient "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/client/clientset/versioned"
+	"github.com/vmware-tanzu/carvel-secretgen-controller/pkg/generator"
 	"github.com/vmware-tanzu/carvel-secretgen-controller/pkg/reconciler"
 	"github.com/vmware-tanzu/carvel-secretgen-controller/pkg/sharing"
 	"k8s.io/client-go/kubernetes"
@@ -62,19 +63,19 @@ func main() {
 	sgClient, err := sgclient.NewForConfig(restConfig)
 	exitIfErr(entryLog, "building secretgen client", err)
 
-	certReconciler := reconciler.NewCertificateReconciler(sgClient, coreClient, log.WithName("cert"))
+	certReconciler := generator.NewCertificateReconciler(sgClient, coreClient, log.WithName("cert"))
 	_, err = registerCtrl("cert", mgr, certReconciler, &source.Kind{Type: &sgv1alpha1.Certificate{}})
 	exitIfErr(entryLog, "registering certificate controller", err)
 
-	passwordReconciler := reconciler.NewPasswordReconciler(sgClient, coreClient, log.WithName("password"))
+	passwordReconciler := generator.NewPasswordReconciler(sgClient, coreClient, log.WithName("password"))
 	_, err = registerCtrl("password", mgr, passwordReconciler, &source.Kind{Type: &sgv1alpha1.Password{}})
 	exitIfErr(entryLog, "registering password controller", err)
 
-	rsaKeyReconciler := reconciler.NewRSAKeyReconciler(sgClient, coreClient, log.WithName("rsakey"))
+	rsaKeyReconciler := generator.NewRSAKeyReconciler(sgClient, coreClient, log.WithName("rsakey"))
 	_, err = registerCtrl("rsakey", mgr, rsaKeyReconciler, &source.Kind{Type: &sgv1alpha1.RSAKey{}})
 	exitIfErr(entryLog, "registering rsakey controller", err)
 
-	sshKeyReconciler := reconciler.NewSSHKeyReconciler(sgClient, coreClient, log.WithName("sshkey"))
+	sshKeyReconciler := generator.NewSSHKeyReconciler(sgClient, coreClient, log.WithName("sshkey"))
 	_, err = registerCtrl("sshkey", mgr, sshKeyReconciler, &source.Kind{Type: &sgv1alpha1.SSHKey{}})
 	exitIfErr(entryLog, "registering sshkey controller", err)
 
