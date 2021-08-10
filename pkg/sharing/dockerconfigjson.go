@@ -29,7 +29,13 @@ func NewCombinedDockerConfigJSON(secrets []*corev1.Secret) (map[string][]byte, e
 	for _, secret := range secrets {
 		var auths authsConf
 
-		err := json.Unmarshal(secret.Data[corev1.DockerConfigJsonKey], &auths)
+		secretData := secret.Data[corev1.DockerConfigJsonKey]
+		if len(secretData) == 0 {
+			// TODO: if we actually like this behavior this should be a warning through the logger
+			fmt.Println("Skipping Empty Secret")
+			continue
+		}
+		err := json.Unmarshal(secretData, &auths)
 		if err != nil {
 			return nil, fmt.Errorf("Unmarshaling secret '%s/%s': %s", secret.Namespace, secret.Name, err)
 		}
