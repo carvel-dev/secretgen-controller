@@ -84,4 +84,4 @@ SecretRequest CRD allows to "accept" secrets being exported.
 
 `spec` fields:
 
-- `fromNamespace` (optional; string) Source namespace; must be one of ServiceExport's destination namespaces.
+- `fromNamespace` (optional; string) Source namespace; must be one of SecretExport's destination namespaces.
