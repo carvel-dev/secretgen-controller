@@ -27,7 +27,7 @@ func NewCombinedDockerConfigJSON(secrets []*corev1.Secret) (map[string][]byte, e
 		var auths authsConf
 
 		secretData := secret.Data[corev1.DockerConfigJsonKey]
-		if len(secretData) < 1 {
+		if len(secretData) == 0 {
 			// TODO: if we actually like this behavior this should be a warning through the logger
 			fmt.Println("Skipping Empty Secret")
 			continue
