@@ -4,9 +4,9 @@
 package e2e
 
 import (
+	"reflect"
 	"strings"
 	"testing"
-	"reflect"
 	"time"
 
 	"github.com/ghodss/yaml"
@@ -133,7 +133,7 @@ stringData:
 
 	logger.Section("Check imported secrets were updated", func() {
 		// TODO proper waiting
-		time.Sleep(5*time.Second)
+		time.Sleep(5 * time.Second)
 
 		for _, ns := range []string{"sg-test2", "sg-test3"} {
 			out := waitForSecretInNs(t, kubectl, ns, "secret")
@@ -164,11 +164,11 @@ stringData:
 			RunOpts{NoNamespace: true})
 
 		// TODO proper waiting
-		time.Sleep(5*time.Second)
+		time.Sleep(5 * time.Second)
 
 		for _, ns := range []string{"sg-test2", "sg-test3"} {
 			_, err := kubectl.RunWithOpts([]string{"get", "secret", "secret", "-n", ns},
-				RunOpts{AllowError: true})
+				RunOpts{AllowError: true, NoNamespace: true})
 
 			if !strings.Contains(err.Error(), "(NotFound)") {
 				t.Fatalf("Expected NotFound error but was: %s", err)

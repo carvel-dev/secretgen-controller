@@ -6,6 +6,11 @@ package e2e
 import (
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
+	//"gopkg.in/yaml.v2"
+	"github.com/ghodss/yaml"
+	corev1 "k8s.io/api/core/v1"
 )
 
 func waitForSecret(t *testing.T, kubectl Kubectl, name string) string {
@@ -33,5 +38,23 @@ func waitForSecretInNs(t *testing.T, kubectl Kubectl, nsName, name string) strin
 	}
 
 	t.Fatalf("Expected to find secret '%s' but did not: %s", name, lastErr)
+	panic("Unreachable")
+}
+
+func waitUntilSecretInNsPopulated(t *testing.T, kubectl Kubectl, nsName, name string, checkFun func(*corev1.Secret) bool) string {
+	var secret corev1.Secret
+
+	for i := 0; i < 10; i++ {
+		out := waitForSecretInNs(t, kubectl, nsName, name)
+		err := yaml.Unmarshal([]byte(out), &secret)
+		require.NoError(t, err)
+
+		if checkFun(&secret) {
+			return out
+		}
+		time.Sleep(time.Second)
+	}
+
+	t.Fatalf("Expected to find secret with data of longer length but found data: %s", string(secret.Data[".dockerconfigjson"]))
 	panic("Unreachable")
 }
