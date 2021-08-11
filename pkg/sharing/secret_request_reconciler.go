@@ -1,3 +1,6 @@
+// Copyright 2021 VMware, Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 package sharing
 
 import (
@@ -225,7 +228,7 @@ func (r *SecretRequestReconciler) copyAssociatedSecret(
 			return reconcile.Result{Requeue: true}, fmt.Errorf("Getting imported secret: %s", err)
 		}
 
-		secret.AssociteExistingSecret(existingSecret)
+		secret.AssociateExistingSecret(existingSecret)
 
 		_, err = r.coreClient.CoreV1().Secrets(secretRequest.Namespace).Update(secret.AsSecret())
 		if err != nil {

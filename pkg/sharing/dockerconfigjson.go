@@ -1,3 +1,6 @@
+// Copyright 2021 VMware, Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 package sharing
 
 import (
@@ -29,7 +32,8 @@ func NewCombinedDockerConfigJSON(secrets []*corev1.Secret) (map[string][]byte, e
 	for _, secret := range secrets {
 		var auths authsConf
 
-		err := json.Unmarshal(secret.Data[corev1.DockerConfigJsonKey], &auths)
+		secretData := secret.Data[corev1.DockerConfigJsonKey]
+		err := json.Unmarshal(secretData, &auths)
 		if err != nil {
 			return nil, fmt.Errorf("Unmarshaling secret '%s/%s': %s", secret.Namespace, secret.Name, err)
 		}
