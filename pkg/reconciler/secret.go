@@ -126,7 +126,7 @@ func (p *Secret) ApplySecret(otherSecret *corev1.Secret) {
 	}
 }
 
-func (p *Secret) AssociteExistingSecret(otherSecret *corev1.Secret) {
+func (p *Secret) AssociateExistingSecret(otherSecret *corev1.Secret) {
 	p.secret.UID = otherSecret.UID
 	p.secret.ResourceVersion = otherSecret.ResourceVersion
 }
