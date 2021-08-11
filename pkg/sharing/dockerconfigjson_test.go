@@ -9,7 +9,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func Test_NewCombinedDockerConfigJSON_handlesEmptySecrets(t *testing.T) {
+func Test_NewCombinedDockerConfigJSON_errorsOnEmptySecrets(t *testing.T) {
 	secrets := []*corev1.Secret{
 		&corev1.Secret{
 			TypeMeta: metav1.TypeMeta{
@@ -22,10 +22,8 @@ func Test_NewCombinedDockerConfigJSON_handlesEmptySecrets(t *testing.T) {
 				APIVersion: "apps/v1beta1",
 			}},
 	}
-	result, err := NewCombinedDockerConfigJSON(secrets)
-	require.NoError(t, err)
-	assert.Equal(t, 1, len(result))
-	assert.Equal(t, `{"auths":{}}`, string(result[".dockerconfigjson"]))
+	_, err := NewCombinedDockerConfigJSON(secrets)
+	assert.Error(t, err)
 }
 
 func Test_NewCombinedDockerConfigJSON_happyPath(t *testing.T) {
@@ -63,5 +61,5 @@ func Test_NewCombinedDockerConfigJSON_happyPath(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 1, len(result))
 	expected := []byte(`{"auths":{"server":{"username":"correctUser","password":"correctPassword","auth":"correctAuth"},"server2":{"username":"user2","password":"password2","auth":"auth2"}}}`)
-	assert.Equal(t, expected, result[".dockerconfigjson"])
+	assert.Equal(t, expected, result[corev1.DockerConfigJsonKey])
 }
