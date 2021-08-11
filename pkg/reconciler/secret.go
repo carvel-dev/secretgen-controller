@@ -126,6 +126,7 @@ func (p *Secret) ApplySecret(otherSecret *corev1.Secret) {
 	}
 }
 
+// AssociateExistingSecret copies the UID and ResourceVersion from other into the receiver
 func (p *Secret) AssociateExistingSecret(otherSecret *corev1.Secret) {
 	p.secret.UID = otherSecret.UID
 	p.secret.ResourceVersion = otherSecret.ResourceVersion
