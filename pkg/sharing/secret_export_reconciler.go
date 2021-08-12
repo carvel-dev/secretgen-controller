@@ -77,6 +77,7 @@ func (r *SecretExportReconciler) WarmUp() error {
 	return nil
 }
 
+// Reconcile acs on a request for a SecretExport to implement a kubernetes reconciler
 func (r *SecretExportReconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	log := r.log.WithValues("request", request)
 
@@ -109,11 +110,13 @@ func (r *SecretExportReconciler) Reconcile(request reconcile.Request) (reconcile
 	}
 
 	status.SetReconciling(secretExport.ObjectMeta)
+	// saving the status helps trigger a cascade so that the Secrets reconciler will also respond if needed
 	defer r.updateStatus(secretExport)
 
 	return status.WithReconcileCompleted(r.reconcile(secretExport, log))
 }
 
+// reconcile looks for the Secret corresponding to the SecretExport Request that we're reconciling.
 func (r *SecretExportReconciler) reconcile(secretExport *sgv1alpha1.SecretExport, log logr.Logger) (reconcile.Result, error) {
 	err := secretExport.Validate()
 	if err != nil {
@@ -130,6 +133,8 @@ func (r *SecretExportReconciler) reconcile(secretExport *sgv1alpha1.SecretExport
 		secretExport.Namespace).Get(secretExport.Name, metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
+			// drop the Secret from the shared cache.
+			r.secretExports.Unexport(secretExport)
 			// Do not requeue as there is nothing this controller can do until secret appears
 			return reconcile.Result{}, fmt.Errorf("Missing exported secret")
 		}

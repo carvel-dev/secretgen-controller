@@ -55,6 +55,6 @@ func waitUntilSecretInNsPopulated(t *testing.T, kubectl Kubectl, nsName, name st
 		time.Sleep(time.Second)
 	}
 
-	t.Fatalf("Expected to find secret with data of longer length but found data: %s", string(secret.Data[".dockerconfigjson"]))
+	t.Fatalf("Timed out before Secret '%s' satisfied condition in Namespace '%s'; current data: %s", name, nsName, string(secret.Data[".dockerconfigjson"]))
 	panic("Unreachable")
 }

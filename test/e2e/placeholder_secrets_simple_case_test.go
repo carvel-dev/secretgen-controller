@@ -13,6 +13,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
+// TestPlaceholderSuccessful : TODO - we have a more complicated test that should make this one redundant; move things from here into unit tests and/or remove this file
 func TestPlaceholderSuccessful(t *testing.T) {
 	env := BuildEnv(t)
 	logger := Logger{}
@@ -161,13 +162,6 @@ stringData:
 
 		}
 	})
-
-	// additional cases: multiple authorizations in one secret,  multiple secrets,  multiple secret exports
-	// additional cases: secret exports control which namespace (subselect namespaces)
-	// additional cases: deleting the secretExport should reset the placeholder secrets back to their previous state (here, empty auths:{})
-	// additional cases: multiple secretExports and one is deleted, placeholder secrets should still have contents from the still-shared secrets.
-	// additional cases: if underlying secret is updated, then that update should be reflected in the placeholder secret
-	//    if the underlying secret gets removed, placeholder secrets should revert back to their previous state.
 
 	logger.Section("Delete export to see exported secrets deleted", func() {
 		kubectl.RunWithOpts([]string{"delete", "secretexport", "secret", "-n", "sg-test1"},

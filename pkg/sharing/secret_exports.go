@@ -76,6 +76,7 @@ func (se *SecretExports) Export(export *sgv1alpha1.SecretExport, secret *corev1.
 	se.exportedSecrets[exportedSec.Key()] = exportedSec
 }
 
+// Unexport deletes the in-memory representation (cached) of both the SecretExport and underlying Secret.
 func (se *SecretExports) Unexport(export *sgv1alpha1.SecretExport) {
 	se.exportedSecretsLock.Lock()
 	defer se.exportedSecretsLock.Unlock()
