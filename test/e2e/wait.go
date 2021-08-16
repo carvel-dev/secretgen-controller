@@ -7,9 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
-	//"gopkg.in/yaml.v2"
 	"github.com/ghodss/yaml"
+	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 )
 

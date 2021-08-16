@@ -69,7 +69,7 @@ kind: Secret
 metadata:
   annotations:
     secretgen.carvel.dev/image-pull-secret: ""
-  name: secret
+  name: placeholder-secret
   namespace: sg-test2
 type: kubernetes.io/dockerconfigjson
 data:
@@ -80,7 +80,7 @@ kind: Secret
 metadata:
   annotations:
     secretgen.carvel.dev/image-pull-secret: ""
-  name: secret
+  name: placeholder-secret
   namespace: sg-test3
 type: kubernetes.io/dockerconfigjson
 data:
@@ -116,14 +116,12 @@ stringData:
 	cleanUp()
 	defer cleanUp()
 
-	logger.Section("Deploy", func() {
+	logger.Section("Deploy and Check imported secrets were created", func() {
 		kapp.RunWithOpts([]string{"deploy", "-f", "-", "-a", name},
 			RunOpts{StdinReader: strings.NewReader(yaml1)})
-	})
 
-	logger.Section("Check imported secrets were created", func() {
 		for _, ns := range []string{"sg-test2", "sg-test3"} {
-			out := waitUntilSecretInNsPopulated(t, kubectl, ns, "secret", func(secret *corev1.Secret) bool {
+			out := waitUntilSecretInNsPopulated(t, kubectl, ns, "placeholder-secret", func(secret *corev1.Secret) bool {
 				return len(secret.Data[".dockerconfigjson"]) > 20
 			})
 
@@ -140,14 +138,12 @@ stringData:
 		}
 	})
 
-	logger.Section("Update secret", func() {
+	logger.Section("Update secret and verify update is synced", func() {
 		kapp.RunWithOpts([]string{"deploy", "-f", "-", "-a", name, "-p"},
 			RunOpts{StdinReader: strings.NewReader(yaml2)})
-	})
 
-	logger.Section("Check imported secrets were updated", func() {
 		for _, ns := range []string{"sg-test2", "sg-test3"} {
-			out := waitUntilSecretInNsPopulated(t, kubectl, ns, "secret", func(secret *corev1.Secret) bool {
+			out := waitUntilSecretInNsPopulated(t, kubectl, ns, "placeholder-secret", func(secret *corev1.Secret) bool {
 				return strings.Contains(string(secret.Data[".dockerconfigjson"]), "user2")
 			})
 
@@ -159,15 +155,15 @@ stringData:
 			expected := `{"auths":{"www.sg-test1-server.com":{"username":"sg-test1-secret-user2","password":"sg-test1-secret-password2","auth":"sgtest1-notbase64-2"}}}`
 			require.Equal(t, "kubernetes.io/dockerconfigjson", string(secret.Type))
 			assert.Equal(t, expected, string(secret.Data[".dockerconfigjson"]))
-
 		}
 	})
 
 	logger.Section("Delete export to see exported secrets deleted", func() {
 		kubectl.RunWithOpts([]string{"delete", "secretexport", "secret", "-n", "sg-test1"},
 			RunOpts{NoNamespace: true})
+
 		for _, ns := range []string{"sg-test2", "sg-test3"} {
-			out := waitUntilSecretInNsPopulated(t, kubectl, ns, "secret", func(secret *corev1.Secret) bool {
+			out := waitUntilSecretInNsPopulated(t, kubectl, ns, "placeholder-secret", func(secret *corev1.Secret) bool {
 				return len(secret.Data[".dockerconfigjson"]) < 20
 			})
 
