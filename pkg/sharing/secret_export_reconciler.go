@@ -4,17 +4,17 @@
 package sharing
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/go-logr/logr"
 	sgv1alpha1 "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/apis/secretgen/v1alpha1"
-	sgclient "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/client/clientset/versioned"
 	"github.com/vmware-tanzu/carvel-secretgen-controller/pkg/reconciler"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/kubernetes"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -24,17 +24,16 @@ import (
 // SecretExportReconciler watches SecretExport CRs to record which Secret resources are exported
 // so that they could be imported in other namespaces.
 type SecretExportReconciler struct {
-	sgClient      sgclient.Interface
-	coreClient    kubernetes.Interface
+	client        client.Client
 	secretExports *SecretExports
 	log           logr.Logger
 }
 
 var _ reconcile.Reconciler = &SecretExportReconciler{}
 
-func NewSecretExportReconciler(sgClient sgclient.Interface, coreClient kubernetes.Interface,
+func NewSecretExportReconciler(client client.Client,
 	secretExports *SecretExports, log logr.Logger) *SecretExportReconciler {
-	return &SecretExportReconciler{sgClient, coreClient, secretExports, log}
+	return &SecretExportReconciler{client, secretExports, log}
 }
 
 func (r *SecretExportReconciler) AttachWatches(controller controller.Controller) error {
@@ -63,10 +62,14 @@ func (r *SecretExportReconciler) WarmUp() error {
 	r.log.Info("Running WarmUp")
 	defer func() { r.log.Info("Done running WarmUp") }()
 
-	secretExportList, err := r.sgClient.SecretgenV1alpha1().SecretExports("").List(metav1.ListOptions{})
+	var secretExportList sgv1alpha1.SecretExportList
+
+	err := r.client.List(context.TODO(), &secretExportList)
 	if err != nil {
 		return err
 	}
+
+	r.log.Info("Warming up with N exports", "len", len(secretExportList.Items))
 
 	for _, se := range secretExportList.Items {
 		_, err := r.reconcile(&se, r.log)
@@ -84,8 +87,9 @@ func (r *SecretExportReconciler) Reconcile(request reconcile.Request) (reconcile
 
 	log.Info("Reconciling")
 
-	secretExport, err := r.sgClient.SecretgenV1alpha1().SecretExports(
-		request.Namespace).Get(request.Name, metav1.GetOptions{})
+	var secretExport sgv1alpha1.SecretExport
+
+	err := r.client.Get(context.TODO(), request.NamespacedName, &secretExport)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			r.secretExports.Unexport(&sgv1alpha1.SecretExport{
@@ -102,7 +106,7 @@ func (r *SecretExportReconciler) Reconcile(request reconcile.Request) (reconcile
 	}
 
 	if secretExport.DeletionTimestamp != nil {
-		r.secretExports.Unexport(secretExport)
+		r.secretExports.Unexport(&secretExport)
 		// Do not requeue as there is nothing to do
 		return reconcile.Result{}, nil
 	}
@@ -113,11 +117,17 @@ func (r *SecretExportReconciler) Reconcile(request reconcile.Request) (reconcile
 	}
 
 	status.SetReconciling(secretExport.ObjectMeta)
+
+	reconcileResult, reconcileErr := status.WithReconcileCompleted(r.reconcile(&secretExport, log))
+
 	// Saving the status helps trigger a cascade so that
 	// the Secrets reconciler will also respond if needed
-	defer r.updateStatus(secretExport)
+	err = r.updateStatus(secretExport)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
 
-	return status.WithReconcileCompleted(r.reconcile(secretExport, log))
+	return reconcileResult, reconcileErr
 }
 
 // reconcile looks for the Secret corresponding to the SecretExport Request that we're reconciling.
@@ -133,8 +143,10 @@ func (r *SecretExportReconciler) reconcile(secretExport *sgv1alpha1.SecretExport
 		return reconcile.Result{}, reconciler.TerminalReconcileErr{err}
 	}
 
-	secret, err := r.coreClient.CoreV1().Secrets(
-		secretExport.Namespace).Get(secretExport.Name, metav1.GetOptions{})
+	var secret corev1.Secret
+	secretNN := types.NamespacedName{Namespace: secretExport.Namespace, Name: secretExport.Name}
+
+	err = r.client.Get(context.TODO(), secretNN, &secret)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Drop the Secret from the shared cache.
@@ -149,23 +161,16 @@ func (r *SecretExportReconciler) reconcile(secretExport *sgv1alpha1.SecretExport
 	// An update to export lets others know to reevaluate export
 	secretExport.Status.ObservedSecretResourceVersion = secret.ResourceVersion
 
-	r.secretExports.Export(secretExport, secret)
+	r.secretExports.Export(secretExport, &secret)
 
 	// Do not requeue since we found exported secret
 	return reconcile.Result{}, nil
 }
 
-func (r *SecretExportReconciler) updateStatus(secretExport *sgv1alpha1.SecretExport) error {
-	existingSecretExport, err := r.sgClient.SecretgenV1alpha1().SecretExports(
-		secretExport.Namespace).Get(secretExport.Name, metav1.GetOptions{})
-	if err != nil {
-		return fmt.Errorf("Fetching secret export: %s", err)
-	}
+func (r *SecretExportReconciler) updateStatus(secretExport sgv1alpha1.SecretExport) error {
+	r.log.Info("Updating secret export")
 
-	existingSecretExport.Status = secretExport.Status
-
-	_, err = r.sgClient.SecretgenV1alpha1().SecretExports(
-		existingSecretExport.Namespace).UpdateStatus(existingSecretExport)
+	err := r.client.Status().Update(context.TODO(), &secretExport)
 	if err != nil {
 		return fmt.Errorf("Updating secret export status: %s", err)
 	}

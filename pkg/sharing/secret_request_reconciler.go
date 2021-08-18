@@ -4,18 +4,18 @@
 package sharing
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/go-logr/logr"
 	sgv1alpha1 "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/apis/secretgen/v1alpha1"
-	sgclient "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/client/clientset/versioned"
 	"github.com/vmware-tanzu/carvel-secretgen-controller/pkg/reconciler"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	// metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -24,16 +24,14 @@ import (
 
 // SecretRequestReconciler creates an imported Secret if it was exported.
 type SecretRequestReconciler struct {
-	sgClient   sgclient.Interface
-	coreClient kubernetes.Interface
-	log        logr.Logger
+	client client.Client
+	log    logr.Logger
 }
 
 var _ reconcile.Reconciler = &SecretRequestReconciler{}
 
-func NewSecretRequestReconciler(sgClient sgclient.Interface,
-	coreClient kubernetes.Interface, log logr.Logger) *SecretRequestReconciler {
-	return &SecretRequestReconciler{sgClient, coreClient, log}
+func NewSecretRequestReconciler(client client.Client, log logr.Logger) *SecretRequestReconciler {
+	return &SecretRequestReconciler{client, log}
 }
 
 func (r *SecretRequestReconciler) AttachWatches(controller controller.Controller) error {
@@ -105,8 +103,9 @@ func (r *SecretRequestReconciler) mapExportsToRequests(a handler.MapObject) []re
 func (r *SecretRequestReconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	log := r.log.WithValues("request", request)
 
-	secretdRequest, err := r.sgClient.SecretgenV1alpha1().SecretRequests(
-		request.Namespace).Get(request.Name, metav1.GetOptions{})
+	var secretRequest sgv1alpha1.SecretRequest
+
+	err := r.client.Get(context.TODO(), request.NamespacedName, &secretRequest)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Do not requeue as there is nothing to do when request is deleted
@@ -116,25 +115,31 @@ func (r *SecretRequestReconciler) Reconcile(request reconcile.Request) (reconcil
 		return reconcile.Result{Requeue: true}, err
 	}
 
-	if secretdRequest.DeletionTimestamp != nil {
+	if secretRequest.DeletionTimestamp != nil {
 		// Do not requeue as there is nothing to do
 		// Associated secret has owned ref so it's going to be deleted
 		return reconcile.Result{}, nil
 	}
 
 	status := &reconciler.Status{
-		secretdRequest.Status.GenericStatus,
-		func(st sgv1alpha1.GenericStatus) { secretdRequest.Status.GenericStatus = st },
+		secretRequest.Status.GenericStatus,
+		func(st sgv1alpha1.GenericStatus) { secretRequest.Status.GenericStatus = st },
 	}
 
-	status.SetReconciling(secretdRequest.ObjectMeta)
-	defer r.updateStatus(secretdRequest)
+	status.SetReconciling(secretRequest.ObjectMeta)
 
-	return status.WithReconcileCompleted(r.reconcile(secretdRequest, log))
+	reconcileResult, reconcileErr := status.WithReconcileCompleted(r.reconcile(secretRequest, log))
+
+	err = r.updateStatus(secretRequest)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	return reconcileResult, reconcileErr
 }
 
 func (r *SecretRequestReconciler) reconcile(
-	secretRequest *sgv1alpha1.SecretRequest, log logr.Logger) (reconcile.Result, error) {
+	secretRequest sgv1alpha1.SecretRequest, log logr.Logger) (reconcile.Result, error) {
 
 	err := secretRequest.Validate()
 	if err != nil {
@@ -147,8 +152,13 @@ func (r *SecretRequestReconciler) reconcile(
 	notOfferedMsg := "Export was not offered (even though requested)"
 	notAllowedMsg := "Export was not allowed (even though requested)"
 
-	secretExport, err := r.sgClient.SecretgenV1alpha1().SecretExports(
-		secretRequest.Spec.FromNamespace).Get(secretRequest.Name, metav1.GetOptions{})
+	var secretExport sgv1alpha1.SecretExport
+	secretExportNN := types.NamespacedName{
+		Namespace: secretRequest.Spec.FromNamespace,
+		Name:      secretRequest.Name,
+	}
+
+	err = r.client.Get(context.TODO(), secretExportNN, &secretExport)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// TODO Should we actually delete offered secret that we previously created?
@@ -178,7 +188,7 @@ func (r *SecretRequestReconciler) reconcile(
 }
 
 func (r *SecretRequestReconciler) isExportAllowed(
-	export *sgv1alpha1.SecretExport, secretRequest *sgv1alpha1.SecretRequest) bool {
+	export sgv1alpha1.SecretExport, secretRequest sgv1alpha1.SecretRequest) bool {
 
 	if export.Spec.ToNamespace == secretRequest.Namespace {
 		return true
@@ -192,10 +202,15 @@ func (r *SecretRequestReconciler) isExportAllowed(
 }
 
 func (r *SecretRequestReconciler) copyAssociatedSecret(
-	secretRequest *sgv1alpha1.SecretRequest) (reconcile.Result, error) {
+	secretRequest sgv1alpha1.SecretRequest) (reconcile.Result, error) {
 
-	srcSecret, err := r.coreClient.CoreV1().Secrets(
-		secretRequest.Spec.FromNamespace).Get(secretRequest.Name, metav1.GetOptions{})
+	var srcSecret corev1.Secret
+	srcSecretNN := types.NamespacedName{
+		Namespace: secretRequest.Spec.FromNamespace,
+		Name:      secretRequest.Name,
+	}
+
+	err := r.client.Get(context.TODO(), srcSecretNN, &srcSecret)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// TODO Should we actually delete offered secret that we previously created?
@@ -211,18 +226,23 @@ func (r *SecretRequestReconciler) copyAssociatedSecret(
 		return reconcile.Result{Requeue: true}, fmt.Errorf("Getting exported secret: %s", err)
 	}
 
-	secret := reconciler.NewSecret(secretRequest, nil)
+	secret := reconciler.NewSecret(&secretRequest, nil)
 	secret.ApplySecret(srcSecret)
 
-	_, err = r.coreClient.CoreV1().Secrets(secretRequest.Namespace).Create(secret.AsSecret())
+	err = r.client.Create(context.TODO(), secret.AsSecret())
 	switch {
 	case err == nil:
 		// Do not requeue since we copied secret successfully
 		return reconcile.Result{}, nil
 
 	case errors.IsAlreadyExists(err):
-		existingSecret, err := r.coreClient.CoreV1().Secrets(secretRequest.Namespace).Get(
-			secretRequest.Name, metav1.GetOptions{})
+		var existingSecret corev1.Secret
+		existingSecretNN := types.NamespacedName{
+			Namespace: secretRequest.Namespace,
+			Name:      secretRequest.Name,
+		}
+
+		err := r.client.Get(context.TODO(), existingSecretNN, &existingSecret)
 		if err != nil {
 			// Requeue to try to fetch a bit later
 			return reconcile.Result{Requeue: true}, fmt.Errorf("Getting imported secret: %s", err)
@@ -230,7 +250,7 @@ func (r *SecretRequestReconciler) copyAssociatedSecret(
 
 		secret.AssociateExistingSecret(existingSecret)
 
-		_, err = r.coreClient.CoreV1().Secrets(secretRequest.Namespace).Update(secret.AsSecret())
+		err = r.client.Update(context.TODO(), secret.AsSecret())
 		if err != nil {
 			// Requeue to try to update a bit later
 			return reconcile.Result{Requeue: true}, fmt.Errorf("Updating imported secret: %s", err)
@@ -246,10 +266,21 @@ func (r *SecretRequestReconciler) copyAssociatedSecret(
 }
 
 func (r *SecretRequestReconciler) deleteAssociatedSecret(
-	secretRequest *sgv1alpha1.SecretRequest) error {
+	secretRequest sgv1alpha1.SecretRequest) error {
 
-	err := r.coreClient.CoreV1().Secrets(secretRequest.Namespace).Delete(
-		secretRequest.Name, &metav1.DeleteOptions{})
+	var secret corev1.Secret
+	secretNN := types.NamespacedName{
+		Namespace: secretRequest.Namespace,
+		Name:      secretRequest.Name,
+	}
+
+	// TODO get rid of extra get
+	err := r.client.Get(context.TODO(), secretNN, &secret)
+	if err != nil {
+		return nil
+	}
+
+	err = r.client.Delete(context.TODO(), &secret)
 	if err != nil && !errors.IsNotFound(err) {
 		return fmt.Errorf("Deleting associated secret: %s", err)
 	}
@@ -257,20 +288,11 @@ func (r *SecretRequestReconciler) deleteAssociatedSecret(
 }
 
 func (r *SecretRequestReconciler) updateStatus(
-	secretRequest *sgv1alpha1.SecretRequest) error {
+	secretRequest sgv1alpha1.SecretRequest) error {
 
-	existingSecretRequest, err := r.sgClient.SecretgenV1alpha1().SecretRequests(
-		secretRequest.Namespace).Get(secretRequest.Name, metav1.GetOptions{})
+	err := r.client.Status().Update(context.TODO(), &secretRequest)
 	if err != nil {
-		return fmt.Errorf("Fetching secret export: %s", err)
-	}
-
-	existingSecretRequest.Status = secretRequest.Status
-
-	_, err = r.sgClient.SecretgenV1alpha1().SecretRequests(
-		secretRequest.Namespace).UpdateStatus(secretRequest)
-	if err != nil {
-		return fmt.Errorf("Updating secret export status: %s", err)
+		return fmt.Errorf("Updating secret request status: %s", err)
 	}
 
 	return nil

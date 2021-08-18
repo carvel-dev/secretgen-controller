@@ -4,6 +4,7 @@
 package sharing
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"reflect"
@@ -12,12 +13,10 @@ import (
 
 	"github.com/go-logr/logr"
 	sgv1alpha1 "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/apis/secretgen/v1alpha1"
-	sgclient "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/client/clientset/versioned"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/kubernetes"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -29,17 +28,16 @@ import (
 // it gets filled with a combined image pull secret that matched
 // import criteria for that Secret.
 type SecretReconciler struct {
-	sgClient      sgclient.Interface
-	coreClient    kubernetes.Interface
+	client        client.Client
 	secretExports *SecretExports
 	log           logr.Logger
 }
 
 var _ reconcile.Reconciler = &SecretReconciler{}
 
-func NewSecretReconciler(sgClient sgclient.Interface, coreClient kubernetes.Interface,
+func NewSecretReconciler(client client.Client,
 	secretExports *SecretExports, log logr.Logger) *SecretReconciler {
-	return &SecretReconciler{sgClient, coreClient, secretExports, log}
+	return &SecretReconciler{client, secretExports, log}
 }
 
 func (r *SecretReconciler) AttachWatches(controller controller.Controller) error {
@@ -54,13 +52,19 @@ func (r *SecretReconciler) AttachWatches(controller controller.Controller) error
 }
 
 func (r *SecretReconciler) mapSecretExportToSecret(a handler.MapObject) []reconcile.Request {
+	r.log.Info("TODO doing very expensive call")
+
+	var secretList corev1.SecretList
+
 	// TODO expensive call on every secret export update (no cached client used, etc)
-	secretList, err := r.coreClient.CoreV1().Secrets("").List(metav1.ListOptions{})
+	err := r.client.List(context.TODO(), &secretList)
 	if err != nil {
 		r.log.Error(err, "Failed fetching list of all secrets")
 		// TODO what should we really do here?
 		return nil
 	}
+
+	r.log.Info("TODO planning to reconcile", "len", len(secretList.Items))
 
 	var result []reconcile.Request
 	for _, secret := range secretList.Items {
@@ -76,10 +80,11 @@ func (r *SecretReconciler) mapSecretExportToSecret(a handler.MapObject) []reconc
 
 func (r *SecretReconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	log := r.log.WithValues("request", request)
-
 	log.Info("Reconciling")
 
-	secret, err := r.coreClient.CoreV1().Secrets(request.Namespace).Get(request.Name, metav1.GetOptions{})
+	var secret corev1.Secret
+
+	err := r.client.Get(context.TODO(), request.NamespacedName, &secret)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return reconcile.Result{}, nil
@@ -92,10 +97,10 @@ func (r *SecretReconciler) Reconcile(request reconcile.Request) (reconcile.Resul
 		return reconcile.Result{}, nil
 	}
 
-	return r.reconcile(secret, secret.DeepCopy(), log)
+	return r.reconcile(secret, *secret.DeepCopy(), log)
 }
 
-func (r *SecretReconciler) reconcile(secret, originalSecret *corev1.Secret, log logr.Logger) (reconcile.Result, error) {
+func (r *SecretReconciler) reconcile(secret, originalSecret corev1.Secret, log logr.Logger) (reconcile.Result, error) {
 	const (
 		imagePullSecretAnnKey = "secretgen.carvel.dev/image-pull-secret"
 	)
@@ -104,7 +109,7 @@ func (r *SecretReconciler) reconcile(secret, originalSecret *corev1.Secret, log 
 		return reconcile.Result{}, nil
 	}
 
-	log.Info("Detected annotation " + imagePullSecretAnnKey)
+	log.Info("Reconciling secret with annotation " + imagePullSecretAnnKey)
 
 	// Note that "type" is immutable on a secret
 	if secret.Type != corev1.SecretTypeDockerConfigJson {
@@ -139,8 +144,8 @@ func (r *SecretReconciler) reconcile(secret, originalSecret *corev1.Secret, log 
 	return r.updateSecret(secret, status, originalSecret)
 }
 
-func (r *SecretReconciler) updateSecret(secret *corev1.Secret, status SecretStatus,
-	originalSecret *corev1.Secret) (reconcile.Result, error) {
+func (r *SecretReconciler) updateSecret(secret corev1.Secret, status SecretStatus,
+	originalSecret corev1.Secret) (reconcile.Result, error) {
 
 	const (
 		statusFieldAnnKey = "secretgen.carvel.dev/status"
@@ -162,7 +167,7 @@ func (r *SecretReconciler) updateSecret(secret *corev1.Secret, status SecretStat
 	}
 
 	// TODO bother to retry to avoid having to recalculate matched secrets?
-	_, err = r.coreClient.CoreV1().Secrets(secret.Namespace).Update(secret)
+	err = r.client.Update(context.TODO(), &secret)
 	if err != nil {
 		// Requeue to try to update a bit later
 		return reconcile.Result{Requeue: true}, fmt.Errorf("Updating secret: %s", err)

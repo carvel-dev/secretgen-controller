@@ -84,22 +84,26 @@ func main() {
 	secretExports := sharing.NewSecretExports(log.WithName("secretexports"))
 
 	{
-		secretExportReconciler := sharing.NewSecretExportReconciler(sgClient, coreClient, secretExports, log.WithName("secexp"))
-		err := registerCtrlMinimal("secexp", mgr, secretExportReconciler)
-		exitIfErr(entryLog, "registering secexp controller", err)
+		secretExportReconciler := sharing.NewSecretExportReconciler(
+			mgr.GetClient(), secretExports, log.WithName("secexp"))
 
-		err = secretExportReconciler.WarmUp()
+		err := secretExportReconciler.WarmUp()
 		exitIfErr(entryLog, "warmingup secexp controller", err)
+
+		err = registerCtrlMinimal("secexp", mgr, secretExportReconciler)
+		exitIfErr(entryLog, "registering secexp controller", err)
 	}
 
 	{
-		secretRequestReconciler := sharing.NewSecretRequestReconciler(sgClient, coreClient, log.WithName("secreq"))
+		secretRequestReconciler := sharing.NewSecretRequestReconciler(
+			mgr.GetClient(), log.WithName("secreq"))
 		err := registerCtrlMinimal("secreq", mgr, secretRequestReconciler)
 		exitIfErr(entryLog, "registering secreq controller", err)
 	}
 
 	// Start after warming up secret exports
-	secretReconciler := sharing.NewSecretReconciler(sgClient, coreClient, secretExports, log.WithName("secret"))
+	secretReconciler := sharing.NewSecretReconciler(
+		mgr.GetClient(), secretExports, log.WithName("secret"))
 	err = registerCtrlMinimal("secret", mgr, secretReconciler)
 	exitIfErr(entryLog, "registering secret controller", err)
 
