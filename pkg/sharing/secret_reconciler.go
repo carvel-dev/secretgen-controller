@@ -52,7 +52,7 @@ func (r *SecretReconciler) AttachWatches(controller controller.Controller) error
 
 	return controller.Watch(&source.Kind{Type: &sgv1alpha1.SecretExport{}}, &enqueueSecretExportToSecret{
 		SecretExports: r.secretExports,
-		ToRequests:    handler.ToRequestsFunc(r.mapSecretExportToSecret),
+		ToRequests:    r.mapSecretExportToSecret,
 		Log:           r.log,
 	})
 }
@@ -209,7 +209,7 @@ func (*SecretReconciler) statusSecretNames(secrets []*corev1.Secret) []string {
 // Secret reconile requests.
 type enqueueSecretExportToSecret struct {
 	SecretExports *SecretExports
-	ToRequests    handler.Mapper
+	ToRequests    handler.MapFunc
 	Log           logr.Logger
 }
 
@@ -226,7 +226,7 @@ func (e *enqueueSecretExportToSecret) Update(evt event.UpdateEvent, q workqueue.
 		e.Log.Info("Skipping SecretExport update since status did not change")
 		return // Skip when status of SecretExport did not change
 	}
-	e.mapAndEnqueue(q, handler.MapObject{Meta: evt.MetaNew, Object: evt.ObjectNew})
+	e.mapAndEnqueue(q, evt.ObjectNew)
 }
 
 // Delete always enqueues but first clears the export cache
@@ -237,19 +237,19 @@ func (e *enqueueSecretExportToSecret) Delete(evt event.DeleteEvent, q workqueue.
 	// (which also clears the shared cache).
 	e.SecretExports.Unexport(&sgv1alpha1.SecretExport{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      evt.Meta.GetName(),
-			Namespace: evt.Meta.GetNamespace(),
+			Name:      evt.Object.GetName(),
+			Namespace: evt.Object.GetNamespace(),
 		},
 	})
-	e.mapAndEnqueue(q, handler.MapObject{Meta: evt.Meta, Object: evt.Object})
+	e.mapAndEnqueue(q, evt.Object)
 }
 
 // Generic does not do anything
 func (e *enqueueSecretExportToSecret) Generic(evt event.GenericEvent, q workqueue.RateLimitingInterface) {
 }
 
-func (e *enqueueSecretExportToSecret) mapAndEnqueue(q workqueue.RateLimitingInterface, object handler.MapObject) {
-	for _, req := range e.ToRequests.Map(object) {
+func (e *enqueueSecretExportToSecret) mapAndEnqueue(q workqueue.RateLimitingInterface, object client.Object) {
+	for _, req := range e.ToRequests(object) {
 		q.Add(req)
 	}
 }
