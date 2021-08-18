@@ -112,7 +112,7 @@ func (r *SecretReconciler) reconcile(secret, originalSecret *corev1.Secret, log 
 			Conditions: []sgv1alpha1.Condition{{
 				Type:    sgv1alpha1.ReconcileFailed,
 				Status:  corev1.ConditionTrue,
-				Message: "Expected secret to have corev1.SecretTypeDockerConfigJson but did not",
+				Message: "Expected secret to have type=corev1.SecretTypeDockerConfigJson, but did not",
 			}},
 		}
 		return r.updateSecret(secret, status, originalSecret)
@@ -148,8 +148,7 @@ func (r *SecretReconciler) updateSecret(secret *corev1.Secret, status SecretStat
 
 	encodedStatus, err := json.Marshal(status)
 	if err != nil {
-		// Requeue to try to update a bit later
-		return reconcile.Result{Requeue: true}, fmt.Errorf("Marshaling secret status: %s", err)
+		panic(fmt.Sprintf("Internal inconsistency: failed to marshal secret status: %s", err))
 	}
 
 	if secret.Annotations == nil {
