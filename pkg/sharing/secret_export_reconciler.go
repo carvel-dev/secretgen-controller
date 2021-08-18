@@ -120,7 +120,7 @@ func (r *SecretExportReconciler) Reconcile(request reconcile.Request) (reconcile
 	return status.WithReconcileCompleted(r.reconcile(secretExport, log))
 }
 
-// Reconcile looks for the Secret corresponding to the SecretExport Request that we're reconciling.
+// reconcile looks for the Secret corresponding to the SecretExport Request that we're reconciling.
 func (r *SecretExportReconciler) reconcile(secretExport *sgv1alpha1.SecretExport, log logr.Logger) (reconcile.Result, error) {
 	// Clear out observed resource version
 	secretExport.Status.ObservedSecretResourceVersion = ""
