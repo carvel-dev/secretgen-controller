@@ -1,0 +1,250 @@
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: certificates.secretgen.k14s.io
+spec:
+  additionalPrinterColumns:
+  - JSONPath: .status.friendlyDescription
+    description: Friendly description
+    name: Description
+    type: string
+  - JSONPath: .metadata.creationTimestamp
+    description: Time passed since creation
+    name: Age
+    type: date
+  group: secretgen.k14s.io
+  names:
+    kind: Certificate
+    listKind: CertificateList
+    plural: certificates
+    singular: certificate
+  scope: Namespaced
+  subresources:
+    status: {}
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: passwords.secretgen.k14s.io
+spec:
+  additionalPrinterColumns:
+  - JSONPath: .status.friendlyDescription
+    description: Friendly description
+    name: Description
+    type: string
+  - JSONPath: .metadata.creationTimestamp
+    description: Time passed since creation
+    name: Age
+    type: date
+  group: secretgen.k14s.io
+  names:
+    kind: Password
+    listKind: PasswordList
+    plural: passwords
+    singular: password
+  scope: Namespaced
+  subresources:
+    status: {}
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: rsakeys.secretgen.k14s.io
+spec:
+  additionalPrinterColumns:
+  - JSONPath: .status.friendlyDescription
+    description: Friendly description
+    name: Description
+    type: string
+  - JSONPath: .metadata.creationTimestamp
+    description: Time passed since creation
+    name: Age
+    type: date
+  group: secretgen.k14s.io
+  names:
+    kind: RSAKey
+    listKind: RSAKeyList
+    plural: rsakeys
+    singular: rsakey
+  scope: Namespaced
+  subresources:
+    status: {}
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: secretrequests.secretgen.k14s.io
+spec:
+  additionalPrinterColumns:
+  - JSONPath: .status.friendlyDescription
+    description: Friendly description
+    name: Description
+    type: string
+  - JSONPath: .metadata.creationTimestamp
+    description: Time passed since creation
+    name: Age
+    type: date
+  group: secretgen.k14s.io
+  names:
+    kind: SecretRequest
+    listKind: SecretRequestList
+    plural: secretrequests
+    singular: secretrequest
+  scope: Namespaced
+  subresources:
+    status: {}
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: secretexports.secretgen.k14s.io
+spec:
+  additionalPrinterColumns:
+  - JSONPath: .status.friendlyDescription
+    description: Friendly description
+    name: Description
+    type: string
+  - JSONPath: .metadata.creationTimestamp
+    description: Time passed since creation
+    name: Age
+    type: date
+  group: secretgen.k14s.io
+  names:
+    kind: SecretExport
+    listKind: SecretExportList
+    plural: secretexports
+    singular: secretexport
+  scope: Namespaced
+  subresources:
+    status: {}
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: sshkeys.secretgen.k14s.io
+spec:
+  additionalPrinterColumns:
+  - JSONPath: .status.friendlyDescription
+    description: Friendly description
+    name: Description
+    type: string
+  - JSONPath: .metadata.creationTimestamp
+    description: Time passed since creation
+    name: Age
+    type: date
+  group: secretgen.k14s.io
+  names:
+    kind: SSHKey
+    listKind: SSHKeyList
+    plural: sshkeys
+    singular: sshkey
+  scope: Namespaced
+  subresources:
+    status: {}
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    kbld.k14s.io/images: |
+      - Metas:
+        - Path: /Users/jkimmel/code/go/src/github.com/vmware-tanzu/carvel-secretgen-controller
+          Type: local
+        - Dirty: false
+          RemoteURL: git@github.com:vmware-tanzu/carvel-secretgen-controller.git
+          SHA: f9a5af83ece6ad1b9c3a87d2f8fe8267ea3c8ea2
+          Type: git
+        URL: index.docker.io/k8slt/secretgen-controller-alpha@sha256:532082ed35549914fdd1f6c7ff373a2881876cbc11e316f865610eb5853cb841
+  name: secretgen-controller
+  namespace: secretgen-controller
+spec:
+  replicas: 1
+  revisionHistoryLimit: 0
+  selector:
+    matchLabels:
+      app: secretgen-controller
+  template:
+    metadata:
+      labels:
+        app: secretgen-controller
+    spec:
+      containers:
+      - image: index.docker.io/k8slt/secretgen-controller-alpha@sha256:532082ed35549914fdd1f6c7ff373a2881876cbc11e316f865610eb5853cb841
+        name: secretgen-controller
+        resources:
+          requests:
+            cpu: 120m
+            memory: 100Mi
+        securityContext:
+          runAsGroup: 2000
+          runAsUser: 1000
+      securityContext:
+        fsGroup: 3000
+      serviceAccount: secretgen-controller-sa
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: secretgen-controller
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: secretgen-controller-sa
+  namespace: secretgen-controller
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: secretgen-controller-cluster-role
+rules:
+- apiGroups:
+  - secretgen.k14s.io
+  resources:
+  - '*'
+  verbs:
+  - '*'
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - '*'
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: secretgen-controller-cluster-role-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: secretgen-controller-cluster-role
+subjects:
+- kind: ServiceAccount
+  name: secretgen-controller-sa
+  namespace: secretgen-controller
