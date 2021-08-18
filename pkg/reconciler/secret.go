@@ -88,7 +88,8 @@ func (p *Secret) ApplyTemplate(template sgv1alpha1.SecretTemplate) error {
 	return nil
 }
 
-func (p *Secret) ApplySecret(otherSecret *corev1.Secret) {
+// ApplySecret fills in annotations, labels, type, and data on top of the Secret.
+func (p *Secret) ApplySecret(otherSecret corev1.Secret) {
 	if len(otherSecret.Annotations) > 0 {
 		if p.secret.Annotations == nil {
 			p.secret.Annotations = map[string]string{}
@@ -127,7 +128,7 @@ func (p *Secret) ApplySecret(otherSecret *corev1.Secret) {
 }
 
 // AssociateExistingSecret copies the UID and ResourceVersion from other into the receiver
-func (p *Secret) AssociateExistingSecret(otherSecret *corev1.Secret) {
+func (p *Secret) AssociateExistingSecret(otherSecret corev1.Secret) {
 	p.secret.UID = otherSecret.UID
 	p.secret.ResourceVersion = otherSecret.ResourceVersion
 }

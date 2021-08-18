@@ -30,17 +30,16 @@ import (
 )
 
 const (
+	// Version is the version of secretgen-controller
 	Version = "0.4.0-alpha.1"
 )
 
 var (
-	log             = logf.Log.WithName("secretgen-controller")
-	ctrlConcurrency = 10
-	ctrlNamespace   = ""
+	log           = logf.Log.WithName("sg")
+	ctrlNamespace = ""
 )
 
 func main() {
-	flag.IntVar(&ctrlConcurrency, "concurrency", 10, "Max concurrent reconciles")
 	flag.StringVar(&ctrlNamespace, "namespace", "", "Namespace to watch")
 	flag.Parse()
 
@@ -84,22 +83,26 @@ func main() {
 	secretExports := sharing.NewSecretExports(log.WithName("secretexports"))
 
 	{
-		secretExportReconciler := sharing.NewSecretExportReconciler(sgClient, coreClient, secretExports, log.WithName("secexp"))
-		err := registerCtrlMinimal("secexp", mgr, secretExportReconciler)
-		exitIfErr(entryLog, "registering secexp controller", err)
+		secretExportReconciler := sharing.NewSecretExportReconciler(
+			mgr.GetClient(), secretExports, log.WithName("secexp"))
 
-		err = secretExportReconciler.WarmUp()
+		err := secretExportReconciler.WarmUp()
 		exitIfErr(entryLog, "warmingup secexp controller", err)
+
+		err = registerCtrlMinimal("secexp", mgr, secretExportReconciler)
+		exitIfErr(entryLog, "registering secexp controller", err)
 	}
 
 	{
-		secretRequestReconciler := sharing.NewSecretRequestReconciler(sgClient, coreClient, log.WithName("secreq"))
+		secretRequestReconciler := sharing.NewSecretRequestReconciler(
+			mgr.GetClient(), log.WithName("secreq"))
 		err := registerCtrlMinimal("secreq", mgr, secretRequestReconciler)
 		exitIfErr(entryLog, "registering secreq controller", err)
 	}
 
 	// Start after warming up secret exports
-	secretReconciler := sharing.NewSecretReconciler(sgClient, coreClient, secretExports, log.WithName("secret"))
+	secretReconciler := sharing.NewSecretReconciler(
+		mgr.GetClient(), secretExports, log.WithName("secret"))
 	err = registerCtrlMinimal("secret", mgr, secretReconciler)
 	exitIfErr(entryLog, "registering secret controller", err)
 
@@ -113,11 +116,12 @@ func registerCtrl(desc string, mgr manager.Manager,
 	reconciler reconcile.Reconciler, src source.Source) (controller.Controller, error) {
 
 	ctrlOpts := controller.Options{
-		Reconciler:              reconciler,
-		MaxConcurrentReconciles: ctrlConcurrency,
+		Reconciler: reconciler,
+		// Default MaxConcurrentReconciles is 1. Keeping at that
+		// since we are not doing anything that we need to parallelize for.
 	}
 
-	ctrl, err := controller.New("secretgen-controller-"+desc, mgr, ctrlOpts)
+	ctrl, err := controller.New("sg-"+desc, mgr, ctrlOpts)
 	if err != nil {
 		return ctrl, fmt.Errorf("unable to set up secretgen-controller-%s: %s", desc, err)
 	}
@@ -139,11 +143,12 @@ func registerCtrlMinimal(desc string, mgr manager.Manager,
 	reconciler reconcilerWithWatches) error {
 
 	ctrlOpts := controller.Options{
-		Reconciler:              reconciler,
-		MaxConcurrentReconciles: ctrlConcurrency,
+		Reconciler: reconciler,
+		// Default MaxConcurrentReconciles is 1. Keeping at that
+		// since we are not doing anything that we need to parallelize for.
 	}
 
-	ctrl, err := controller.New("secretgen-controller-"+desc, mgr, ctrlOpts)
+	ctrl, err := controller.New("sg-"+desc, mgr, ctrlOpts)
 	if err != nil {
 		return fmt.Errorf("unable to set up secretgen-controller-%s: %s", desc, err)
 	}

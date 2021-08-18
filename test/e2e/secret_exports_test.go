@@ -11,6 +11,7 @@ import (
 
 	"github.com/ghodss/yaml"
 	corev1 "k8s.io/api/core/v1"
+	"github.com/stretchr/testify/require"
 )
 
 func TestExportSuccessful(t *testing.T) {
@@ -169,6 +170,7 @@ stringData:
 		for _, ns := range []string{"sg-test2", "sg-test3"} {
 			_, err := kubectl.RunWithOpts([]string{"get", "secret", "secret", "-n", ns},
 				RunOpts{AllowError: true, NoNamespace: true})
+			require.Error(t, err)
 
 			if !strings.Contains(err.Error(), "(NotFound)") {
 				t.Fatalf("Expected NotFound error but was: %s", err)
