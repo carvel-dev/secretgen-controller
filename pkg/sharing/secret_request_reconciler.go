@@ -144,7 +144,7 @@ func (r *SecretRequestReconciler) reconcile(
 	err := secretRequest.Validate()
 	if err != nil {
 		// Do not requeue as there is nothing this controller can do until secret request is fixed
-		return reconcile.Result{}, err
+		return reconcile.Result{}, reconciler.TerminalReconcileErr{err}
 	}
 
 	log.Info("Reconciling")
@@ -168,7 +168,7 @@ func (r *SecretRequestReconciler) reconcile(
 				return reconcile.Result{Requeue: true}, fmt.Errorf("%s: %s", notOfferedMsg, err)
 			}
 			// Do not requeue since export is not offered
-			return reconcile.Result{}, fmt.Errorf("%s", notOfferedMsg)
+			return reconcile.Result{}, reconciler.TerminalReconcileErr{fmt.Errorf("%s", notOfferedMsg)}
 		}
 		// Requeue to try to find secret export
 		return reconcile.Result{Requeue: true}, fmt.Errorf("Finding export: %s", err)
@@ -178,10 +178,10 @@ func (r *SecretRequestReconciler) reconcile(
 		err := r.deleteAssociatedSecret(secretRequest)
 		if err != nil {
 			// Requeue to try to delete a bit later
-			return reconcile.Result{Requeue: true}, fmt.Errorf("%s: %s", notAllowedMsg, err)
+			return reconcile.Result{Requeue: true}, err
 		}
 		// Do not requeue since export is not allowed
-		return reconcile.Result{}, fmt.Errorf("%s", notAllowedMsg)
+		return reconcile.Result{}, reconciler.TerminalReconcileErr{fmt.Errorf("%s", notAllowedMsg)}
 	}
 
 	return r.copyAssociatedSecret(secretRequest)
