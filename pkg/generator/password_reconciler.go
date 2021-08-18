@@ -35,7 +35,7 @@ func NewPasswordReconciler(sgClient sgclient.Interface,
 func (r *PasswordReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := r.log.WithValues("request", request)
 
-	password, err := r.sgClient.SecretgenV1alpha1().Passwords(request.Namespace).Get(request.Name, metav1.GetOptions{})
+	password, err := r.sgClient.SecretgenV1alpha1().Passwords(request.Namespace).Get(ctx, request.Name, metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			log.Info("Not found")
@@ -55,7 +55,7 @@ func (r *PasswordReconciler) Reconcile(ctx context.Context, request reconcile.Re
 	}
 
 	status.SetReconciling(password.ObjectMeta)
-	defer r.updateStatus(password)
+	defer r.updateStatus(ctx, password)
 
 	return status.WithReconcileCompleted(r.reconcile(ctx, password))
 }
@@ -126,15 +126,15 @@ func (r *PasswordReconciler) generate(password *sgv1alpha1.Password) (string, er
 	return passwordVal.(string), nil
 }
 
-func (r *PasswordReconciler) updateStatus(password *sgv1alpha1.Password) error {
-	existingPassword, err := r.sgClient.SecretgenV1alpha1().Passwords(password.Namespace).Get(password.Name, metav1.GetOptions{})
+func (r *PasswordReconciler) updateStatus(ctx context.Context, password *sgv1alpha1.Password) error {
+	existingPassword, err := r.sgClient.SecretgenV1alpha1().Passwords(password.Namespace).Get(ctx, password.Name, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("Fetching password: %s", err)
 	}
 
 	existingPassword.Status = password.Status
 
-	_, err = r.sgClient.SecretgenV1alpha1().Passwords(existingPassword.Namespace).UpdateStatus(existingPassword)
+	_, err = r.sgClient.SecretgenV1alpha1().Passwords(existingPassword.Namespace).UpdateStatus(ctx, existingPassword, metav1.UpdateOptions{})
 	if err != nil {
 		return fmt.Errorf("Updating password status: %s", err)
 	}

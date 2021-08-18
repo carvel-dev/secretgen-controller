@@ -35,7 +35,7 @@ func NewRSAKeyReconciler(sgClient sgclient.Interface,
 func (r *RSAKeyReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := r.log.WithValues("request", request)
 
-	rsaKey, err := r.sgClient.SecretgenV1alpha1().RSAKeys(request.Namespace).Get(request.Name, metav1.GetOptions{})
+	rsaKey, err := r.sgClient.SecretgenV1alpha1().RSAKeys(request.Namespace).Get(ctx, request.Name, metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			log.Info("Not found")
@@ -55,7 +55,7 @@ func (r *RSAKeyReconciler) Reconcile(ctx context.Context, request reconcile.Requ
 	}
 
 	status.SetReconciling(rsaKey.ObjectMeta)
-	defer r.updateStatus(rsaKey)
+	defer r.updateStatus(ctx, rsaKey)
 
 	return status.WithReconcileCompleted(r.reconcile(ctx, rsaKey))
 }
@@ -119,15 +119,15 @@ func (r *RSAKeyReconciler) generate(rsaKey *sgv1alpha1.RSAKey) (cfgtypes.RSAKey,
 	return rsaKeyVal.(cfgtypes.RSAKey), nil
 }
 
-func (r *RSAKeyReconciler) updateStatus(rsaKey *sgv1alpha1.RSAKey) error {
-	existingRSAKey, err := r.sgClient.SecretgenV1alpha1().RSAKeys(rsaKey.Namespace).Get(rsaKey.Name, metav1.GetOptions{})
+func (r *RSAKeyReconciler) updateStatus(ctx context.Context, rsaKey *sgv1alpha1.RSAKey) error {
+	existingRSAKey, err := r.sgClient.SecretgenV1alpha1().RSAKeys(rsaKey.Namespace).Get(ctx, rsaKey.Name, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("Fetching rsakey: %s", err)
 	}
 
 	existingRSAKey.Status = rsaKey.Status
 
-	_, err = r.sgClient.SecretgenV1alpha1().RSAKeys(existingRSAKey.Namespace).UpdateStatus(existingRSAKey)
+	_, err = r.sgClient.SecretgenV1alpha1().RSAKeys(existingRSAKey.Namespace).UpdateStatus(ctx, existingRSAKey, metav1.UpdateOptions{})
 	if err != nil {
 		return fmt.Errorf("Updating rsakey status: %s", err)
 	}

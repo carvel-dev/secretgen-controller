@@ -35,7 +35,7 @@ func NewSSHKeyReconciler(sgClient sgclient.Interface,
 func (r *SSHKeyReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := r.log.WithValues("request", request)
 
-	sshKey, err := r.sgClient.SecretgenV1alpha1().SSHKeys(request.Namespace).Get(request.Name, metav1.GetOptions{})
+	sshKey, err := r.sgClient.SecretgenV1alpha1().SSHKeys(request.Namespace).Get(ctx, request.Name, metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			log.Info("Not found")
@@ -55,7 +55,7 @@ func (r *SSHKeyReconciler) Reconcile(ctx context.Context, request reconcile.Requ
 	}
 
 	status.SetReconciling(sshKey.ObjectMeta)
-	defer r.updateStatus(sshKey)
+	defer r.updateStatus(ctx, sshKey)
 
 	return status.WithReconcileCompleted(r.reconcile(ctx, sshKey))
 }
@@ -119,15 +119,15 @@ func (r *SSHKeyReconciler) generate(sshKey *sgv1alpha1.SSHKey) (cfgtypes.SSHKey,
 	return sshKeyVal.(cfgtypes.SSHKey), nil
 }
 
-func (r *SSHKeyReconciler) updateStatus(sshKey *sgv1alpha1.SSHKey) error {
-	existingSSHKey, err := r.sgClient.SecretgenV1alpha1().SSHKeys(sshKey.Namespace).Get(sshKey.Name, metav1.GetOptions{})
+func (r *SSHKeyReconciler) updateStatus(ctx context.Context, sshKey *sgv1alpha1.SSHKey) error {
+	existingSSHKey, err := r.sgClient.SecretgenV1alpha1().SSHKeys(sshKey.Namespace).Get(ctx, sshKey.Name, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("Fetching sshkey: %s", err)
 	}
 
 	existingSSHKey.Status = sshKey.Status
 
-	_, err = r.sgClient.SecretgenV1alpha1().SSHKeys(existingSSHKey.Namespace).UpdateStatus(existingSSHKey)
+	_, err = r.sgClient.SecretgenV1alpha1().SSHKeys(existingSSHKey.Namespace).UpdateStatus(ctx, existingSSHKey, metav1.UpdateOptions{})
 	if err != nil {
 		return fmt.Errorf("Updating sshkey status: %s", err)
 	}

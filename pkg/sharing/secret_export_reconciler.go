@@ -88,7 +88,7 @@ func (r *SecretExportReconciler) Reconcile(ctx context.Context, request reconcil
 
 	var secretExport sgv1alpha1.SecretExport
 
-	err := r.client.Get(context.TODO(), request.NamespacedName, &secretExport)
+	err := r.client.Get(ctx, request.NamespacedName, &secretExport)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			r.secretExports.Unexport(&sgv1alpha1.SecretExport{
@@ -121,7 +121,7 @@ func (r *SecretExportReconciler) Reconcile(ctx context.Context, request reconcil
 
 	// Saving the status helps trigger a cascade so that
 	// the Secrets reconciler will also respond if needed
-	err = r.updateStatus(secretExport)
+	err = r.updateStatus(ctx, secretExport)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -166,10 +166,10 @@ func (r *SecretExportReconciler) reconcile(ctx context.Context, secretExport *sg
 	return reconcile.Result{}, nil
 }
 
-func (r *SecretExportReconciler) updateStatus(secretExport sgv1alpha1.SecretExport) error {
+func (r *SecretExportReconciler) updateStatus(ctx context.Context, secretExport sgv1alpha1.SecretExport) error {
 	r.log.Info("Updating secret export")
 
-	err := r.client.Status().Update(context.TODO(), &secretExport)
+	err := r.client.Status().Update(ctx, &secretExport)
 	if err != nil {
 		return fmt.Errorf("Updating secret export status: %s", err)
 	}

@@ -107,7 +107,7 @@ func (r *SecretRequestReconciler) Reconcile(ctx context.Context, request reconci
 
 	var secretRequest sgv1alpha1.SecretRequest
 
-	err := r.client.Get(context.TODO(), request.NamespacedName, &secretRequest)
+	err := r.client.Get(ctx, request.NamespacedName, &secretRequest)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Do not requeue as there is nothing to do when request is deleted
@@ -160,7 +160,7 @@ func (r *SecretRequestReconciler) reconcile(ctx context.Context,
 		Name:      secretRequest.Name,
 	}
 
-	err = r.client.Get(context.TODO(), secretExportNN, &secretExport)
+	err = r.client.Get(ctx, secretExportNN, &secretExport)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// TODO Should we actually delete offered secret that we previously created?
@@ -289,10 +289,10 @@ func (r *SecretRequestReconciler) deleteAssociatedSecret(ctx context.Context,
 	return nil
 }
 
-func (r *SecretRequestReconciler) updateStatus(
+func (r *SecretRequestReconciler) updateStatus(ctx context.Context,
 	secretRequest sgv1alpha1.SecretRequest) error {
 
-	err := r.client.Status().Update(context.TODO(), &secretRequest)
+	err := r.client.Status().Update(ctx, &secretRequest)
 	if err != nil {
 		return fmt.Errorf("Updating secret request status: %s", err)
 	}

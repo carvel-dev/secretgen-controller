@@ -36,7 +36,7 @@ func NewCertificateReconciler(sgClient sgclient.Interface,
 func (r *CertificateReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := r.log.WithValues("request", request)
 
-	cert, err := r.sgClient.SecretgenV1alpha1().Certificates(request.Namespace).Get(request.Name, metav1.GetOptions{})
+	cert, err := r.sgClient.SecretgenV1alpha1().Certificates(request.Namespace).Get(ctx, request.Name, metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			log.Info("Not found")
@@ -56,7 +56,7 @@ func (r *CertificateReconciler) Reconcile(ctx context.Context, request reconcile
 	}
 
 	status.SetReconciling(cert.ObjectMeta)
-	defer r.updateStatus(cert)
+	defer r.updateStatus(ctx, cert)
 
 	return status.WithReconcileCompleted(r.reconcile(ctx, cert))
 }
@@ -191,15 +191,15 @@ func (r *CertificateReconciler) getCARefSecret(
 	return caSecret, nil
 }
 
-func (r *CertificateReconciler) updateStatus(cert *sgv1alpha1.Certificate) error {
-	existingCert, err := r.sgClient.SecretgenV1alpha1().Certificates(cert.Namespace).Get(cert.Name, metav1.GetOptions{})
+func (r *CertificateReconciler) updateStatus(ctx context.Context, cert *sgv1alpha1.Certificate) error {
+	existingCert, err := r.sgClient.SecretgenV1alpha1().Certificates(cert.Namespace).Get(ctx, cert.Name, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("Fetching cert: %s", err)
 	}
 
 	existingCert.Status = cert.Status
 
-	_, err = r.sgClient.SecretgenV1alpha1().Certificates(existingCert.Namespace).UpdateStatus(existingCert)
+	_, err = r.sgClient.SecretgenV1alpha1().Certificates(existingCert.Namespace).UpdateStatus(ctx, existingCert, metav1.UpdateOptions{})
 	if err != nil {
 		return fmt.Errorf("Updating cert status: %s", err)
 	}
