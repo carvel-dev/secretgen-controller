@@ -60,6 +60,9 @@ func (r *SecretExportReconciler) AttachWatches(controller controller.Controller)
 // secret exports. If this method is not called before using SecretExports then
 // users of SecretExports such as SecretReconciler will not have complete/accurate data.
 func (r *SecretExportReconciler) WarmUp() error {
+	r.log.Info("Running WarmUp")
+	defer func() { r.log.Info("Done running WarmUp") }()
+
 	secretExportList, err := r.sgClient.SecretgenV1alpha1().SecretExports("").List(metav1.ListOptions{})
 	if err != nil {
 		return err
@@ -78,6 +81,8 @@ func (r *SecretExportReconciler) WarmUp() error {
 // Reconcile acs on a request for a SecretExport to implement a kubernetes reconciler
 func (r *SecretExportReconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	log := r.log.WithValues("request", request)
+
+	log.Info("Reconciling")
 
 	secretExport, err := r.sgClient.SecretgenV1alpha1().SecretExports(
 		request.Namespace).Get(request.Name, metav1.GetOptions{})

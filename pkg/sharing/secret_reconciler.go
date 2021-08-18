@@ -77,6 +77,8 @@ func (r *SecretReconciler) mapSecretExportToSecret(a handler.MapObject) []reconc
 func (r *SecretReconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	log := r.log.WithValues("request", request)
 
+	log.Info("Reconciling")
+
 	secret, err := r.coreClient.CoreV1().Secrets(request.Namespace).Get(request.Name, metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -102,7 +104,7 @@ func (r *SecretReconciler) reconcile(secret, originalSecret *corev1.Secret, log 
 		return reconcile.Result{}, nil
 	}
 
-	log.Info("Reconciling")
+	log.Info("Detected annotation " + imagePullSecretAnnKey)
 
 	// Note that "type" is immutable on a secret
 	if secret.Type != corev1.SecretTypeDockerConfigJson {
