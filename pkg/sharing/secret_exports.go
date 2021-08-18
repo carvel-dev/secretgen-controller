@@ -5,6 +5,7 @@ package sharing
 
 import (
 	"sync"
+	"sort"
 
 	"github.com/go-logr/logr"
 	sgv1alpha1 "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/apis/secretgen/v1alpha1"
@@ -22,66 +23,31 @@ type SecretExports struct {
 	exportedSecrets     map[string]exportedSecret
 }
 
-type exportedSecret struct {
-	*sgv1alpha1.SecretExport
-	*corev1.Secret
-}
-
-func (es exportedSecret) Key() string {
-	if es.SecretExport.Namespace == "" {
-		panic("Internal inconsistency: missing namespace")
-	}
-	if es.SecretExport.Name == "" {
-		panic("Internal inconsistency: missing name")
-	}
-	return es.SecretExport.Namespace + "/" + es.SecretExport.Name
-}
-
-func (es exportedSecret) Matches(matcher SecretMatcher) bool {
-	if matcher.Subject != "" {
-		// TODO we currently do not match by subject
-		return false
-	}
-	if matcher.SecretType != es.Secret.Type {
-		return false
-	}
-	if !es.matchesNamespace(matcher.Namespace) {
-		return false
-	}
-	return true
-}
-
-func (es exportedSecret) matchesNamespace(nsToMatch string) bool {
-	for _, ns := range es.SecretExport.StaticToNamespaces() {
-		if ns == sgv1alpha1.AllNamespaces || ns == nsToMatch {
-			return true
-		}
-	}
-	return false
-}
-
 func NewSecretExports(log logr.Logger) *SecretExports {
 	return &SecretExports{log: log, exportedSecrets: map[string]exportedSecret{}}
 }
 
 func (se *SecretExports) Export(export *sgv1alpha1.SecretExport, secret *corev1.Secret) {
-	if export.Namespace != secret.Namespace || export.Name != secret.Name {
-		panic("Internal inconsistency: export and secret names do not match")
+	if secret == nil {
+		panic("Internal inconsistency: expected non-nil secret")
 	}
+	exportedSec := newExportedSecret(export, secret)
 
 	se.exportedSecretsLock.Lock()
 	defer se.exportedSecretsLock.Unlock()
 
-	exportedSec := exportedSecret{export, secret}
 	se.exportedSecrets[exportedSec.Key()] = exportedSec
 }
 
-// Unexport deletes the in-memory representation (cached) of both the SecretExport and underlying Secret.
+// Unexport deletes the in-memory representation (cached)
+// of both the SecretExport and underlying Secret.
 func (se *SecretExports) Unexport(export *sgv1alpha1.SecretExport) {
+	exportedSec := newExportedSecret(export, nil)
+
 	se.exportedSecretsLock.Lock()
 	defer se.exportedSecretsLock.Unlock()
 
-	delete(se.exportedSecrets, exportedSecret{export, nil}.Key())
+	delete(se.exportedSecrets, exportedSec.Key())
 }
 
 type SecretMatcher struct {
@@ -99,9 +65,74 @@ func (se *SecretExports) MatchedSecretsForImport(matcher SecretMatcher) []*corev
 
 	for _, exportedSec := range se.exportedSecrets {
 		if exportedSec.Matches(matcher) {
-			result = append(result, exportedSec.Secret)
+			result = append(result, exportedSec.Secret())
 		}
 	}
 
+	// Return determinsticly ordered result
+	sort.Slice(result, func(i, j int) bool {
+		// First by namespace, then by name
+		if result[i].Namespace != result[j].Namespace {
+			return result[i].Namespace < result[j].Namespace
+		}
+		return result[i].Name < result[j].Name
+	})
+
 	return result
+}
+
+// exportedSecret used for keeping track export->secret pair.
+type exportedSecret struct {
+	export *sgv1alpha1.SecretExport
+	secret *corev1.Secret
+}
+
+func newExportedSecret(export *sgv1alpha1.SecretExport, secret *corev1.Secret) exportedSecret {
+	if export == nil {
+		panic("Internal inconsistency: nil export")
+	}
+	if export.Namespace == "" {
+		panic("Internal inconsistency: missing export namespace")
+	}
+	if export.Name == "" {
+		panic("Internal inconsistency: missing export name")
+	}
+	if secret != nil {
+		if export.Namespace != secret.Namespace || export.Name != secret.Name {
+			panic("Internal inconsistency: export and secret names do not match")
+		}
+		secret = secret.DeepCopy()
+	}
+	return exportedSecret{export.DeepCopy(), secret}
+}
+
+func (es exportedSecret) Key() string {
+	return es.export.Namespace + "/" + es.export.Name
+}
+
+func (es exportedSecret) Secret() *corev1.Secret {
+	return es.secret.DeepCopy()
+}
+
+func (es exportedSecret) Matches(matcher SecretMatcher) bool {
+	if matcher.Subject != "" {
+		// TODO we currently do not match by subject
+		return false
+	}
+	if matcher.SecretType != es.secret.Type {
+		return false
+	}
+	if !es.matchesNamespace(matcher.Namespace) {
+		return false
+	}
+	return true
+}
+
+func (es exportedSecret) matchesNamespace(nsToMatch string) bool {
+	for _, ns := range es.export.StaticToNamespaces() {
+		if ns == sgv1alpha1.AllNamespaces || ns == nsToMatch {
+			return true
+		}
+	}
+	return false
 }
