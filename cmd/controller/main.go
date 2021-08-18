@@ -6,6 +6,7 @@ package main
 // Based on https://github.com/kubernetes-sigs/controller-runtime/blob/8f633b179e1c704a6e40440b528252f147a3362a/examples/builtins/main.go
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"os"
@@ -43,7 +44,7 @@ func main() {
 	flag.StringVar(&ctrlNamespace, "namespace", "", "Namespace to watch")
 	flag.Parse()
 
-	logf.SetLogger(zap.Logger(false))
+	logf.SetLogger(zap.New(zap.UseDevMode(false)))
 	entryLog := log.WithName("entrypoint")
 	entryLog.Info("secretgen-controller", "version", Version)
 
@@ -86,7 +87,7 @@ func main() {
 		secretExportReconciler := sharing.NewSecretExportReconciler(
 			mgr.GetClient(), secretExports, log.WithName("secexp"))
 
-		err := secretExportReconciler.WarmUp()
+		err := secretExportReconciler.WarmUp(context.Background())
 		exitIfErr(entryLog, "warmingup secexp controller", err)
 
 		err = registerCtrlMinimal("secexp", mgr, secretExportReconciler)

@@ -4,6 +4,7 @@
 package generator
 
 import (
+	"context"
 	"fmt"
 
 	cfgtypes "github.com/cloudfoundry/config-server/types"
@@ -31,7 +32,7 @@ func NewSSHKeyReconciler(sgClient sgclient.Interface,
 	return &SSHKeyReconciler{sgClient, coreClient, log}
 }
 
-func (r *SSHKeyReconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (r *SSHKeyReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := r.log.WithValues("request", request)
 
 	sshKey, err := r.sgClient.SecretgenV1alpha1().SSHKeys(request.Namespace).Get(request.Name, metav1.GetOptions{})
@@ -56,21 +57,21 @@ func (r *SSHKeyReconciler) Reconcile(request reconcile.Request) (reconcile.Resul
 	status.SetReconciling(sshKey.ObjectMeta)
 	defer r.updateStatus(sshKey)
 
-	return status.WithReconcileCompleted(r.reconcile(sshKey))
+	return status.WithReconcileCompleted(r.reconcile(ctx, sshKey))
 }
 
-func (r *SSHKeyReconciler) reconcile(sshKey *sgv1alpha1.SSHKey) (reconcile.Result, error) {
-	_, err := r.coreClient.CoreV1().Secrets(sshKey.Namespace).Get(sshKey.Name, metav1.GetOptions{})
+func (r *SSHKeyReconciler) reconcile(ctx context.Context, sshKey *sgv1alpha1.SSHKey) (reconcile.Result, error) {
+	_, err := r.coreClient.CoreV1().Secrets(sshKey.Namespace).Get(ctx, sshKey.Name, metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
-			return r.createSecret(sshKey)
+			return r.createSecret(ctx, sshKey)
 		}
 		return reconcile.Result{Requeue: true}, err
 	}
 	return reconcile.Result{}, nil
 }
 
-func (r *SSHKeyReconciler) createSecret(sshKey *sgv1alpha1.SSHKey) (reconcile.Result, error) {
+func (r *SSHKeyReconciler) createSecret(ctx context.Context, sshKey *sgv1alpha1.SSHKey) (reconcile.Result, error) {
 	sshKeyResult, err := r.generate(sshKey)
 	if err != nil {
 		return reconcile.Result{Requeue: true}, err
@@ -98,7 +99,7 @@ func (r *SSHKeyReconciler) createSecret(sshKey *sgv1alpha1.SSHKey) (reconcile.Re
 
 	newSecret := secret.AsSecret()
 
-	_, err = r.coreClient.CoreV1().Secrets(newSecret.Namespace).Create(newSecret)
+	_, err = r.coreClient.CoreV1().Secrets(newSecret.Namespace).Create(ctx, newSecret, metav1.CreateOptions{})
 	if err != nil {
 		return reconcile.Result{Requeue: true}, err
 	}

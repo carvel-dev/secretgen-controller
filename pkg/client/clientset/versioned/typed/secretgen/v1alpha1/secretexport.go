@@ -6,6 +6,7 @@
 package v1alpha1
 
 import (
+	"context"
 	"time"
 
 	v1alpha1 "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/apis/secretgen/v1alpha1"
@@ -58,7 +59,7 @@ func (c *secretExports) Get(name string, options v1.GetOptions) (result *v1alpha
 		Resource("secretexports").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
-		Do().
+		Do(context.Background()).
 		Into(result)
 	return
 }
@@ -75,7 +76,7 @@ func (c *secretExports) List(opts v1.ListOptions) (result *v1alpha1.SecretExport
 		Resource("secretexports").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Do().
+		Do(context.Background()).
 		Into(result)
 	return
 }
@@ -92,7 +93,7 @@ func (c *secretExports) Watch(opts v1.ListOptions) (watch.Interface, error) {
 		Resource("secretexports").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Watch()
+		Watch(context.Background())
 }
 
 // Create takes the representation of a secretExport and creates it.  Returns the server's representation of the secretExport, and an error, if there is any.
@@ -102,7 +103,7 @@ func (c *secretExports) Create(secretExport *v1alpha1.SecretExport) (result *v1a
 		Namespace(c.ns).
 		Resource("secretexports").
 		Body(secretExport).
-		Do().
+		Do(context.Background()).
 		Into(result)
 	return
 }
@@ -115,7 +116,7 @@ func (c *secretExports) Update(secretExport *v1alpha1.SecretExport) (result *v1a
 		Resource("secretexports").
 		Name(secretExport.Name).
 		Body(secretExport).
-		Do().
+		Do(context.Background()).
 		Into(result)
 	return
 }
@@ -131,7 +132,7 @@ func (c *secretExports) UpdateStatus(secretExport *v1alpha1.SecretExport) (resul
 		Name(secretExport.Name).
 		SubResource("status").
 		Body(secretExport).
-		Do().
+		Do(context.Background()).
 		Into(result)
 	return
 }
@@ -143,7 +144,7 @@ func (c *secretExports) Delete(name string, options *v1.DeleteOptions) error {
 		Resource("secretexports").
 		Name(name).
 		Body(options).
-		Do().
+		Do(context.Background()).
 		Error()
 }
 
@@ -159,7 +160,7 @@ func (c *secretExports) DeleteCollection(options *v1.DeleteOptions, listOptions 
 		VersionedParams(&listOptions, scheme.ParameterCodec).
 		Timeout(timeout).
 		Body(options).
-		Do().
+		Do(context.Background()).
 		Error()
 }
 
@@ -172,7 +173,7 @@ func (c *secretExports) Patch(name string, pt types.PatchType, data []byte, subr
 		SubResource(subresources...).
 		Name(name).
 		Body(data).
-		Do().
+		Do(context.Background()).
 		Into(result)
 	return
 }

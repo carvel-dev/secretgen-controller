@@ -6,6 +6,7 @@
 package v1alpha1
 
 import (
+	"context"
 	"time"
 
 	v1alpha1 "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/apis/secretgen/v1alpha1"
@@ -58,7 +59,7 @@ func (c *rSAKeys) Get(name string, options v1.GetOptions) (result *v1alpha1.RSAK
 		Resource("rsakeys").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
-		Do().
+		Do(context.Background()).
 		Into(result)
 	return
 }
@@ -75,7 +76,7 @@ func (c *rSAKeys) List(opts v1.ListOptions) (result *v1alpha1.RSAKeyList, err er
 		Resource("rsakeys").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Do().
+		Do(context.Background()).
 		Into(result)
 	return
 }
@@ -92,7 +93,7 @@ func (c *rSAKeys) Watch(opts v1.ListOptions) (watch.Interface, error) {
 		Resource("rsakeys").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Watch()
+		Watch(context.Background())
 }
 
 // Create takes the representation of a rSAKey and creates it.  Returns the server's representation of the rSAKey, and an error, if there is any.
@@ -102,7 +103,7 @@ func (c *rSAKeys) Create(rSAKey *v1alpha1.RSAKey) (result *v1alpha1.RSAKey, err 
 		Namespace(c.ns).
 		Resource("rsakeys").
 		Body(rSAKey).
-		Do().
+		Do(context.Background()).
 		Into(result)
 	return
 }
@@ -115,7 +116,7 @@ func (c *rSAKeys) Update(rSAKey *v1alpha1.RSAKey) (result *v1alpha1.RSAKey, err 
 		Resource("rsakeys").
 		Name(rSAKey.Name).
 		Body(rSAKey).
-		Do().
+		Do(context.Background()).
 		Into(result)
 	return
 }
@@ -131,7 +132,7 @@ func (c *rSAKeys) UpdateStatus(rSAKey *v1alpha1.RSAKey) (result *v1alpha1.RSAKey
 		Name(rSAKey.Name).
 		SubResource("status").
 		Body(rSAKey).
-		Do().
+		Do(context.Background()).
 		Into(result)
 	return
 }
@@ -143,7 +144,7 @@ func (c *rSAKeys) Delete(name string, options *v1.DeleteOptions) error {
 		Resource("rsakeys").
 		Name(name).
 		Body(options).
-		Do().
+		Do(context.Background()).
 		Error()
 }
 
@@ -159,7 +160,7 @@ func (c *rSAKeys) DeleteCollection(options *v1.DeleteOptions, listOptions v1.Lis
 		VersionedParams(&listOptions, scheme.ParameterCodec).
 		Timeout(timeout).
 		Body(options).
-		Do().
+		Do(context.Background()).
 		Error()
 }
 
@@ -172,7 +173,7 @@ func (c *rSAKeys) Patch(name string, pt types.PatchType, data []byte, subresourc
 		SubResource(subresources...).
 		Name(name).
 		Body(data).
-		Do().
+		Do(context.Background()).
 		Into(result)
 	return
 }

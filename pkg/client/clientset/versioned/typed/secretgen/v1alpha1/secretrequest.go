@@ -6,6 +6,7 @@
 package v1alpha1
 
 import (
+	"context"
 	"time"
 
 	v1alpha1 "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/apis/secretgen/v1alpha1"
@@ -58,7 +59,7 @@ func (c *secretRequests) Get(name string, options v1.GetOptions) (result *v1alph
 		Resource("secretrequests").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
-		Do().
+		Do(context.Background()).
 		Into(result)
 	return
 }
@@ -75,7 +76,7 @@ func (c *secretRequests) List(opts v1.ListOptions) (result *v1alpha1.SecretReque
 		Resource("secretrequests").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Do().
+		Do(context.Background()).
 		Into(result)
 	return
 }
@@ -92,7 +93,7 @@ func (c *secretRequests) Watch(opts v1.ListOptions) (watch.Interface, error) {
 		Resource("secretrequests").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Watch()
+		Watch(context.Background())
 }
 
 // Create takes the representation of a secretRequest and creates it.  Returns the server's representation of the secretRequest, and an error, if there is any.
@@ -102,7 +103,7 @@ func (c *secretRequests) Create(secretRequest *v1alpha1.SecretRequest) (result *
 		Namespace(c.ns).
 		Resource("secretrequests").
 		Body(secretRequest).
-		Do().
+		Do(context.Background()).
 		Into(result)
 	return
 }
@@ -115,7 +116,7 @@ func (c *secretRequests) Update(secretRequest *v1alpha1.SecretRequest) (result *
 		Resource("secretrequests").
 		Name(secretRequest.Name).
 		Body(secretRequest).
-		Do().
+		Do(context.Background()).
 		Into(result)
 	return
 }
@@ -131,7 +132,7 @@ func (c *secretRequests) UpdateStatus(secretRequest *v1alpha1.SecretRequest) (re
 		Name(secretRequest.Name).
 		SubResource("status").
 		Body(secretRequest).
-		Do().
+		Do(context.Background()).
 		Into(result)
 	return
 }
@@ -143,7 +144,7 @@ func (c *secretRequests) Delete(name string, options *v1.DeleteOptions) error {
 		Resource("secretrequests").
 		Name(name).
 		Body(options).
-		Do().
+		Do(context.Background()).
 		Error()
 }
 
@@ -159,7 +160,7 @@ func (c *secretRequests) DeleteCollection(options *v1.DeleteOptions, listOptions
 		VersionedParams(&listOptions, scheme.ParameterCodec).
 		Timeout(timeout).
 		Body(options).
-		Do().
+		Do(context.Background()).
 		Error()
 }
 
@@ -172,7 +173,7 @@ func (c *secretRequests) Patch(name string, pt types.PatchType, data []byte, sub
 		SubResource(subresources...).
 		Name(name).
 		Body(data).
-		Do().
+		Do(context.Background()).
 		Into(result)
 	return
 }

@@ -6,6 +6,7 @@
 package v1alpha1
 
 import (
+	"context"
 	"time"
 
 	v1alpha1 "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/apis/secretgen/v1alpha1"
@@ -58,7 +59,7 @@ func (c *certificates) Get(name string, options v1.GetOptions) (result *v1alpha1
 		Resource("certificates").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
-		Do().
+		Do(context.Background()).
 		Into(result)
 	return
 }
@@ -75,7 +76,7 @@ func (c *certificates) List(opts v1.ListOptions) (result *v1alpha1.CertificateLi
 		Resource("certificates").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Do().
+		Do(context.Background()).
 		Into(result)
 	return
 }
@@ -92,7 +93,7 @@ func (c *certificates) Watch(opts v1.ListOptions) (watch.Interface, error) {
 		Resource("certificates").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Watch()
+		Watch(context.Background())
 }
 
 // Create takes the representation of a certificate and creates it.  Returns the server's representation of the certificate, and an error, if there is any.
@@ -102,7 +103,7 @@ func (c *certificates) Create(certificate *v1alpha1.Certificate) (result *v1alph
 		Namespace(c.ns).
 		Resource("certificates").
 		Body(certificate).
-		Do().
+		Do(context.Background()).
 		Into(result)
 	return
 }
@@ -115,7 +116,7 @@ func (c *certificates) Update(certificate *v1alpha1.Certificate) (result *v1alph
 		Resource("certificates").
 		Name(certificate.Name).
 		Body(certificate).
-		Do().
+		Do(context.Background()).
 		Into(result)
 	return
 }
@@ -131,7 +132,7 @@ func (c *certificates) UpdateStatus(certificate *v1alpha1.Certificate) (result *
 		Name(certificate.Name).
 		SubResource("status").
 		Body(certificate).
-		Do().
+		Do(context.Background()).
 		Into(result)
 	return
 }
@@ -143,7 +144,7 @@ func (c *certificates) Delete(name string, options *v1.DeleteOptions) error {
 		Resource("certificates").
 		Name(name).
 		Body(options).
-		Do().
+		Do(context.Background()).
 		Error()
 }
 
@@ -159,7 +160,7 @@ func (c *certificates) DeleteCollection(options *v1.DeleteOptions, listOptions v
 		VersionedParams(&listOptions, scheme.ParameterCodec).
 		Timeout(timeout).
 		Body(options).
-		Do().
+		Do(context.Background()).
 		Error()
 }
 
@@ -172,7 +173,7 @@ func (c *certificates) Patch(name string, pt types.PatchType, data []byte, subre
 		SubResource(subresources...).
 		Name(name).
 		Body(data).
-		Do().
+		Do(context.Background()).
 		Into(result)
 	return
 }

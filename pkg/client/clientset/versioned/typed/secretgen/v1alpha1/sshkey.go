@@ -6,6 +6,7 @@
 package v1alpha1
 
 import (
+	"context"
 	"time"
 
 	v1alpha1 "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/apis/secretgen/v1alpha1"
@@ -58,7 +59,7 @@ func (c *sSHKeys) Get(name string, options v1.GetOptions) (result *v1alpha1.SSHK
 		Resource("sshkeys").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
-		Do().
+		Do(context.Background()).
 		Into(result)
 	return
 }
@@ -75,7 +76,7 @@ func (c *sSHKeys) List(opts v1.ListOptions) (result *v1alpha1.SSHKeyList, err er
 		Resource("sshkeys").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Do().
+		Do(context.Background()).
 		Into(result)
 	return
 }
@@ -92,7 +93,7 @@ func (c *sSHKeys) Watch(opts v1.ListOptions) (watch.Interface, error) {
 		Resource("sshkeys").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Watch()
+		Watch(context.Background())
 }
 
 // Create takes the representation of a sSHKey and creates it.  Returns the server's representation of the sSHKey, and an error, if there is any.
@@ -102,7 +103,7 @@ func (c *sSHKeys) Create(sSHKey *v1alpha1.SSHKey) (result *v1alpha1.SSHKey, err 
 		Namespace(c.ns).
 		Resource("sshkeys").
 		Body(sSHKey).
-		Do().
+		Do(context.Background()).
 		Into(result)
 	return
 }
@@ -115,7 +116,7 @@ func (c *sSHKeys) Update(sSHKey *v1alpha1.SSHKey) (result *v1alpha1.SSHKey, err 
 		Resource("sshkeys").
 		Name(sSHKey.Name).
 		Body(sSHKey).
-		Do().
+		Do(context.Background()).
 		Into(result)
 	return
 }
@@ -131,7 +132,7 @@ func (c *sSHKeys) UpdateStatus(sSHKey *v1alpha1.SSHKey) (result *v1alpha1.SSHKey
 		Name(sSHKey.Name).
 		SubResource("status").
 		Body(sSHKey).
-		Do().
+		Do(context.Background()).
 		Into(result)
 	return
 }
@@ -143,7 +144,7 @@ func (c *sSHKeys) Delete(name string, options *v1.DeleteOptions) error {
 		Resource("sshkeys").
 		Name(name).
 		Body(options).
-		Do().
+		Do(context.Background()).
 		Error()
 }
 
@@ -159,7 +160,7 @@ func (c *sSHKeys) DeleteCollection(options *v1.DeleteOptions, listOptions v1.Lis
 		VersionedParams(&listOptions, scheme.ParameterCodec).
 		Timeout(timeout).
 		Body(options).
-		Do().
+		Do(context.Background()).
 		Error()
 }
 
@@ -172,7 +173,7 @@ func (c *sSHKeys) Patch(name string, pt types.PatchType, data []byte, subresourc
 		SubResource(subresources...).
 		Name(name).
 		Body(data).
-		Do().
+		Do(context.Background()).
 		Into(result)
 	return
 }

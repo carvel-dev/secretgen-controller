@@ -12,6 +12,7 @@ import (
 	"github.com/vmware-tanzu/carvel-secretgen-controller/pkg/reconciler"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+
 	// metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -47,15 +48,15 @@ func (r *SecretRequestReconciler) AttachWatches(controller controller.Controller
 	// to make sure imported secret is up-to-date
 	errs = append(errs, controller.Watch(
 		&source.Kind{Type: &corev1.Secret{}},
-		&handler.EnqueueRequestsFromMapFunc{ToRequests: handler.ToRequestsFunc(r.mapSecretToRequest)},
+		handler.EnqueueRequestsFromMapFunc(r.mapSecretToRequest),
 	))
 
 	// Watch SecretExport and enqueue for related SecretRequest
 	// based on export namespace configuration
 	errs = append(errs, controller.Watch(
 		&source.Kind{Type: &sgv1alpha1.SecretExport{}},
-		&handler.EnqueueRequestsFromMapFunc{ToRequests: handler.ToRequestsFunc(r.mapExportsToRequests)},
-	))
+		handler.EnqueueRequestsFromMapFunc(r.mapExportsToRequests)),
+	)
 
 	for _, err := range errs {
 		if err != nil {
@@ -65,20 +66,20 @@ func (r *SecretRequestReconciler) AttachWatches(controller controller.Controller
 	return nil
 }
 
-func (r *SecretRequestReconciler) mapSecretToRequest(a handler.MapObject) []reconcile.Request {
+func (r *SecretRequestReconciler) mapSecretToRequest(a client.Object) []reconcile.Request {
 	return []reconcile.Request{
 		{NamespacedName: types.NamespacedName{
-			Name:      a.Meta.GetName(),
-			Namespace: a.Meta.GetNamespace(),
+			Name:      a.GetName(),
+			Namespace: a.GetNamespace(),
 		}},
 	}
 }
 
-func (r *SecretRequestReconciler) mapExportsToRequests(a handler.MapObject) []reconcile.Request {
+func (r *SecretRequestReconciler) mapExportsToRequests(a client.Object) []reconcile.Request {
 	var export sgv1alpha1.SecretExport
 	var result []reconcile.Request
 
-	err := scheme.Scheme.Convert(a.Object, &export, nil)
+	err := scheme.Scheme.Convert(a, &export, nil)
 	if err != nil {
 		return nil
 	}
@@ -92,7 +93,7 @@ func (r *SecretRequestReconciler) mapExportsToRequests(a handler.MapObject) []re
 	for _, ns := range export.StaticToNamespaces() {
 		result = append(result, reconcile.Request{
 			NamespacedName: types.NamespacedName{
-				Name:      a.Meta.GetName(),
+				Name:      a.GetName(),
 				Namespace: ns,
 			},
 		})
@@ -101,7 +102,7 @@ func (r *SecretRequestReconciler) mapExportsToRequests(a handler.MapObject) []re
 	return result
 }
 
-func (r *SecretRequestReconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (r *SecretRequestReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := r.log.WithValues("request", request)
 
 	var secretRequest sgv1alpha1.SecretRequest
@@ -129,9 +130,9 @@ func (r *SecretRequestReconciler) Reconcile(request reconcile.Request) (reconcil
 
 	status.SetReconciling(secretRequest.ObjectMeta)
 
-	reconcileResult, reconcileErr := status.WithReconcileCompleted(r.reconcile(secretRequest, log))
+	reconcileResult, reconcileErr := status.WithReconcileCompleted(r.reconcile(ctx, secretRequest, log))
 
-	err = r.updateStatus(secretRequest)
+	err = r.updateStatus(ctx, secretRequest)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -139,7 +140,7 @@ func (r *SecretRequestReconciler) Reconcile(request reconcile.Request) (reconcil
 	return reconcileResult, reconcileErr
 }
 
-func (r *SecretRequestReconciler) reconcile(
+func (r *SecretRequestReconciler) reconcile(ctx context.Context,
 	secretRequest sgv1alpha1.SecretRequest, log logr.Logger) (reconcile.Result, error) {
 
 	err := secretRequest.Validate()
@@ -163,7 +164,7 @@ func (r *SecretRequestReconciler) reconcile(
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// TODO Should we actually delete offered secret that we previously created?
-			err := r.deleteAssociatedSecret(secretRequest)
+			err := r.deleteAssociatedSecret(ctx, secretRequest)
 			if err != nil {
 				// Requeue to try to delete a bit later
 				return reconcile.Result{Requeue: true}, fmt.Errorf("%s: %s", notOfferedMsg, err)
@@ -176,7 +177,7 @@ func (r *SecretRequestReconciler) reconcile(
 	}
 
 	if !r.isExportAllowed(secretExport, secretRequest) {
-		err := r.deleteAssociatedSecret(secretRequest)
+		err := r.deleteAssociatedSecret(ctx, secretRequest)
 		if err != nil {
 			// Requeue to try to delete a bit later
 			return reconcile.Result{Requeue: true}, err
@@ -185,7 +186,7 @@ func (r *SecretRequestReconciler) reconcile(
 		return reconcile.Result{}, reconciler.TerminalReconcileErr{fmt.Errorf("%s", notAllowedMsg)}
 	}
 
-	return r.copyAssociatedSecret(secretRequest)
+	return r.copyAssociatedSecret(ctx, secretRequest)
 }
 
 func (r *SecretRequestReconciler) isExportAllowed(
@@ -202,7 +203,7 @@ func (r *SecretRequestReconciler) isExportAllowed(
 	return false
 }
 
-func (r *SecretRequestReconciler) copyAssociatedSecret(
+func (r *SecretRequestReconciler) copyAssociatedSecret(ctx context.Context,
 	secretRequest sgv1alpha1.SecretRequest) (reconcile.Result, error) {
 
 	var srcSecret corev1.Secret
@@ -211,11 +212,11 @@ func (r *SecretRequestReconciler) copyAssociatedSecret(
 		Name:      secretRequest.Name,
 	}
 
-	err := r.client.Get(context.TODO(), srcSecretNN, &srcSecret)
+	err := r.client.Get(ctx, srcSecretNN, &srcSecret)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// TODO Should we actually delete offered secret that we previously created?
-			err := r.deleteAssociatedSecret(secretRequest)
+			err := r.deleteAssociatedSecret(ctx, secretRequest)
 			if err != nil {
 				// Requeue to try to delete a bit later
 				return reconcile.Result{Requeue: true}, err
@@ -230,7 +231,7 @@ func (r *SecretRequestReconciler) copyAssociatedSecret(
 	secret := reconciler.NewSecret(&secretRequest, nil)
 	secret.ApplySecret(srcSecret)
 
-	err = r.client.Create(context.TODO(), secret.AsSecret())
+	err = r.client.Create(ctx, secret.AsSecret())
 	switch {
 	case err == nil:
 		// Do not requeue since we copied secret successfully
@@ -243,7 +244,7 @@ func (r *SecretRequestReconciler) copyAssociatedSecret(
 			Name:      secretRequest.Name,
 		}
 
-		err := r.client.Get(context.TODO(), existingSecretNN, &existingSecret)
+		err := r.client.Get(ctx, existingSecretNN, &existingSecret)
 		if err != nil {
 			// Requeue to try to fetch a bit later
 			return reconcile.Result{Requeue: true}, fmt.Errorf("Getting imported secret: %s", err)
@@ -251,7 +252,7 @@ func (r *SecretRequestReconciler) copyAssociatedSecret(
 
 		secret.AssociateExistingSecret(existingSecret)
 
-		err = r.client.Update(context.TODO(), secret.AsSecret())
+		err = r.client.Update(ctx, secret.AsSecret())
 		if err != nil {
 			// Requeue to try to update a bit later
 			return reconcile.Result{Requeue: true}, fmt.Errorf("Updating imported secret: %s", err)
@@ -266,7 +267,7 @@ func (r *SecretRequestReconciler) copyAssociatedSecret(
 	}
 }
 
-func (r *SecretRequestReconciler) deleteAssociatedSecret(
+func (r *SecretRequestReconciler) deleteAssociatedSecret(ctx context.Context,
 	secretRequest sgv1alpha1.SecretRequest) error {
 
 	var secret corev1.Secret
@@ -276,7 +277,7 @@ func (r *SecretRequestReconciler) deleteAssociatedSecret(
 	}
 
 	// TODO get rid of extra get
-	err := r.client.Get(context.TODO(), secretNN, &secret)
+	err := r.client.Get(ctx, secretNN, &secret)
 	if err != nil {
 		return nil
 	}

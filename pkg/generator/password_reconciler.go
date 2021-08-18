@@ -4,6 +4,7 @@
 package generator
 
 import (
+	"context"
 	"fmt"
 
 	cfgtypes "github.com/cloudfoundry/config-server/types"
@@ -31,7 +32,7 @@ func NewPasswordReconciler(sgClient sgclient.Interface,
 	return &PasswordReconciler{sgClient, coreClient, log}
 }
 
-func (r *PasswordReconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (r *PasswordReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := r.log.WithValues("request", request)
 
 	password, err := r.sgClient.SecretgenV1alpha1().Passwords(request.Namespace).Get(request.Name, metav1.GetOptions{})
@@ -56,14 +57,14 @@ func (r *PasswordReconciler) Reconcile(request reconcile.Request) (reconcile.Res
 	status.SetReconciling(password.ObjectMeta)
 	defer r.updateStatus(password)
 
-	return status.WithReconcileCompleted(r.reconcile(password))
+	return status.WithReconcileCompleted(r.reconcile(ctx, password))
 }
 
-func (r *PasswordReconciler) reconcile(password *sgv1alpha1.Password) (reconcile.Result, error) {
-	_, err := r.coreClient.CoreV1().Secrets(password.Namespace).Get(password.Name, metav1.GetOptions{})
+func (r *PasswordReconciler) reconcile(ctx context.Context, password *sgv1alpha1.Password) (reconcile.Result, error) {
+	_, err := r.coreClient.CoreV1().Secrets(password.Namespace).Get(ctx, password.Name, metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
-			return r.createSecret(password)
+			return r.createSecret(ctx, password)
 		}
 		return reconcile.Result{Requeue: true}, err
 	}
@@ -71,7 +72,7 @@ func (r *PasswordReconciler) reconcile(password *sgv1alpha1.Password) (reconcile
 	return reconcile.Result{}, nil
 }
 
-func (r *PasswordReconciler) createSecret(password *sgv1alpha1.Password) (reconcile.Result, error) {
+func (r *PasswordReconciler) createSecret(ctx context.Context, password *sgv1alpha1.Password) (reconcile.Result, error) {
 	passwordStr, err := r.generate(password)
 	if err != nil {
 		return reconcile.Result{Requeue: true}, err
@@ -97,7 +98,7 @@ func (r *PasswordReconciler) createSecret(password *sgv1alpha1.Password) (reconc
 
 	newSecret := secret.AsSecret()
 
-	_, err = r.coreClient.CoreV1().Secrets(newSecret.Namespace).Create(newSecret)
+	_, err = r.coreClient.CoreV1().Secrets(newSecret.Namespace).Create(ctx, newSecret, metav1.CreateOptions{})
 	if err != nil {
 		return reconcile.Result{Requeue: true}, err
 	}

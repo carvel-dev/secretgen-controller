@@ -44,28 +44,26 @@ func (r *SecretExportReconciler) AttachWatches(controller controller.Controller)
 	}
 
 	// Watch exported secrets and enqueue for same named SecretExports
-	return controller.Watch(&source.Kind{Type: &corev1.Secret{}}, &handler.EnqueueRequestsFromMapFunc{
-		ToRequests: handler.ToRequestsFunc(func(a handler.MapObject) []reconcile.Request {
-			return []reconcile.Request{
-				{NamespacedName: types.NamespacedName{
-					Name:      a.Meta.GetName(),
-					Namespace: a.Meta.GetNamespace(),
-				}},
-			}
-		}),
-	})
+	return controller.Watch(&source.Kind{Type: &corev1.Secret{}}, handler.EnqueueRequestsFromMapFunc(func(a client.Object) []reconcile.Request {
+		return []reconcile.Request{
+			{NamespacedName: types.NamespacedName{
+				Name:      a.GetName(),
+				Namespace: a.GetNamespace(),
+			}},
+		}
+	}))
 }
 
 // WarmUp hydrates SecretExports given to this SecretExportReconciler with latest
 // secret exports. If this method is not called before using SecretExports then
 // users of SecretExports such as SecretReconciler will not have complete/accurate data.
-func (r *SecretExportReconciler) WarmUp() error {
+func (r *SecretExportReconciler) WarmUp(ctx context.Context) error {
 	r.log.Info("Running WarmUp")
 	defer func() { r.log.Info("Done running WarmUp") }()
 
 	var secretExportList sgv1alpha1.SecretExportList
 
-	err := r.client.List(context.TODO(), &secretExportList)
+	err := r.client.List(ctx, &secretExportList)
 	if err != nil {
 		return err
 	}
@@ -73,7 +71,7 @@ func (r *SecretExportReconciler) WarmUp() error {
 	r.log.Info("Warming up with N exports", "len", len(secretExportList.Items))
 
 	for _, se := range secretExportList.Items {
-		_, err := r.reconcile(&se, r.log)
+		_, err := r.reconcile(ctx, &se, r.log)
 		if err != nil {
 			// Ignore error
 		}
@@ -83,7 +81,7 @@ func (r *SecretExportReconciler) WarmUp() error {
 }
 
 // Reconcile acs on a request for a SecretExport to implement a kubernetes reconciler
-func (r *SecretExportReconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (r *SecretExportReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := r.log.WithValues("request", request)
 
 	log.Info("Reconciling")
@@ -119,7 +117,7 @@ func (r *SecretExportReconciler) Reconcile(request reconcile.Request) (reconcile
 
 	status.SetReconciling(secretExport.ObjectMeta)
 
-	reconcileResult, reconcileErr := status.WithReconcileCompleted(r.reconcile(&secretExport, log))
+	reconcileResult, reconcileErr := status.WithReconcileCompleted(r.reconcile(ctx, &secretExport, log))
 
 	// Saving the status helps trigger a cascade so that
 	// the Secrets reconciler will also respond if needed
@@ -132,7 +130,7 @@ func (r *SecretExportReconciler) Reconcile(request reconcile.Request) (reconcile
 }
 
 // reconcile looks for the Secret corresponding to the SecretExport Request that we're reconciling.
-func (r *SecretExportReconciler) reconcile(secretExport *sgv1alpha1.SecretExport, log logr.Logger) (reconcile.Result, error) {
+func (r *SecretExportReconciler) reconcile(ctx context.Context, secretExport *sgv1alpha1.SecretExport, log logr.Logger) (reconcile.Result, error) {
 	// Clear out observed resource version
 	secretExport.Status.ObservedSecretResourceVersion = ""
 
@@ -147,7 +145,7 @@ func (r *SecretExportReconciler) reconcile(secretExport *sgv1alpha1.SecretExport
 	var secret corev1.Secret
 	secretNN := types.NamespacedName{Namespace: secretExport.Namespace, Name: secretExport.Name}
 
-	err = r.client.Get(context.TODO(), secretNN, &secret)
+	err = r.client.Get(ctx, secretNN, &secret)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Drop the Secret from the shared cache.

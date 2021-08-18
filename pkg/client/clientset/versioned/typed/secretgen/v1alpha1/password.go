@@ -6,6 +6,7 @@
 package v1alpha1
 
 import (
+	"context"
 	"time"
 
 	v1alpha1 "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/apis/secretgen/v1alpha1"
@@ -58,7 +59,7 @@ func (c *passwords) Get(name string, options v1.GetOptions) (result *v1alpha1.Pa
 		Resource("passwords").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
-		Do().
+		Do(context.Background()).
 		Into(result)
 	return
 }
@@ -75,7 +76,7 @@ func (c *passwords) List(opts v1.ListOptions) (result *v1alpha1.PasswordList, er
 		Resource("passwords").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Do().
+		Do(context.Background()).
 		Into(result)
 	return
 }
@@ -92,7 +93,7 @@ func (c *passwords) Watch(opts v1.ListOptions) (watch.Interface, error) {
 		Resource("passwords").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Watch()
+		Watch(context.Background())
 }
 
 // Create takes the representation of a password and creates it.  Returns the server's representation of the password, and an error, if there is any.
@@ -102,7 +103,7 @@ func (c *passwords) Create(password *v1alpha1.Password) (result *v1alpha1.Passwo
 		Namespace(c.ns).
 		Resource("passwords").
 		Body(password).
-		Do().
+		Do(context.Background()).
 		Into(result)
 	return
 }
@@ -115,7 +116,7 @@ func (c *passwords) Update(password *v1alpha1.Password) (result *v1alpha1.Passwo
 		Resource("passwords").
 		Name(password.Name).
 		Body(password).
-		Do().
+		Do(context.Background()).
 		Into(result)
 	return
 }
@@ -131,7 +132,7 @@ func (c *passwords) UpdateStatus(password *v1alpha1.Password) (result *v1alpha1.
 		Name(password.Name).
 		SubResource("status").
 		Body(password).
-		Do().
+		Do(context.Background()).
 		Into(result)
 	return
 }
@@ -143,7 +144,7 @@ func (c *passwords) Delete(name string, options *v1.DeleteOptions) error {
 		Resource("passwords").
 		Name(name).
 		Body(options).
-		Do().
+		Do(context.Background()).
 		Error()
 }
 
@@ -159,7 +160,7 @@ func (c *passwords) DeleteCollection(options *v1.DeleteOptions, listOptions v1.L
 		VersionedParams(&listOptions, scheme.ParameterCodec).
 		Timeout(timeout).
 		Body(options).
-		Do().
+		Do(context.Background()).
 		Error()
 }
 
@@ -172,7 +173,7 @@ func (c *passwords) Patch(name string, pt types.PatchType, data []byte, subresou
 		SubResource(subresources...).
 		Name(name).
 		Body(data).
-		Do().
+		Do(context.Background()).
 		Into(result)
 	return
 }

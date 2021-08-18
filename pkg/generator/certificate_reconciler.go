@@ -4,6 +4,7 @@
 package generator
 
 import (
+	"context"
 	"fmt"
 
 	cfgtypes "github.com/cloudfoundry/config-server/types"
@@ -32,7 +33,7 @@ func NewCertificateReconciler(sgClient sgclient.Interface,
 	return &CertificateReconciler{sgClient, coreClient, log}
 }
 
-func (r *CertificateReconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (r *CertificateReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := r.log.WithValues("request", request)
 
 	cert, err := r.sgClient.SecretgenV1alpha1().Certificates(request.Namespace).Get(request.Name, metav1.GetOptions{})
@@ -57,16 +58,16 @@ func (r *CertificateReconciler) Reconcile(request reconcile.Request) (reconcile.
 	status.SetReconciling(cert.ObjectMeta)
 	defer r.updateStatus(cert)
 
-	return status.WithReconcileCompleted(r.reconcile(cert))
+	return status.WithReconcileCompleted(r.reconcile(ctx, cert))
 }
 
-func (r *CertificateReconciler) reconcile(cert *sgv1alpha1.Certificate) (reconcile.Result, error) {
+func (r *CertificateReconciler) reconcile(ctx context.Context, cert *sgv1alpha1.Certificate) (reconcile.Result, error) {
 	params := newCertParams(cert)
 
-	existingSecret, err := r.coreClient.CoreV1().Secrets(cert.Namespace).Get(cert.Name, metav1.GetOptions{})
+	existingSecret, err := r.coreClient.CoreV1().Secrets(cert.Namespace).Get(ctx, cert.Name, metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
-			return r.createSecret(params, cert)
+			return r.createSecret(ctx, params, cert)
 		}
 		return reconcile.Result{Requeue: true}, err
 	}
@@ -78,8 +79,8 @@ func (r *CertificateReconciler) reconcile(cert *sgv1alpha1.Certificate) (reconci
 	return reconcile.Result{}, nil
 }
 
-func (r *CertificateReconciler) createSecret(params certParams, cert *sgv1alpha1.Certificate) (reconcile.Result, error) {
-	certResult, err := r.generate(params, cert)
+func (r *CertificateReconciler) createSecret(ctx context.Context, params certParams, cert *sgv1alpha1.Certificate) (reconcile.Result, error) {
+	certResult, err := r.generate(ctx, params, cert)
 	if err != nil {
 		return reconcile.Result{Requeue: true}, err
 	}
@@ -108,7 +109,7 @@ func (r *CertificateReconciler) createSecret(params certParams, cert *sgv1alpha1
 
 	GenerateInputs{params}.Add(newSecret.Annotations)
 
-	_, err = r.coreClient.CoreV1().Secrets(newSecret.Namespace).Create(newSecret)
+	_, err = r.coreClient.CoreV1().Secrets(newSecret.Namespace).Create(ctx, newSecret, metav1.CreateOptions{})
 	if err != nil {
 		return reconcile.Result{Requeue: true}, err
 	}
@@ -157,10 +158,10 @@ func newCertParams(cert *sgv1alpha1.Certificate) certParams {
 	return params
 }
 
-func (r *CertificateReconciler) generate(params certParams,
+func (r *CertificateReconciler) generate(ctx context.Context, params certParams,
 	cert *sgv1alpha1.Certificate) (cfgtypes.CertResponse, error) {
 
-	caCertSecret, err := r.getCARefSecret(cert)
+	caCertSecret, err := r.getCARefSecret(ctx, cert)
 	if err != nil {
 		return cfgtypes.CertResponse{}, err
 	}
@@ -176,13 +177,13 @@ func (r *CertificateReconciler) generate(params certParams,
 }
 
 func (r *CertificateReconciler) getCARefSecret(
-	cert *sgv1alpha1.Certificate) (*corev1.Secret, error) {
+	ctx context.Context, cert *sgv1alpha1.Certificate) (*corev1.Secret, error) {
 
 	if cert.Spec.CARef == nil {
 		return nil, nil
 	}
 
-	caSecret, err := r.coreClient.CoreV1().Secrets(cert.Namespace).Get(cert.Spec.CARef.Name, metav1.GetOptions{})
+	caSecret, err := r.coreClient.CoreV1().Secrets(cert.Namespace).Get(ctx, cert.Spec.CARef.Name, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
