@@ -30,6 +30,7 @@ type SecretRequestReconciler struct {
 
 var _ reconcile.Reconciler = &SecretRequestReconciler{}
 
+// NewSecretRequestReconciler constructs SecretRequestReconciler.
 func NewSecretRequestReconciler(client client.Client, log logr.Logger) *SecretRequestReconciler {
 	return &SecretRequestReconciler{client, log}
 }

@@ -30,6 +30,7 @@ import (
 )
 
 const (
+	// Version is the version of secretgen-controller
 	Version = "0.4.0-alpha.1"
 )
 
