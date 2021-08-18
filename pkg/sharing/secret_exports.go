@@ -104,7 +104,7 @@ func (se *SecretExports) MatchedSecretsForImport(matcher SecretMatcher) []*corev
 	return result
 }
 
-// exportedSecret used for keeping track export->secret pair.
+// exportedSecret is used for keeping track export->secret pair.
 type exportedSecret struct {
 	export *sgv1alpha1.SecretExport
 	secret *corev1.Secret
