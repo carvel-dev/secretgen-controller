@@ -13,6 +13,16 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
+// TerminalReconcileErr represent a reconciliation error that
+// cannot be corrected without some change in the system
+// (e.g. reconfiguring resources, adding/removing resources).
+// It's indicative to not requeue a reconcile request.
+type TerminalReconcileErr struct {
+	Err error
+}
+
+func (e TerminalReconcileErr) Error() string { return e.Err.Error() }
+
 type Status struct {
 	S          sgv1alpha1.GenericStatus
 	UpdateFunc func(sgv1alpha1.GenericStatus)
@@ -77,6 +87,11 @@ func (s *Status) friendlyErrMsg(errMsg string) string {
 
 func (s *Status) WithReconcileCompleted(result reconcile.Result, err error) (reconcile.Result, error) {
 	s.SetReconcileCompleted(err)
+	if err != nil {
+		if _, ok := err.(TerminalReconcileErr); ok {
+			return reconcile.Result{}, nil
+		}
+	}
 	return result, err
 }
 

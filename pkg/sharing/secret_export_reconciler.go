@@ -113,33 +113,34 @@ func (r *SecretExportReconciler) Reconcile(request reconcile.Request) (reconcile
 	}
 
 	status.SetReconciling(secretExport.ObjectMeta)
-	// saving the status helps trigger a cascade so that the Secrets reconciler will also respond if needed
+	// Saving the status helps trigger a cascade so that
+	// the Secrets reconciler will also respond if needed
 	defer r.updateStatus(secretExport)
 
 	return status.WithReconcileCompleted(r.reconcile(secretExport, log))
 }
 
-// reconcile looks for the Secret corresponding to the SecretExport Request that we're reconciling.
+// Reconcile looks for the Secret corresponding to the SecretExport Request that we're reconciling.
 func (r *SecretExportReconciler) reconcile(secretExport *sgv1alpha1.SecretExport, log logr.Logger) (reconcile.Result, error) {
-	err := secretExport.Validate()
-	if err != nil {
-		// Do not requeue as there is nothing this controller can do until secret export is fixed
-		return reconcile.Result{}, err
-	}
-
-	log.Info("Reconciling")
-
 	// Clear out observed resource version
 	secretExport.Status.ObservedSecretResourceVersion = ""
+
+	err := secretExport.Validate()
+	if err != nil {
+		// Drop the Secret from the shared cache.
+		r.secretExports.Unexport(secretExport)
+		// Do not requeue as there is nothing this controller can do until secret export is fixed
+		return reconcile.Result{}, reconciler.TerminalReconcileErr{err}
+	}
 
 	secret, err := r.coreClient.CoreV1().Secrets(
 		secretExport.Namespace).Get(secretExport.Name, metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
-			// drop the Secret from the shared cache.
+			// Drop the Secret from the shared cache.
 			r.secretExports.Unexport(secretExport)
 			// Do not requeue as there is nothing this controller can do until secret appears
-			return reconcile.Result{}, fmt.Errorf("Missing exported secret")
+			return reconcile.Result{}, reconciler.TerminalReconcileErr{fmt.Errorf("Missing exported secret")}
 		}
 		// Requeue to try to fetch exported secret again
 		return reconcile.Result{Requeue: true}, fmt.Errorf("Getting exported secret: %s", err)

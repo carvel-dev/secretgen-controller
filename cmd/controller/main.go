@@ -150,7 +150,7 @@ func registerCtrlMinimal(desc string, mgr manager.Manager,
 
 	err = reconciler.AttachWatches(ctrl)
 	if err != nil {
-		return fmt.Errorf("unable to attaches watches", err)
+		return fmt.Errorf("unable to attaches watches: %s", err)
 	}
 
 	return nil
