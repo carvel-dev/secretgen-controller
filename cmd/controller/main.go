@@ -34,7 +34,7 @@ const (
 )
 
 var (
-	log           = logf.Log.WithName("secretgen-controller")
+	log           = logf.Log.WithName("sg")
 	ctrlNamespace = ""
 )
 
@@ -120,7 +120,7 @@ func registerCtrl(desc string, mgr manager.Manager,
 		// since we are not doing anything that we need to parallelize for.
 	}
 
-	ctrl, err := controller.New("secretgen-controller-"+desc, mgr, ctrlOpts)
+	ctrl, err := controller.New("sg-"+desc, mgr, ctrlOpts)
 	if err != nil {
 		return ctrl, fmt.Errorf("unable to set up secretgen-controller-%s: %s", desc, err)
 	}
@@ -147,7 +147,7 @@ func registerCtrlMinimal(desc string, mgr manager.Manager,
 		// since we are not doing anything that we need to parallelize for.
 	}
 
-	ctrl, err := controller.New("secretgen-controller-"+desc, mgr, ctrlOpts)
+	ctrl, err := controller.New("sg-"+desc, mgr, ctrlOpts)
 	if err != nil {
 		return fmt.Errorf("unable to set up secretgen-controller-%s: %s", desc, err)
 	}
