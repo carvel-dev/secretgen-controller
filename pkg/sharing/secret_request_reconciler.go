@@ -102,6 +102,7 @@ func (r *SecretRequestReconciler) mapExportsToRequests(a client.Object) []reconc
 	return result
 }
 
+// Reconcile is the entrypoint for incoming requests from k8s
 func (r *SecretRequestReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := r.log.WithValues("request", request)
 

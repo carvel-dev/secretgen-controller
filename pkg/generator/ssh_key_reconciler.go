@@ -32,6 +32,7 @@ func NewSSHKeyReconciler(sgClient sgclient.Interface,
 	return &SSHKeyReconciler{sgClient, coreClient, log}
 }
 
+// Reconcile is the entrypoint for incoming requests from k8s
 func (r *SSHKeyReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := r.log.WithValues("request", request)
 

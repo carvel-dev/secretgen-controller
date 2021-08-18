@@ -32,6 +32,7 @@ func NewPasswordReconciler(sgClient sgclient.Interface,
 	return &PasswordReconciler{sgClient, coreClient, log}
 }
 
+// Reconcile is the entrypoint for incoming requests from k8s
 func (r *PasswordReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := r.log.WithValues("request", request)
 

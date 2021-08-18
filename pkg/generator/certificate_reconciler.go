@@ -33,6 +33,7 @@ func NewCertificateReconciler(sgClient sgclient.Interface,
 	return &CertificateReconciler{sgClient, coreClient, log}
 }
 
+// Reconcile is the entrypoint for incoming requests from k8s
 func (r *CertificateReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := r.log.WithValues("request", request)
 
