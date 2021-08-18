@@ -1,0 +1,4 @@
+#@data/values
+---
+push_images: true
+image_repo: docker.io/k8slt/secretgen-controller-alpha
