@@ -45,17 +45,15 @@ func (r *SecretExportReconciler) AttachWatches(controller controller.Controller)
 
 	// Watch exported secrets and enqueue for same named SecretExports
 	return controller.Watch(&source.Kind{Type: &corev1.Secret{}}, &handler.EnqueueRequestsFromMapFunc{
-		ToRequests: handler.ToRequestsFunc(r.mapSecretToExport),
+		ToRequests: handler.ToRequestsFunc(func(a handler.MapObject) []reconcile.Request {
+			return []reconcile.Request{
+				{NamespacedName: types.NamespacedName{
+					Name:      a.Meta.GetName(),
+					Namespace: a.Meta.GetNamespace(),
+				}},
+			}
+		}),
 	})
-}
-
-func (r *SecretExportReconciler) mapSecretToExport(a handler.MapObject) []reconcile.Request {
-	return []reconcile.Request{
-		{NamespacedName: types.NamespacedName{
-			Name:      a.Meta.GetName(),
-			Namespace: a.Meta.GetNamespace(),
-		}},
-	}
 }
 
 // WarmUp hydrates SecretExports given to this SecretExportReconciler with latest
