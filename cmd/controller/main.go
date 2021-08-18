@@ -34,13 +34,11 @@ const (
 )
 
 var (
-	log             = logf.Log.WithName("secretgen-controller")
-	ctrlConcurrency = 10
-	ctrlNamespace   = ""
+	log           = logf.Log.WithName("secretgen-controller")
+	ctrlNamespace = ""
 )
 
 func main() {
-	flag.IntVar(&ctrlConcurrency, "concurrency", 10, "Max concurrent reconciles")
 	flag.StringVar(&ctrlNamespace, "namespace", "", "Namespace to watch")
 	flag.Parse()
 
@@ -117,8 +115,9 @@ func registerCtrl(desc string, mgr manager.Manager,
 	reconciler reconcile.Reconciler, src source.Source) (controller.Controller, error) {
 
 	ctrlOpts := controller.Options{
-		Reconciler:              reconciler,
-		MaxConcurrentReconciles: ctrlConcurrency,
+		Reconciler: reconciler,
+		// Default MaxConcurrentReconciles is 1. Keeping at that
+		// since we are not doing anything that we need to parallelize for.
 	}
 
 	ctrl, err := controller.New("secretgen-controller-"+desc, mgr, ctrlOpts)
@@ -143,8 +142,9 @@ func registerCtrlMinimal(desc string, mgr manager.Manager,
 	reconciler reconcilerWithWatches) error {
 
 	ctrlOpts := controller.Options{
-		Reconciler:              reconciler,
-		MaxConcurrentReconciles: ctrlConcurrency,
+		Reconciler: reconciler,
+		// Default MaxConcurrentReconciles is 1. Keeping at that
+		// since we are not doing anything that we need to parallelize for.
 	}
 
 	ctrl, err := controller.New("secretgen-controller-"+desc, mgr, ctrlOpts)
