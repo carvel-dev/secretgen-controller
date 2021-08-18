@@ -10,6 +10,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/go-logr/logr"
 	sgv1alpha1 "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/apis/secretgen/v1alpha1"
@@ -83,23 +84,26 @@ func main() {
 
 	secretExports := sharing.NewSecretExports(log.WithName("secretexports"))
 
-	{
-		secretExportReconciler := sharing.NewSecretExportReconciler(
-			mgr.GetClient(), secretExports, log.WithName("secexp"))
+	go func() {
+		time.Sleep(10)
+		{
+			secretExportReconciler := sharing.NewSecretExportReconciler(
+				mgr.GetClient(), secretExports, log.WithName("secexp"))
 
-		err := secretExportReconciler.WarmUp(context.Background())
-		exitIfErr(entryLog, "warmingup secexp controller", err)
+			err := secretExportReconciler.WarmUp(context.Background())
+			exitIfErr(entryLog, "warmingup secexp controller", err)
 
-		err = registerCtrlMinimal("secexp", mgr, secretExportReconciler)
-		exitIfErr(entryLog, "registering secexp controller", err)
-	}
+			err = registerCtrlMinimal("secexp", mgr, secretExportReconciler)
+			exitIfErr(entryLog, "registering secexp controller", err)
+		}
 
-	{
-		secretRequestReconciler := sharing.NewSecretRequestReconciler(
-			mgr.GetClient(), log.WithName("secreq"))
-		err := registerCtrlMinimal("secreq", mgr, secretRequestReconciler)
-		exitIfErr(entryLog, "registering secreq controller", err)
-	}
+		{
+			secretRequestReconciler := sharing.NewSecretRequestReconciler(
+				mgr.GetClient(), log.WithName("secreq"))
+			err := registerCtrlMinimal("secreq", mgr, secretRequestReconciler)
+			exitIfErr(entryLog, "registering secreq controller", err)
+		}
+	}()
 
 	// Start after warming up secret exports
 	secretReconciler := sharing.NewSecretReconciler(
