@@ -28,11 +28,14 @@ func NewCombinedDockerConfigJSON(secrets []*corev1.Secret) (map[string][]byte, e
 		Auths: map[string]authConf{},
 	}
 
-	// TODO deterministically order secrets
+	// Secrets are already ordered in more preferred way
+	// first->least specific, last->most specific.
+	// In other words, last one wins.
 	for _, secret := range secrets {
 		var auths authsConf
 
 		secretData := secret.Data[corev1.DockerConfigJsonKey]
+
 		err := json.Unmarshal(secretData, &auths)
 		if err != nil {
 			return nil, fmt.Errorf("Unmarshaling secret '%s/%s': %s", secret.Namespace, secret.Name, err)

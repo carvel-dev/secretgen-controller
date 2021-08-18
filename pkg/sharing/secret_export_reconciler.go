@@ -45,23 +45,24 @@ func (r *SecretExportReconciler) AttachWatches(controller controller.Controller)
 
 	// Watch exported secrets and enqueue for same named SecretExports
 	return controller.Watch(&source.Kind{Type: &corev1.Secret{}}, &handler.EnqueueRequestsFromMapFunc{
-		ToRequests: handler.ToRequestsFunc(r.mapSecretToExport),
+		ToRequests: handler.ToRequestsFunc(func(a handler.MapObject) []reconcile.Request {
+			return []reconcile.Request{
+				{NamespacedName: types.NamespacedName{
+					Name:      a.Meta.GetName(),
+					Namespace: a.Meta.GetNamespace(),
+				}},
+			}
+		}),
 	})
-}
-
-func (r *SecretExportReconciler) mapSecretToExport(a handler.MapObject) []reconcile.Request {
-	return []reconcile.Request{
-		{NamespacedName: types.NamespacedName{
-			Name:      a.Meta.GetName(),
-			Namespace: a.Meta.GetNamespace(),
-		}},
-	}
 }
 
 // WarmUp hydrates SecretExports given to this SecretExportReconciler with latest
 // secret exports. If this method is not called before using SecretExports then
 // users of SecretExports such as SecretReconciler will not have complete/accurate data.
 func (r *SecretExportReconciler) WarmUp() error {
+	r.log.Info("Running WarmUp")
+	defer func() { r.log.Info("Done running WarmUp") }()
+
 	secretExportList, err := r.sgClient.SecretgenV1alpha1().SecretExports("").List(metav1.ListOptions{})
 	if err != nil {
 		return err
@@ -80,6 +81,8 @@ func (r *SecretExportReconciler) WarmUp() error {
 // Reconcile acs on a request for a SecretExport to implement a kubernetes reconciler
 func (r *SecretExportReconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	log := r.log.WithValues("request", request)
+
+	log.Info("Reconciling")
 
 	secretExport, err := r.sgClient.SecretgenV1alpha1().SecretExports(
 		request.Namespace).Get(request.Name, metav1.GetOptions{})
@@ -110,7 +113,8 @@ func (r *SecretExportReconciler) Reconcile(request reconcile.Request) (reconcile
 	}
 
 	status.SetReconciling(secretExport.ObjectMeta)
-	// saving the status helps trigger a cascade so that the Secrets reconciler will also respond if needed
+	// Saving the status helps trigger a cascade so that
+	// the Secrets reconciler will also respond if needed
 	defer r.updateStatus(secretExport)
 
 	return status.WithReconcileCompleted(r.reconcile(secretExport, log))
@@ -118,25 +122,25 @@ func (r *SecretExportReconciler) Reconcile(request reconcile.Request) (reconcile
 
 // reconcile looks for the Secret corresponding to the SecretExport Request that we're reconciling.
 func (r *SecretExportReconciler) reconcile(secretExport *sgv1alpha1.SecretExport, log logr.Logger) (reconcile.Result, error) {
-	err := secretExport.Validate()
-	if err != nil {
-		// Do not requeue as there is nothing this controller can do until secret export is fixed
-		return reconcile.Result{}, err
-	}
-
-	log.Info("Reconciling")
-
 	// Clear out observed resource version
 	secretExport.Status.ObservedSecretResourceVersion = ""
+
+	err := secretExport.Validate()
+	if err != nil {
+		// Drop the Secret from the shared cache.
+		r.secretExports.Unexport(secretExport)
+		// Do not requeue as there is nothing this controller can do until secret export is fixed
+		return reconcile.Result{}, reconciler.TerminalReconcileErr{err}
+	}
 
 	secret, err := r.coreClient.CoreV1().Secrets(
 		secretExport.Namespace).Get(secretExport.Name, metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
-			// drop the Secret from the shared cache.
+			// Drop the Secret from the shared cache.
 			r.secretExports.Unexport(secretExport)
 			// Do not requeue as there is nothing this controller can do until secret appears
-			return reconcile.Result{}, fmt.Errorf("Missing exported secret")
+			return reconcile.Result{}, reconciler.TerminalReconcileErr{fmt.Errorf("Missing exported secret")}
 		}
 		// Requeue to try to fetch exported secret again
 		return reconcile.Result{Requeue: true}, fmt.Errorf("Getting exported secret: %s", err)

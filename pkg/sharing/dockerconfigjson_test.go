@@ -12,57 +12,55 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func Test_NewCombinedDockerConfigJSON_errorsOnEmptySecrets(t *testing.T) {
-	secrets := []*corev1.Secret{
-		&corev1.Secret{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "Secret",
-				APIVersion: "apps/v1beta1",
-			}},
-		&corev1.Secret{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "Secret",
-				APIVersion: "apps/v1beta1",
-			}},
-	}
-	_, err := NewCombinedDockerConfigJSON(secrets)
-	assert.Error(t, err)
-}
+func Test_NewCombinedDockerConfigJSON(t *testing.T) {
+	t.Run("returns error when secret does not contain parseable auth section", func(t *testing.T) {
+		_, err := NewCombinedDockerConfigJSON([]*corev1.Secret{{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "secret1",
+				Namespace: "ns1",
+			},
+		}})
+		assert.Error(t, err)
+		assert.EqualError(t, err, "Unmarshaling secret 'ns1/secret1': unexpected end of JSON input")
+	})
 
-func Test_NewCombinedDockerConfigJSON_happyPath(t *testing.T) {
-	secrets := []*corev1.Secret{
-		&corev1.Secret{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "Secret",
-				APIVersion: "apps/v1beta1",
+	t.Run("returns combined set of credentials, preferring last secret for duplicate servers", func(t *testing.T) {
+		secrets := []*corev1.Secret{
+			// 3rd secret overrides 'server' auth creds
+			&corev1.Secret{
+				Data: map[string][]byte{
+					"George":                   []byte("Washington"),
+					corev1.DockerConfigJsonKey: []byte(`{"auths":{"server":{"username":"TopSecret","password":"password1","auth":"author"}}}`),
+				},
 			},
-			Data: map[string][]byte{
-				"George":                   []byte("Washington"), // third secret also has 'server' so we're testing that it overrides this secret's settings
-				corev1.DockerConfigJsonKey: []byte(`{"auths":{"server":{"username":"TopSecret","password":"password1","auth":"author"}}}`),
+			// Secret without auths
+			&corev1.Secret{
+				Data: map[string][]byte{
+					corev1.DockerConfigJsonKey: []byte(`{}`),
+				},
 			},
-		},
-		&corev1.Secret{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "Secret",
-				APIVersion: "apps/v1beta1",
+			// Secret with 0 auths
+			&corev1.Secret{
+				Data: map[string][]byte{
+					corev1.DockerConfigJsonKey: []byte(`{"auths":{}}`),
+				},
 			},
-			Data: map[string][]byte{
-				corev1.DockerConfigJsonKey: []byte(`{"auths":{"server2":{"username":"user2","password":"password2","auth":"auth2"}}}`),
+			&corev1.Secret{
+				Data: map[string][]byte{
+					corev1.DockerConfigJsonKey: []byte(`{"auths":{"server2":{"username":"user2","password":"password2","auth":"auth2"}}}`),
+				},
 			},
-		},
-		&corev1.Secret{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "Secret",
-				APIVersion: "apps/v1beta1",
+			&corev1.Secret{
+				Data: map[string][]byte{
+					corev1.DockerConfigJsonKey: []byte(`{"auths":{"server":{"username":"correctUser","password":"correctPassword","auth":"correctAuth"}}}`),
+				},
 			},
-			Data: map[string][]byte{
-				corev1.DockerConfigJsonKey: []byte(`{"auths":{"server":{"username":"correctUser","password":"correctPassword","auth":"correctAuth"}}}`),
-			},
-		},
-	}
-	result, err := NewCombinedDockerConfigJSON(secrets)
-	require.NoError(t, err)
-	assert.Equal(t, 1, len(result))
-	expected := []byte(`{"auths":{"server":{"username":"correctUser","password":"correctPassword","auth":"correctAuth"},"server2":{"username":"user2","password":"password2","auth":"auth2"}}}`)
-	assert.Equal(t, expected, result[corev1.DockerConfigJsonKey])
+		}
+		result, err := NewCombinedDockerConfigJSON(secrets)
+		require.NoError(t, err)
+
+		expected := []byte(`{"auths":{"server":{"username":"correctUser","password":"correctPassword","auth":"correctAuth"},"server2":{"username":"user2","password":"password2","auth":"auth2"}}}`)
+		assert.Equal(t, 1, len(result))
+		assert.Equal(t, expected, result[corev1.DockerConfigJsonKey])
+	})
 }

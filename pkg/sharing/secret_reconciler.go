@@ -77,6 +77,8 @@ func (r *SecretReconciler) mapSecretExportToSecret(a handler.MapObject) []reconc
 func (r *SecretReconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	log := r.log.WithValues("request", request)
 
+	log.Info("Reconciling")
+
 	secret, err := r.coreClient.CoreV1().Secrets(request.Namespace).Get(request.Name, metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -102,7 +104,7 @@ func (r *SecretReconciler) reconcile(secret, originalSecret *corev1.Secret, log 
 		return reconcile.Result{}, nil
 	}
 
-	log.Info("Reconciling")
+	log.Info("Detected annotation " + imagePullSecretAnnKey)
 
 	// Note that "type" is immutable on a secret
 	if secret.Type != corev1.SecretTypeDockerConfigJson {
@@ -110,7 +112,7 @@ func (r *SecretReconciler) reconcile(secret, originalSecret *corev1.Secret, log 
 			Conditions: []sgv1alpha1.Condition{{
 				Type:    sgv1alpha1.ReconcileFailed,
 				Status:  corev1.ConditionTrue,
-				Message: "Expected secret to have corev1.SecretTypeDockerConfigJson but did not",
+				Message: "Expected secret to have type=corev1.SecretTypeDockerConfigJson, but did not",
 			}},
 		}
 		return r.updateSecret(secret, status, originalSecret)
@@ -146,8 +148,7 @@ func (r *SecretReconciler) updateSecret(secret *corev1.Secret, status SecretStat
 
 	encodedStatus, err := json.Marshal(status)
 	if err != nil {
-		// Requeue to try to update a bit later
-		return reconcile.Result{Requeue: true}, fmt.Errorf("Marshaling secret status: %s", err)
+		panic(fmt.Sprintf("Internal inconsistency: failed to marshal secret status: %s", err))
 	}
 
 	if secret.Annotations == nil {
