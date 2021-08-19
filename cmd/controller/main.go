@@ -6,11 +6,9 @@ package main
 // Based on https://github.com/kubernetes-sigs/controller-runtime/blob/8f633b179e1c704a6e40440b528252f147a3362a/examples/builtins/main.go
 
 import (
-	"context"
 	"flag"
 	"fmt"
 	"os"
-	"time"
 
 	"github.com/go-logr/logr"
 	sgv1alpha1 "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/apis/secretgen/v1alpha1"
@@ -84,26 +82,20 @@ func main() {
 
 	secretExports := sharing.NewSecretExports(log.WithName("secretexports"))
 
-	go func() {
-		time.Sleep(10)
-		{
-			secretExportReconciler := sharing.NewSecretExportReconciler(
-				mgr.GetClient(), secretExports, log.WithName("secexp"))
+	{
+		secretExportReconciler := sharing.NewSecretExportReconciler(
+			mgr.GetClient(), secretExports, log.WithName("secexp"))
 
-			err := secretExportReconciler.WarmUp(context.Background())
-			exitIfErr(entryLog, "warmingup secexp controller", err)
+		err = registerCtrlMinimal("secexp", mgr, secretExportReconciler)
+		exitIfErr(entryLog, "registering secexp controller", err)
+	}
 
-			err = registerCtrlMinimal("secexp", mgr, secretExportReconciler)
-			exitIfErr(entryLog, "registering secexp controller", err)
-		}
-
-		{
-			secretRequestReconciler := sharing.NewSecretRequestReconciler(
-				mgr.GetClient(), log.WithName("secreq"))
-			err := registerCtrlMinimal("secreq", mgr, secretRequestReconciler)
-			exitIfErr(entryLog, "registering secreq controller", err)
-		}
-	}()
+	{
+		secretRequestReconciler := sharing.NewSecretRequestReconciler(
+			mgr.GetClient(), log.WithName("secreq"))
+		err := registerCtrlMinimal("secreq", mgr, secretRequestReconciler)
+		exitIfErr(entryLog, "registering secreq controller", err)
+	}
 
 	// Start after warming up secret exports
 	secretReconciler := sharing.NewSecretReconciler(

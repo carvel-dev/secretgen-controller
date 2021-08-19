@@ -27,6 +27,7 @@ type SecretExportReconciler struct {
 	client        client.Client
 	secretExports *SecretExports
 	log           logr.Logger
+	isWarmedUp    bool
 }
 
 var _ reconcile.Reconciler = &SecretExportReconciler{}
@@ -34,7 +35,7 @@ var _ reconcile.Reconciler = &SecretExportReconciler{}
 // NewSecretExportReconciler constructs SecretExportReconciler.
 func NewSecretExportReconciler(client client.Client,
 	secretExports *SecretExports, log logr.Logger) *SecretExportReconciler {
-	return &SecretExportReconciler{client, secretExports, log}
+	return &SecretExportReconciler{client, secretExports, log, false}
 }
 
 func (r *SecretExportReconciler) AttachWatches(controller controller.Controller) error {
@@ -83,6 +84,12 @@ func (r *SecretExportReconciler) WarmUp(ctx context.Context) error {
 // Reconcile acs on a request for a SecretExport to implement a kubernetes reconciler
 func (r *SecretExportReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := r.log.WithValues("request", request)
+	if !r.isWarmedUp {
+		if err := r.WarmUp(ctx); err != nil {
+			return reconcile.Result{}, nil // TODO : how should we handle a warmup failure here?
+		}
+		r.isWarmedUp = true
+	}
 
 	log.Info("Reconciling")
 
