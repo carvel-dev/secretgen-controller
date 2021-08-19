@@ -4,6 +4,7 @@
 package generator
 
 import (
+	"context"
 	"fmt"
 
 	cfgtypes "github.com/cloudfoundry/config-server/types"
@@ -31,10 +32,11 @@ func NewRSAKeyReconciler(sgClient sgclient.Interface,
 	return &RSAKeyReconciler{sgClient, coreClient, log}
 }
 
-func (r *RSAKeyReconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+// Reconcile is the entrypoint for incoming requests from k8s
+func (r *RSAKeyReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := r.log.WithValues("request", request)
 
-	rsaKey, err := r.sgClient.SecretgenV1alpha1().RSAKeys(request.Namespace).Get(request.Name, metav1.GetOptions{})
+	rsaKey, err := r.sgClient.SecretgenV1alpha1().RSAKeys(request.Namespace).Get(ctx, request.Name, metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			log.Info("Not found")
@@ -54,23 +56,23 @@ func (r *RSAKeyReconciler) Reconcile(request reconcile.Request) (reconcile.Resul
 	}
 
 	status.SetReconciling(rsaKey.ObjectMeta)
-	defer r.updateStatus(rsaKey)
+	defer r.updateStatus(ctx, rsaKey)
 
-	return status.WithReconcileCompleted(r.reconcile(rsaKey))
+	return status.WithReconcileCompleted(r.reconcile(ctx, rsaKey))
 }
 
-func (r *RSAKeyReconciler) reconcile(rsaKey *sgv1alpha1.RSAKey) (reconcile.Result, error) {
-	_, err := r.coreClient.CoreV1().Secrets(rsaKey.Namespace).Get(rsaKey.Name, metav1.GetOptions{})
+func (r *RSAKeyReconciler) reconcile(ctx context.Context, rsaKey *sgv1alpha1.RSAKey) (reconcile.Result, error) {
+	_, err := r.coreClient.CoreV1().Secrets(rsaKey.Namespace).Get(ctx, rsaKey.Name, metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
-			return r.createSecret(rsaKey)
+			return r.createSecret(ctx, rsaKey)
 		}
 		return reconcile.Result{Requeue: true}, err
 	}
 	return reconcile.Result{}, nil
 }
 
-func (r *RSAKeyReconciler) createSecret(rsaKey *sgv1alpha1.RSAKey) (reconcile.Result, error) {
+func (r *RSAKeyReconciler) createSecret(ctx context.Context, rsaKey *sgv1alpha1.RSAKey) (reconcile.Result, error) {
 	rsaKeyResult, err := r.generate(rsaKey)
 	if err != nil {
 		return reconcile.Result{Requeue: true}, err
@@ -98,7 +100,7 @@ func (r *RSAKeyReconciler) createSecret(rsaKey *sgv1alpha1.RSAKey) (reconcile.Re
 
 	newSecret := secret.AsSecret()
 
-	_, err = r.coreClient.CoreV1().Secrets(newSecret.Namespace).Create(newSecret)
+	_, err = r.coreClient.CoreV1().Secrets(newSecret.Namespace).Create(ctx, newSecret, metav1.CreateOptions{})
 	if err != nil {
 		return reconcile.Result{Requeue: true}, err
 	}
@@ -118,15 +120,15 @@ func (r *RSAKeyReconciler) generate(rsaKey *sgv1alpha1.RSAKey) (cfgtypes.RSAKey,
 	return rsaKeyVal.(cfgtypes.RSAKey), nil
 }
 
-func (r *RSAKeyReconciler) updateStatus(rsaKey *sgv1alpha1.RSAKey) error {
-	existingRSAKey, err := r.sgClient.SecretgenV1alpha1().RSAKeys(rsaKey.Namespace).Get(rsaKey.Name, metav1.GetOptions{})
+func (r *RSAKeyReconciler) updateStatus(ctx context.Context, rsaKey *sgv1alpha1.RSAKey) error {
+	existingRSAKey, err := r.sgClient.SecretgenV1alpha1().RSAKeys(rsaKey.Namespace).Get(ctx, rsaKey.Name, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("Fetching rsakey: %s", err)
 	}
 
 	existingRSAKey.Status = rsaKey.Status
 
-	_, err = r.sgClient.SecretgenV1alpha1().RSAKeys(existingRSAKey.Namespace).UpdateStatus(existingRSAKey)
+	_, err = r.sgClient.SecretgenV1alpha1().RSAKeys(existingRSAKey.Namespace).UpdateStatus(ctx, existingRSAKey, metav1.UpdateOptions{})
 	if err != nil {
 		return fmt.Errorf("Updating rsakey status: %s", err)
 	}

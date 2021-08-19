@@ -52,16 +52,16 @@ func (r *SecretReconciler) AttachWatches(controller controller.Controller) error
 
 	return controller.Watch(&source.Kind{Type: &sgv1alpha1.SecretExport{}}, &enqueueSecretExportToSecret{
 		SecretExports: r.secretExports,
-		ToRequests:    handler.ToRequestsFunc(r.mapSecretExportToSecret),
+		ToRequests:    r.mapSecretExportToSecret,
 		Log:           r.log,
 	})
 }
 
-func (r *SecretReconciler) mapSecretExportToSecret(a handler.MapObject) []reconcile.Request {
+func (r *SecretReconciler) mapSecretExportToSecret(_ client.Object) []reconcile.Request {
 	var secretList corev1.SecretList
 
 	// TODO expensive call on every secret export update
-	err := r.client.List(context.TODO(), &secretList)
+	err := r.client.List(context.Background(), &secretList)
 	if err != nil {
 		// TODO what should we really do here?
 		r.log.Error(err, "Failed fetching list of all secrets")
@@ -86,13 +86,14 @@ func (r *SecretReconciler) mapSecretExportToSecret(a handler.MapObject) []reconc
 	return result
 }
 
-func (r *SecretReconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+// Reconcile is the entrypoint for incoming requests from k8s
+func (r *SecretReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := r.log.WithValues("request", request)
 	log.Info("Reconciling")
 
 	var secret corev1.Secret
 
-	err := r.client.Get(context.TODO(), request.NamespacedName, &secret)
+	err := r.client.Get(ctx, request.NamespacedName, &secret)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return reconcile.Result{}, nil
@@ -105,7 +106,7 @@ func (r *SecretReconciler) Reconcile(request reconcile.Request) (reconcile.Resul
 		return reconcile.Result{}, nil
 	}
 
-	return r.reconcile(secret, *secret.DeepCopy(), log)
+	return r.reconcile(ctx, secret, *secret.DeepCopy(), log)
 }
 
 const (
@@ -117,7 +118,7 @@ func (r *SecretReconciler) predictWantToReconcile(secret corev1.Secret) bool {
 	return found
 }
 
-func (r *SecretReconciler) reconcile(secret, originalSecret corev1.Secret, log logr.Logger) (reconcile.Result, error) {
+func (r *SecretReconciler) reconcile(ctx context.Context, secret, originalSecret corev1.Secret, log logr.Logger) (reconcile.Result, error) {
 	if _, found := secret.Annotations[imagePullSecretAnnKey]; !found {
 		return reconcile.Result{}, nil
 	}
@@ -133,7 +134,7 @@ func (r *SecretReconciler) reconcile(secret, originalSecret corev1.Secret, log l
 				Message: "Expected secret to have type=corev1.SecretTypeDockerConfigJson, but did not",
 			}},
 		}
-		return r.updateSecret(secret, status, originalSecret)
+		return r.updateSecret(ctx, secret, status, originalSecret)
 	}
 
 	matcher := SecretMatcher{Namespace: secret.Namespace, SecretType: secret.Type}
@@ -154,10 +155,10 @@ func (r *SecretReconciler) reconcile(secret, originalSecret corev1.Secret, log l
 		SecretNames: r.statusSecretNames(secrets),
 	}
 
-	return r.updateSecret(secret, status, originalSecret)
+	return r.updateSecret(ctx, secret, status, originalSecret)
 }
 
-func (r *SecretReconciler) updateSecret(secret corev1.Secret, status SecretStatus,
+func (r *SecretReconciler) updateSecret(ctx context.Context, secret corev1.Secret, status SecretStatus,
 	originalSecret corev1.Secret) (reconcile.Result, error) {
 
 	const (
@@ -180,7 +181,7 @@ func (r *SecretReconciler) updateSecret(secret corev1.Secret, status SecretStatu
 	}
 
 	// TODO bother to retry to avoid having to recalculate matched secrets?
-	err = r.client.Update(context.TODO(), &secret)
+	err = r.client.Update(ctx, &secret)
 	if err != nil {
 		// Requeue to try to update a bit later
 		return reconcile.Result{Requeue: true}, fmt.Errorf("Updating secret: %s", err)
@@ -208,7 +209,7 @@ func (*SecretReconciler) statusSecretNames(secrets []*corev1.Secret) []string {
 // Secret reconile requests.
 type enqueueSecretExportToSecret struct {
 	SecretExports *SecretExports
-	ToRequests    handler.Mapper
+	ToRequests    handler.MapFunc
 	Log           logr.Logger
 }
 
@@ -225,7 +226,7 @@ func (e *enqueueSecretExportToSecret) Update(evt event.UpdateEvent, q workqueue.
 		e.Log.Info("Skipping SecretExport update since status did not change")
 		return // Skip when status of SecretExport did not change
 	}
-	e.mapAndEnqueue(q, handler.MapObject{Meta: evt.MetaNew, Object: evt.ObjectNew})
+	e.mapAndEnqueue(q, evt.ObjectNew)
 }
 
 // Delete always enqueues but first clears the export cache
@@ -236,19 +237,19 @@ func (e *enqueueSecretExportToSecret) Delete(evt event.DeleteEvent, q workqueue.
 	// (which also clears the shared cache).
 	e.SecretExports.Unexport(&sgv1alpha1.SecretExport{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      evt.Meta.GetName(),
-			Namespace: evt.Meta.GetNamespace(),
+			Name:      evt.Object.GetName(),
+			Namespace: evt.Object.GetNamespace(),
 		},
 	})
-	e.mapAndEnqueue(q, handler.MapObject{Meta: evt.Meta, Object: evt.Object})
+	e.mapAndEnqueue(q, evt.Object)
 }
 
 // Generic does not do anything
 func (e *enqueueSecretExportToSecret) Generic(evt event.GenericEvent, q workqueue.RateLimitingInterface) {
 }
 
-func (e *enqueueSecretExportToSecret) mapAndEnqueue(q workqueue.RateLimitingInterface, object handler.MapObject) {
-	for _, req := range e.ToRequests.Map(object) {
+func (e *enqueueSecretExportToSecret) mapAndEnqueue(q workqueue.RateLimitingInterface, object client.Object) {
+	for _, req := range e.ToRequests(object) {
 		q.Add(req)
 	}
 }

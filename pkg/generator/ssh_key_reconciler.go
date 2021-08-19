@@ -4,6 +4,7 @@
 package generator
 
 import (
+	"context"
 	"fmt"
 
 	cfgtypes "github.com/cloudfoundry/config-server/types"
@@ -31,10 +32,11 @@ func NewSSHKeyReconciler(sgClient sgclient.Interface,
 	return &SSHKeyReconciler{sgClient, coreClient, log}
 }
 
-func (r *SSHKeyReconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+// Reconcile is the entrypoint for incoming requests from k8s
+func (r *SSHKeyReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := r.log.WithValues("request", request)
 
-	sshKey, err := r.sgClient.SecretgenV1alpha1().SSHKeys(request.Namespace).Get(request.Name, metav1.GetOptions{})
+	sshKey, err := r.sgClient.SecretgenV1alpha1().SSHKeys(request.Namespace).Get(ctx, request.Name, metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			log.Info("Not found")
@@ -54,23 +56,23 @@ func (r *SSHKeyReconciler) Reconcile(request reconcile.Request) (reconcile.Resul
 	}
 
 	status.SetReconciling(sshKey.ObjectMeta)
-	defer r.updateStatus(sshKey)
+	defer r.updateStatus(ctx, sshKey)
 
-	return status.WithReconcileCompleted(r.reconcile(sshKey))
+	return status.WithReconcileCompleted(r.reconcile(ctx, sshKey))
 }
 
-func (r *SSHKeyReconciler) reconcile(sshKey *sgv1alpha1.SSHKey) (reconcile.Result, error) {
-	_, err := r.coreClient.CoreV1().Secrets(sshKey.Namespace).Get(sshKey.Name, metav1.GetOptions{})
+func (r *SSHKeyReconciler) reconcile(ctx context.Context, sshKey *sgv1alpha1.SSHKey) (reconcile.Result, error) {
+	_, err := r.coreClient.CoreV1().Secrets(sshKey.Namespace).Get(ctx, sshKey.Name, metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
-			return r.createSecret(sshKey)
+			return r.createSecret(ctx, sshKey)
 		}
 		return reconcile.Result{Requeue: true}, err
 	}
 	return reconcile.Result{}, nil
 }
 
-func (r *SSHKeyReconciler) createSecret(sshKey *sgv1alpha1.SSHKey) (reconcile.Result, error) {
+func (r *SSHKeyReconciler) createSecret(ctx context.Context, sshKey *sgv1alpha1.SSHKey) (reconcile.Result, error) {
 	sshKeyResult, err := r.generate(sshKey)
 	if err != nil {
 		return reconcile.Result{Requeue: true}, err
@@ -98,7 +100,7 @@ func (r *SSHKeyReconciler) createSecret(sshKey *sgv1alpha1.SSHKey) (reconcile.Re
 
 	newSecret := secret.AsSecret()
 
-	_, err = r.coreClient.CoreV1().Secrets(newSecret.Namespace).Create(newSecret)
+	_, err = r.coreClient.CoreV1().Secrets(newSecret.Namespace).Create(ctx, newSecret, metav1.CreateOptions{})
 	if err != nil {
 		return reconcile.Result{Requeue: true}, err
 	}
@@ -118,15 +120,15 @@ func (r *SSHKeyReconciler) generate(sshKey *sgv1alpha1.SSHKey) (cfgtypes.SSHKey,
 	return sshKeyVal.(cfgtypes.SSHKey), nil
 }
 
-func (r *SSHKeyReconciler) updateStatus(sshKey *sgv1alpha1.SSHKey) error {
-	existingSSHKey, err := r.sgClient.SecretgenV1alpha1().SSHKeys(sshKey.Namespace).Get(sshKey.Name, metav1.GetOptions{})
+func (r *SSHKeyReconciler) updateStatus(ctx context.Context, sshKey *sgv1alpha1.SSHKey) error {
+	existingSSHKey, err := r.sgClient.SecretgenV1alpha1().SSHKeys(sshKey.Namespace).Get(ctx, sshKey.Name, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("Fetching sshkey: %s", err)
 	}
 
 	existingSSHKey.Status = sshKey.Status
 
-	_, err = r.sgClient.SecretgenV1alpha1().SSHKeys(existingSSHKey.Namespace).UpdateStatus(existingSSHKey)
+	_, err = r.sgClient.SecretgenV1alpha1().SSHKeys(existingSSHKey.Namespace).UpdateStatus(ctx, existingSSHKey, metav1.UpdateOptions{})
 	if err != nil {
 		return fmt.Errorf("Updating sshkey status: %s", err)
 	}

@@ -30,7 +30,7 @@ import (
 )
 
 const (
-	// Version is the version of secretgen-controller
+	// Version of secretgen-controller that will be visible to users
 	Version = "0.4.0-alpha.1"
 )
 
@@ -43,7 +43,7 @@ func main() {
 	flag.StringVar(&ctrlNamespace, "namespace", "", "Namespace to watch")
 	flag.Parse()
 
-	logf.SetLogger(zap.Logger(false))
+	logf.SetLogger(zap.New(zap.UseDevMode(false)))
 	entryLog := log.WithName("entrypoint")
 	entryLog.Info("secretgen-controller", "version", Version)
 
@@ -85,9 +85,6 @@ func main() {
 	{
 		secretExportReconciler := sharing.NewSecretExportReconciler(
 			mgr.GetClient(), secretExports, log.WithName("secexp"))
-
-		err := secretExportReconciler.WarmUp()
-		exitIfErr(entryLog, "warmingup secexp controller", err)
 
 		err = registerCtrlMinimal("secexp", mgr, secretExportReconciler)
 		exitIfErr(entryLog, "registering secexp controller", err)
