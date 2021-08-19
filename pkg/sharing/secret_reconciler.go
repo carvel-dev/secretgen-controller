@@ -137,7 +137,7 @@ func (r *SecretReconciler) reconcile(ctx context.Context, secret, originalSecret
 		return r.updateSecret(ctx, secret, status, originalSecret)
 	}
 
-	matcher := SecretMatcher{Namespace: secret.Namespace, SecretType: secret.Type}
+	matcher := SecretMatcher{ToNamespace: secret.Namespace, SecretType: secret.Type}
 	secrets := r.secretExports.MatchedSecretsForImport(matcher)
 
 	newData, err := NewCombinedDockerConfigJSON(secrets)
