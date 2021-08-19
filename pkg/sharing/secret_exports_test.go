@@ -48,8 +48,8 @@ func TestSecretExports(t *testing.T) {
 		se.Export(export2, secret2)
 
 		require.Equal(t, []*corev1.Secret(nil), se.MatchedSecretsForImport(sharing.SecretMatcher{
-			Namespace:  "dst-ns",
-			SecretType: corev1.SecretType("Opaque"),
+			ToNamespace: "dst-ns",
+			SecretType:  corev1.SecretType("Opaque"),
 		}))
 
 		// Everything matches
@@ -67,8 +67,8 @@ func TestSecretExports(t *testing.T) {
 		se.Export(export3, secret3)
 
 		require.Equal(t, []*corev1.Secret{secret3}, se.MatchedSecretsForImport(sharing.SecretMatcher{
-			Namespace:  "dst-ns",
-			SecretType: corev1.SecretType("Opaque"),
+			ToNamespace: "dst-ns",
+			SecretType:  corev1.SecretType("Opaque"),
 		}))
 
 		// Everything matches but from different namespace
@@ -88,8 +88,8 @@ func TestSecretExports(t *testing.T) {
 		require.Equal(t,
 			[]*corev1.Secret{secret3, secret4},
 			se.MatchedSecretsForImport(sharing.SecretMatcher{
-				Namespace:  "dst-ns",
-				SecretType: corev1.SecretType("Opaque"),
+				ToNamespace: "dst-ns",
+				SecretType:  corev1.SecretType("Opaque"),
 			}),
 		)
 
@@ -125,16 +125,16 @@ func TestSecretExports(t *testing.T) {
 		require.Equal(t,
 			[]*corev1.Secret{secret5, secret3, secret4, secret6},
 			se.MatchedSecretsForImport(sharing.SecretMatcher{
-				Namespace:  "dst-ns",
-				SecretType: corev1.SecretType("Opaque"),
+				ToNamespace: "dst-ns",
+				SecretType:  corev1.SecretType("Opaque"),
 			}),
 		)
 
 		// No matches are produced when subject is offered for matching
 		require.Equal(t, []*corev1.Secret(nil), se.MatchedSecretsForImport(sharing.SecretMatcher{
-			Subject:    "non-empty", // Currently not supported
-			Namespace:  "dst-ns",
-			SecretType: corev1.SecretType("Opaque"),
+			Subject:     "non-empty", // Currently not supported
+			ToNamespace: "dst-ns",
+			SecretType:  corev1.SecretType("Opaque"),
 		}))
 
 		se.Unexport(export4)
@@ -142,8 +142,8 @@ func TestSecretExports(t *testing.T) {
 		require.Equal(t,
 			[]*corev1.Secret{secret5, secret3, secret6},
 			se.MatchedSecretsForImport(sharing.SecretMatcher{
-				Namespace:  "dst-ns",
-				SecretType: corev1.SecretType("Opaque"),
+				ToNamespace: "dst-ns",
+				SecretType:  corev1.SecretType("Opaque"),
 			}),
 		)
 
@@ -160,8 +160,8 @@ func TestSecretExports(t *testing.T) {
 		require.Equal(t,
 			[]*corev1.Secret{secret5, secret3},
 			se.MatchedSecretsForImport(sharing.SecretMatcher{
-				Namespace:  "dst-ns",
-				SecretType: corev1.SecretType("Opaque"),
+				ToNamespace: "dst-ns",
+				SecretType:  corev1.SecretType("Opaque"),
 			}),
 		)
 	})
@@ -262,8 +262,8 @@ func TestSecretExports(t *testing.T) {
 		})
 
 		result := se.MatchedSecretsForImport(sharing.SecretMatcher{
-			Namespace:  "dst-ns",
-			SecretType: corev1.SecretType("Opaque"),
+			ToNamespace: "dst-ns",
+			SecretType:  corev1.SecretType("Opaque"),
 		})
 
 		// Check based on metas since assertion diff will be more readable

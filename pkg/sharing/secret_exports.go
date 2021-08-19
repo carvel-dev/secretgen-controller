@@ -64,7 +64,11 @@ func (se *SecretExports) Unexport(export *sgv1alpha1.SecretExport) {
 
 // SecretMatcher allows to specify criteria for matching exported secrets.
 type SecretMatcher struct {
-	Namespace  string
+	FromName      string
+	FromNamespace string
+
+	ToNamespace string
+
 	Subject    string
 	SecretType corev1.SecretType
 }
@@ -93,7 +97,7 @@ func (se *SecretExports) MatchedSecretsForImport(matcher SecretMatcher) []*corev
 
 	sort.Slice(matched, func(i, j int) bool {
 		// j and i are flipped to do a reverse sort
-		return matched[j].SortKey(matcher.Namespace).Less(matched[i].SortKey(matcher.Namespace))
+		return matched[j].SortKey(matcher.ToNamespace).Less(matched[i].SortKey(matcher.ToNamespace))
 	})
 
 	var result []*corev1.Secret
@@ -142,10 +146,22 @@ func (es exportedSecret) Matches(matcher SecretMatcher) bool {
 		// TODO we currently do not match by subject
 		return false
 	}
-	if matcher.SecretType != es.secret.Type {
-		return false
+	if len(matcher.SecretType) > 0 {
+		if matcher.SecretType != es.secret.Type {
+			return false
+		}
 	}
-	if !es.matchesNamespace(matcher.Namespace) {
+	if len(matcher.FromName) > 0 {
+		if matcher.FromName != es.secret.Name {
+			return false
+		}
+	}
+	if len(matcher.FromNamespace) > 0 {
+		if matcher.FromNamespace != es.secret.Namespace {
+			return false
+		}
+	}
+	if !es.matchesNamespace(matcher.ToNamespace) {
 		return false
 	}
 	return true
@@ -160,7 +176,7 @@ func (es exportedSecret) matchesNamespace(nsToMatch string) bool {
 	return false
 }
 
-func (es exportedSecret) SortKey(dstNs string) exportedSecretSortKey {
+func (es exportedSecret) SortKey(toNs string) exportedSecretSortKey {
 	var weight float64 // default weight is 0.0
 	if val, found := es.export.Annotations[WeightAnnKey]; found {
 		if typedVal, err := strconv.ParseFloat(val, 64); err == nil { // Ignore invalid weights
@@ -168,27 +184,27 @@ func (es exportedSecret) SortKey(dstNs string) exportedSecretSortKey {
 		}
 	}
 
-	var matchesNsExactly bool
+	var matchesToNsExactly bool
 	for _, ns := range es.export.StaticToNamespaces() {
-		if ns == dstNs {
-			matchesNsExactly = true
+		if ns == toNs {
+			matchesToNsExactly = true
 			break
 		}
 	}
 
 	return exportedSecretSortKey{
-		Weight:           weight,
-		WithinDstNs:      es.secret.Namespace == dstNs,
-		MatchesNsExactly: matchesNsExactly,
-		SecretNsName:     fmt.Sprintf("%s/%s", es.secret.Namespace, es.secret.Name),
+		Weight:             weight,
+		WithinToNs:         es.secret.Namespace == toNs,
+		MatchesToNsExactly: matchesToNsExactly,
+		SecretNsName:       fmt.Sprintf("%s/%s", es.secret.Namespace, es.secret.Name),
 	}
 }
 
 type exportedSecretSortKey struct {
-	Weight           float64
-	WithinDstNs      bool
-	MatchesNsExactly bool // or by wildcard
-	SecretNsName     string
+	Weight             float64
+	WithinToNs         bool
+	MatchesToNsExactly bool // or by wildcard
+	SecretNsName       string
 }
 
 func (k exportedSecretSortKey) Less(otherKey exportedSecretSortKey) bool {
@@ -201,18 +217,18 @@ func (k exportedSecretSortKey) Less(otherKey exportedSecretSortKey) bool {
 	}
 
 	// Check same dst namespace
-	if k.WithinDstNs && !otherKey.WithinDstNs {
+	if k.WithinToNs && !otherKey.WithinToNs {
 		return true
 	}
-	if !k.WithinDstNs && otherKey.WithinDstNs {
+	if !k.WithinToNs && otherKey.WithinToNs {
 		return false
 	}
 
 	// Check ns name exact match
-	if k.MatchesNsExactly && !otherKey.MatchesNsExactly {
+	if k.MatchesToNsExactly && !otherKey.MatchesToNsExactly {
 		return true
 	}
-	if !k.MatchesNsExactly && otherKey.MatchesNsExactly {
+	if !k.MatchesToNsExactly && otherKey.MatchesToNsExactly {
 		return false
 	}
 
