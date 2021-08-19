@@ -92,7 +92,7 @@ func main() {
 
 	{
 		secretRequestReconciler := sharing.NewSecretRequestReconciler(
-			mgr.GetClient(), log.WithName("secreq"))
+			mgr.GetClient(), secretExports, log.WithName("secreq"))
 		err := registerCtrlMinimal("secreq", mgr, secretRequestReconciler)
 		exitIfErr(entryLog, "registering secreq controller", err)
 	}

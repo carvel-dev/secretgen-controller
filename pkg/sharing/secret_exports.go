@@ -64,6 +64,9 @@ func (se *SecretExports) Unexport(export *sgv1alpha1.SecretExport) {
 
 // SecretMatcher allows to specify criteria for matching exported secrets.
 type SecretMatcher struct {
+	FromName      string
+	FromNamespace string
+
 	ToNamespace string
 
 	Subject    string
@@ -145,6 +148,16 @@ func (es exportedSecret) Matches(matcher SecretMatcher) bool {
 	}
 	if len(matcher.SecretType) > 0 {
 		if matcher.SecretType != es.secret.Type {
+			return false
+		}
+	}
+	if len(matcher.FromName) > 0 {
+		if matcher.FromName != es.secret.Name {
+			return false
+		}
+	}
+	if len(matcher.FromNamespace) > 0 {
+		if matcher.FromNamespace != es.secret.Namespace {
 			return false
 		}
 	}
