@@ -80,11 +80,14 @@ func main() {
 	_, err = registerCtrl("sshkey", mgr, sshKeyReconciler, &source.Kind{Type: &sgv1alpha1.SSHKey{}})
 	exitIfErr(entryLog, "registering sshkey controller", err)
 
-	secretExports := sharing.NewSecretExports(log.WithName("secretexports"))
+	secretExports := sharing.NewSecretExportsWarmedUp(
+		sharing.NewSecretExports(log.WithName("secretexports")))
 
 	{
 		secretExportReconciler := sharing.NewSecretExportReconciler(
 			mgr.GetClient(), secretExports, log.WithName("secexp"))
+
+		secretExports.WarmUpFunc = secretExportReconciler.WarmUp
 
 		err = registerCtrlMinimal("secexp", mgr, secretExportReconciler)
 		exitIfErr(entryLog, "registering secexp controller", err)
