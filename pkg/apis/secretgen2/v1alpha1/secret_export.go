@@ -12,6 +12,9 @@ import (
 
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name=Description,JSONPath=.status.friendlyDescription,description=Friendly description,type=string
+// +kubebuilder:printcolumn:name=Age,JSONPath=.metadata.creationTimestamp,description=Time since creation,type=date
 type SecretExport struct {
 	metav1.TypeMeta `json:",inline"`
 
@@ -19,7 +22,8 @@ type SecretExport struct {
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   SecretExportSpec   `json:"spec"`
+	Spec SecretExportSpec `json:"spec"`
+	// +optional
 	Status SecretExportStatus `json:"status"`
 }
 
@@ -36,12 +40,15 @@ type SecretExportList struct {
 }
 
 type SecretExportSpec struct {
-	ToNamespace  string   `json:"toNamespace,omitempty"`
+	// +optional
+	ToNamespace string `json:"toNamespace,omitempty"`
+	// +optional
 	ToNamespaces []string `json:"toNamespaces,omitempty"`
 }
 
 type SecretExportStatus struct {
-	sgv1alpha1.GenericStatus      `json:",inline"`
+	sgv1alpha1.GenericStatus `json:",inline"`
+	// +optional
 	ObservedSecretResourceVersion string `json:"observedSecretResourceVersion,omitempty"`
 }
 

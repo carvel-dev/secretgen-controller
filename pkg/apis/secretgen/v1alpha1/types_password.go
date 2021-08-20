@@ -17,6 +17,9 @@ const (
 
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name=Description,JSONPath=.status.friendlyDescription,description=Friendly description,type=string
+// +kubebuilder:printcolumn:name=Age,JSONPath=.metadata.creationTimestamp,description=Time since creation,type=date
 type Password struct {
 	metav1.TypeMeta `json:",inline"`
 
@@ -24,7 +27,9 @@ type Password struct {
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   PasswordSpec   `json:"spec"`
+	// +optional
+	Spec PasswordSpec `json:"spec"`
+	// +optional
 	Status PasswordStatus `json:"status"`
 }
 
@@ -41,8 +46,10 @@ type PasswordList struct {
 }
 
 type PasswordSpec struct {
+	// +optional
 	Length int `json:"length"`
 
+	// +optional
 	SecretTemplate *SecretTemplate `json:"secretTemplate,omitempty"`
 }
 

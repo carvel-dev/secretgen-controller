@@ -19,6 +19,9 @@ const (
 
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name=Description,JSONPath=.status.friendlyDescription,description=Friendly description,type=string
+// +kubebuilder:printcolumn:name=Age,JSONPath=.metadata.creationTimestamp,description=Time since creation,type=date
 type Certificate struct {
 	metav1.TypeMeta `json:",inline"`
 
@@ -26,7 +29,9 @@ type Certificate struct {
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   CertificateSpec   `json:"spec"`
+	// +optional
+	Spec CertificateSpec `json:"spec"`
+	// +optional
 	Status CertificateStatus `json:"status"`
 }
 
@@ -43,16 +48,23 @@ type CertificateList struct {
 }
 
 type CertificateSpec struct {
-	// TODO should we support cross namespace references?
+	// +optional
 	CARef *corev1.LocalObjectReference `json:"caRef,omitempty"`
-	IsCA  bool                         `json:"isCA,omitempty"`
+	// +optional
+	IsCA bool `json:"isCA,omitempty"`
 
-	CommonName       string   `json:"commonName,omitempty"`
-	Organization     string   `json:"organization,omitempty"`
+	// +optional
+	CommonName string `json:"commonName,omitempty"`
+	// +optional
+	Organization string `json:"organization,omitempty"`
+	// +optional
 	AlternativeNames []string `json:"alternativeNames,omitempty"`
+	// +optional
 	ExtendedKeyUsage []string `json:"extendedKeyUsage,omitempty"`
-	Duration         int64    `json:"duration,omitempty"`
+	// +optional
+	Duration int64 `json:"duration,omitempty"`
 
+	// +optional
 	SecretTemplate *SecretTemplate `json:"secretTemplate,omitempty"`
 }
 

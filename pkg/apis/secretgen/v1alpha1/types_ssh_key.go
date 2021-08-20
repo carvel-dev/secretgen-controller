@@ -19,6 +19,9 @@ const (
 
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name=Description,JSONPath=.status.friendlyDescription,description=Friendly description,type=string
+// +kubebuilder:printcolumn:name=Age,JSONPath=.metadata.creationTimestamp,description=Time since creation,type=date
 type SSHKey struct {
 	metav1.TypeMeta `json:",inline"`
 
@@ -26,7 +29,9 @@ type SSHKey struct {
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   SSHKeySpec   `json:"spec"`
+	// +optional
+	Spec SSHKeySpec `json:"spec"`
+	// +optional
 	Status SSHKeyStatus `json:"status"`
 }
 
@@ -43,6 +48,7 @@ type SSHKeyList struct {
 }
 
 type SSHKeySpec struct {
+	// +optional
 	SecretTemplate *SecretTemplate `json:"secretTemplate,omitempty"`
 }
 

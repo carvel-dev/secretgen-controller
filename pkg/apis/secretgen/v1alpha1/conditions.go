@@ -19,7 +19,9 @@ const (
 )
 
 type Condition struct {
-	Type   ConditionType          `json:"type"`
+	// +optional
+	Type ConditionType `json:"type"`
+	// +optional
 	Status corev1.ConditionStatus `json:"status"`
 	// Unique, this should be a short, machine understandable string that gives the reason
 	// for condition's last transition. If it reports "ResizeStarted" that means the underlying

@@ -1,0 +1,24 @@
+#@ load("@ytt:overlay", "overlay")
+
+#@overlay/match by=overlay.subset({"kind": "CustomResourceDefinition"}), expects="1+"
+---
+metadata:
+  #@overlay/remove
+  #@overlay/match missing_ok=True
+  creationTimestamp: null
+  #@overlay/remove
+  #@overlay/match missing_ok=True
+  annotations:
+spec:
+  versions:
+  #@overlay/match by=overlay.all, expects="0+"
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        properties:
+          metadata:
+            #@overlay/remove
+            description:
+#@overlay/remove
+#@overlay/match missing_ok=True
+status:
