@@ -98,9 +98,9 @@ func (r *SecretImportReconciler) AttachWatches(controller controller.Controller)
 func (r *SecretImportReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := r.log.WithValues("request", request)
 
-	var secretRequest sg2v1alpha1.SecretImport
+	var secretImport sg2v1alpha1.SecretImport
 
-	err := r.client.Get(ctx, request.NamespacedName, &secretRequest)
+	err := r.client.Get(ctx, request.NamespacedName, &secretImport)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Do not requeue as there is nothing to do when request is deleted
@@ -110,22 +110,22 @@ func (r *SecretImportReconciler) Reconcile(ctx context.Context, request reconcil
 		return reconcile.Result{Requeue: true}, err
 	}
 
-	if secretRequest.DeletionTimestamp != nil {
+	if secretImport.DeletionTimestamp != nil {
 		// Do not requeue as there is nothing to do
 		// Associated secret has owned ref so it's going to be deleted
 		return reconcile.Result{}, nil
 	}
 
 	status := &reconciler.Status{
-		secretRequest.Status.GenericStatus,
-		func(st sgv1alpha1.GenericStatus) { secretRequest.Status.GenericStatus = st },
+		secretImport.Status.GenericStatus,
+		func(st sgv1alpha1.GenericStatus) { secretImport.Status.GenericStatus = st },
 	}
 
-	status.SetReconciling(secretRequest.ObjectMeta)
+	status.SetReconciling(secretImport.ObjectMeta)
 
-	reconcileResult, reconcileErr := status.WithReconcileCompleted(r.reconcile(ctx, secretRequest, log))
+	reconcileResult, reconcileErr := status.WithReconcileCompleted(r.reconcile(ctx, secretImport, log))
 
-	err = r.updateStatus(ctx, secretRequest)
+	err = r.updateStatus(ctx, secretImport)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -134,10 +134,10 @@ func (r *SecretImportReconciler) Reconcile(ctx context.Context, request reconcil
 }
 
 func (r *SecretImportReconciler) reconcile(
-	ctx context.Context, secretRequest sg2v1alpha1.SecretImport,
+	ctx context.Context, secretImport sg2v1alpha1.SecretImport,
 	log logr.Logger) (reconcile.Result, error) {
 
-	err := secretRequest.Validate()
+	err := secretImport.Validate()
 	if err != nil {
 		// Do not requeue as there is nothing this controller can do until secret request is fixed
 		return reconcile.Result{}, reconciler.TerminalReconcileErr{err}
@@ -146,16 +146,16 @@ func (r *SecretImportReconciler) reconcile(
 	log.Info("Reconciling")
 
 	matcher := SecretMatcher{
-		FromName:      secretRequest.Name,
-		FromNamespace: secretRequest.Spec.FromNamespace,
-		ToNamespace:   secretRequest.Namespace,
+		FromName:      secretImport.Name,
+		FromNamespace: secretImport.Spec.FromNamespace,
+		ToNamespace:   secretImport.Namespace,
 	}
 
 	secrets := r.secretExports.MatchedSecretsForImport(matcher)
 
 	switch len(secrets) {
 	case 0:
-		err := r.deleteAssociatedSecret(ctx, secretRequest)
+		err := r.deleteAssociatedSecret(ctx, secretImport)
 		if err != nil {
 			// Requeue to try to delete a bit later
 			return reconcile.Result{Requeue: true}, err
@@ -164,7 +164,7 @@ func (r *SecretImportReconciler) reconcile(
 		return reconcile.Result{}, reconciler.TerminalReconcileErr{fmt.Errorf("No matching export/secret")}
 
 	case 1:
-		return r.copyAssociatedSecret(ctx, secretRequest, secrets[0])
+		return r.copyAssociatedSecret(ctx, secretImport, secrets[0])
 
 	default:
 		panic("Internal inconsistency: multiple exports/secrets matched one ns+name")

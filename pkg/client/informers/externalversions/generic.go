@@ -45,10 +45,6 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Secretgen().V1alpha1().RSAKeys().Informer()}, nil
 	case v1alpha1.SchemeGroupVersion.WithResource("sshkeys"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Secretgen().V1alpha1().SSHKeys().Informer()}, nil
-	case v1alpha1.SchemeGroupVersion.WithResource("secretexports"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Secretgen().V1alpha1().SecretExports().Informer()}, nil
-	case v1alpha1.SchemeGroupVersion.WithResource("secretrequests"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Secretgen().V1alpha1().SecretRequests().Informer()}, nil
 
 	}
 

@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-logr/logr"
 	sgv1alpha1 "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/apis/secretgen/v1alpha1"
+	sg2v1alpha1 "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/apis/secretgen2/v1alpha1"
 	"github.com/vmware-tanzu/carvel-secretgen-controller/pkg/reconciler"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -38,7 +39,7 @@ func NewSecretExportReconciler(client client.Client,
 }
 
 func (r *SecretExportReconciler) AttachWatches(controller controller.Controller) error {
-	err := controller.Watch(&source.Kind{Type: &sgv1alpha1.SecretExport{}}, &handler.EnqueueRequestForObject{})
+	err := controller.Watch(&source.Kind{Type: &sg2v1alpha1.SecretExport{}}, &handler.EnqueueRequestForObject{})
 	if err != nil {
 		return fmt.Errorf("Watching secret exports: %s", err)
 	}
@@ -62,7 +63,7 @@ func (r *SecretExportReconciler) WarmUp() {
 	defer func() { r.log.Info("Done running WarmUp") }()
 
 	ctx := context.Background()
-	var secretExportList sgv1alpha1.SecretExportList
+	var secretExportList sg2v1alpha1.SecretExportList
 
 	err := r.client.List(ctx, &secretExportList)
 	if err != nil {
@@ -85,12 +86,12 @@ func (r *SecretExportReconciler) Reconcile(ctx context.Context, request reconcil
 	log := r.log.WithValues("request", request)
 	log.Info("Reconciling")
 
-	var secretExport sgv1alpha1.SecretExport
+	var secretExport sg2v1alpha1.SecretExport
 
 	err := r.client.Get(ctx, request.NamespacedName, &secretExport)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			r.secretExports.Unexport(&sgv1alpha1.SecretExport{
+			r.secretExports.Unexport(&sg2v1alpha1.SecretExport{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      request.Name,
 					Namespace: request.Namespace,
@@ -129,7 +130,7 @@ func (r *SecretExportReconciler) Reconcile(ctx context.Context, request reconcil
 }
 
 // reconcile looks for the Secret corresponding to the SecretExport Request that we're reconciling.
-func (r *SecretExportReconciler) reconcile(ctx context.Context, secretExport *sgv1alpha1.SecretExport, log logr.Logger) (reconcile.Result, error) {
+func (r *SecretExportReconciler) reconcile(ctx context.Context, secretExport *sg2v1alpha1.SecretExport, log logr.Logger) (reconcile.Result, error) {
 	// Clear out observed resource version
 	secretExport.Status.ObservedSecretResourceVersion = ""
 
@@ -165,7 +166,7 @@ func (r *SecretExportReconciler) reconcile(ctx context.Context, secretExport *sg
 	return reconcile.Result{}, nil
 }
 
-func (r *SecretExportReconciler) updateStatus(ctx context.Context, secretExport sgv1alpha1.SecretExport) error {
+func (r *SecretExportReconciler) updateStatus(ctx context.Context, secretExport sg2v1alpha1.SecretExport) error {
 	r.log.Info("Updating secret export")
 
 	err := r.client.Status().Update(ctx, &secretExport)

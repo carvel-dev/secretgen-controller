@@ -6,7 +6,7 @@ package sharing
 import (
 	"sync"
 
-	sgv1alpha1 "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/apis/secretgen/v1alpha1"
+	sg2v1alpha1 "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/apis/secretgen2/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -27,12 +27,12 @@ func NewSecretExportsWarmedUp(delegate SecretExportsProvider) *SecretExportsWarm
 }
 
 // Export delegates.
-func (se *SecretExportsWarmedUp) Export(export *sgv1alpha1.SecretExport, secret *corev1.Secret) {
+func (se *SecretExportsWarmedUp) Export(export *sg2v1alpha1.SecretExport, secret *corev1.Secret) {
 	se.delegate.Export(export, secret)
 }
 
 // Unexport delegates.
-func (se *SecretExportsWarmedUp) Unexport(export *sgv1alpha1.SecretExport) {
+func (se *SecretExportsWarmedUp) Unexport(export *sg2v1alpha1.SecretExport) {
 	se.delegate.Unexport(export)
 }
 

@@ -10,7 +10,7 @@ import (
 	"sync"
 
 	"github.com/go-logr/logr"
-	sgv1alpha1 "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/apis/secretgen/v1alpha1"
+	sg2v1alpha1 "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/apis/secretgen2/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -24,8 +24,8 @@ const (
 // SecretExportsProvider provides a way to record and
 // later query secrets based on a given criteria.
 type SecretExportsProvider interface {
-	Export(*sgv1alpha1.SecretExport, *corev1.Secret)
-	Unexport(*sgv1alpha1.SecretExport)
+	Export(*sg2v1alpha1.SecretExport, *corev1.Secret)
+	Unexport(*sg2v1alpha1.SecretExport)
 	MatchedSecretsForImport(SecretMatcher) []*corev1.Secret
 }
 
@@ -49,7 +49,7 @@ func NewSecretExports(log logr.Logger) *SecretExports {
 
 // Export adds the in-memory representation (cached)
 // of both the SecretExport and underlying Secret.
-func (se *SecretExports) Export(export *sgv1alpha1.SecretExport, secret *corev1.Secret) {
+func (se *SecretExports) Export(export *sg2v1alpha1.SecretExport, secret *corev1.Secret) {
 	if secret == nil {
 		panic("Internal inconsistency: expected non-nil secret")
 	}
@@ -63,7 +63,7 @@ func (se *SecretExports) Export(export *sgv1alpha1.SecretExport, secret *corev1.
 
 // Unexport deletes the in-memory representation (cached)
 // of both the SecretExport and underlying Secret.
-func (se *SecretExports) Unexport(export *sgv1alpha1.SecretExport) {
+func (se *SecretExports) Unexport(export *sg2v1alpha1.SecretExport) {
 	exportedSec := newExportedSecret(export, nil)
 
 	se.exportedSecretsLock.Lock()
@@ -120,11 +120,11 @@ func (se *SecretExports) MatchedSecretsForImport(matcher SecretMatcher) []*corev
 
 // exportedSecret is used for keeping track export->secret pair.
 type exportedSecret struct {
-	export *sgv1alpha1.SecretExport
+	export *sg2v1alpha1.SecretExport
 	secret *corev1.Secret
 }
 
-func newExportedSecret(export *sgv1alpha1.SecretExport, secret *corev1.Secret) exportedSecret {
+func newExportedSecret(export *sg2v1alpha1.SecretExport, secret *corev1.Secret) exportedSecret {
 	if export == nil {
 		panic("Internal inconsistency: nil export")
 	}
@@ -179,7 +179,7 @@ func (es exportedSecret) Matches(matcher SecretMatcher) bool {
 
 func (es exportedSecret) matchesNamespace(nsToMatch string) bool {
 	for _, ns := range es.export.StaticToNamespaces() {
-		if ns == sgv1alpha1.AllNamespaces || ns == nsToMatch {
+		if ns == sg2v1alpha1.AllNamespaces || ns == nsToMatch {
 			return true
 		}
 	}

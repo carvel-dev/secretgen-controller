@@ -9,7 +9,3 @@ type PasswordExpansion interface{}
 type RSAKeyExpansion interface{}
 
 type SSHKeyExpansion interface{}
-
-type SecretExportExpansion interface{}
-
-type SecretRequestExpansion interface{}

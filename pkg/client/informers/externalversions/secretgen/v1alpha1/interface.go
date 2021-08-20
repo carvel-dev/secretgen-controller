@@ -16,10 +16,6 @@ type Interface interface {
 	RSAKeys() RSAKeyInformer
 	// SSHKeys returns a SSHKeyInformer.
 	SSHKeys() SSHKeyInformer
-	// SecretExports returns a SecretExportInformer.
-	SecretExports() SecretExportInformer
-	// SecretRequests returns a SecretRequestInformer.
-	SecretRequests() SecretRequestInformer
 }
 
 type version struct {
@@ -51,14 +47,4 @@ func (v *version) RSAKeys() RSAKeyInformer {
 // SSHKeys returns a SSHKeyInformer.
 func (v *version) SSHKeys() SSHKeyInformer {
 	return &sSHKeyInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
-}
-
-// SecretExports returns a SecretExportInformer.
-func (v *version) SecretExports() SecretExportInformer {
-	return &secretExportInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
-}
-
-// SecretRequests returns a SecretRequestInformer.
-func (v *version) SecretRequests() SecretRequestInformer {
-	return &secretRequestInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }

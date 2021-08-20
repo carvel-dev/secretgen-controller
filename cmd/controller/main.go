@@ -16,7 +16,6 @@ import (
 	sgclient "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/client/clientset/versioned"
 	"github.com/vmware-tanzu/carvel-secretgen-controller/pkg/generator"
 	"github.com/vmware-tanzu/carvel-secretgen-controller/pkg/sharing"
-	sharing2 "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/sharing2"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
@@ -75,7 +74,7 @@ func main() {
 	sshKeyReconciler := generator.NewSSHKeyReconciler(sgClient, coreClient, log.WithName("sshkey"))
 	exitIfErr(entryLog, "registering", registerCtrl("sshkey", mgr, sshKeyReconciler))
 
-	{ // Lives under secretgen.k14s.io
+	{
 		secretExports := sharing.NewSecretExportsWarmedUp(
 			sharing.NewSecretExports(log.WithName("secretexports")))
 
@@ -84,25 +83,11 @@ func main() {
 		secretExports.WarmUpFunc = secretExportReconciler.WarmUp
 		exitIfErr(entryLog, "registering", registerCtrl("secexp", mgr, secretExportReconciler))
 
-		secretRequestReconciler := sharing.NewSecretRequestReconciler(
-			mgr.GetClient(), secretExports, log.WithName("secreq"))
-		exitIfErr(entryLog, "registering", registerCtrl("secreq", mgr, secretRequestReconciler))
-	}
-
-	{ // Lives under secretgen.carvel.dev
-		secretExports := sharing2.NewSecretExportsWarmedUp(
-			sharing2.NewSecretExports(log.WithName("secretexports")))
-
-		secretExportReconciler := sharing2.NewSecretExportReconciler(
-			mgr.GetClient(), secretExports, log.WithName("secexp"))
-		secretExports.WarmUpFunc = secretExportReconciler.WarmUp
-		exitIfErr(entryLog, "registering", registerCtrl("secexp", mgr, secretExportReconciler))
-
-		secretImportReconciler := sharing2.NewSecretImportReconciler(
+		secretImportReconciler := sharing.NewSecretImportReconciler(
 			mgr.GetClient(), secretExports, log.WithName("secimp"))
 		exitIfErr(entryLog, "registering", registerCtrl("secimp", mgr, secretImportReconciler))
 
-		secretReconciler := sharing2.NewSecretReconciler(
+		secretReconciler := sharing.NewSecretReconciler(
 			mgr.GetClient(), secretExports, log.WithName("secret"))
 		exitIfErr(entryLog, "registering", registerCtrl("secret", mgr, secretReconciler))
 	}

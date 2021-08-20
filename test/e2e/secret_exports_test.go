@@ -47,7 +47,7 @@ stringData:
   key2: val2
   key3: val3
 ---
-apiVersion: secretgen.k14s.io/v1alpha1
+apiVersion: secretgen.carvel.dev/v1alpha1
 kind: SecretExport
 metadata:
   name: secret
@@ -57,16 +57,16 @@ spec:
   - sg-test2
   - sg-test3
 ---
-apiVersion: secretgen.k14s.io/v1alpha1
-kind: SecretRequest
+apiVersion: secretgen.carvel.dev/v1alpha1
+kind: SecretImport
 metadata:
   name: secret
   namespace: sg-test2
 spec:
   fromNamespace: sg-test1
 ---
-apiVersion: secretgen.k14s.io/v1alpha1
-kind: SecretRequest
+apiVersion: secretgen.carvel.dev/v1alpha1
+kind: SecretImport
 metadata:
   name: secret
   namespace: sg-test3
@@ -161,7 +161,7 @@ stringData:
 	})
 
 	logger.Section("Delete export to see exported secrets deleted", func() {
-		kubectl.RunWithOpts([]string{"delete", "secretexport.secretgen.k14s.io", "secret", "-n", "sg-test1"},
+		kubectl.RunWithOpts([]string{"delete", "secretexport.secretgen.carvel.dev", "secret", "-n", "sg-test1"},
 			RunOpts{NoNamespace: true})
 
 		// TODO proper waiting

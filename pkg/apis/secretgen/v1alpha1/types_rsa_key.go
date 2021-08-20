@@ -19,6 +19,9 @@ const (
 
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name=Description,JSONPath=.status.friendlyDescription,description=Friendly description,type=string
+// +kubebuilder:printcolumn:name=Age,JSONPath=.metadata.creationTimestamp,description=Time since creation,type=date
 type RSAKey struct {
 	metav1.TypeMeta `json:",inline"`
 
@@ -26,7 +29,9 @@ type RSAKey struct {
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   RSAKeySpec   `json:"spec"`
+	// +optional
+	Spec RSAKeySpec `json:"spec"`
+	// +optional
 	Status RSAKeyStatus `json:"status"`
 }
 
@@ -43,6 +48,7 @@ type RSAKeyList struct {
 }
 
 type RSAKeySpec struct {
+	// +optional
 	SecretTemplate *SecretTemplate `json:"secretTemplate,omitempty"`
 }
 
