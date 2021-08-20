@@ -28,14 +28,8 @@ func init() {
 			&RSAKeyList{},
 			&SSHKey{},
 			&SSHKeyList{},
-			&SecretExport{},
-			&SecretExportList{},
-			&SecretRequest{},
-			&SecretRequestList{},
 		)
-		scheme.AddKnownTypes(SchemeGroupVersion,
-			&metav1.Status{},
-		)
+		scheme.AddKnownTypes(SchemeGroupVersion, &metav1.Status{})
 		metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 		return nil
 	})

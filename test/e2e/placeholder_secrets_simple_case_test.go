@@ -54,7 +54,7 @@ stringData:
       }
     }
 ---
-apiVersion: secretgen.k14s.io/v1alpha1
+apiVersion: secretgen.carvel.dev/v1alpha1
 kind: SecretExport
 metadata:
   name: secret
@@ -159,7 +159,7 @@ stringData:
 	})
 
 	logger.Section("Delete export to see exported secrets deleted", func() {
-		kubectl.RunWithOpts([]string{"delete", "secretexport.secretgen.k14s.io", "secret", "-n", "sg-test1"},
+		kubectl.RunWithOpts([]string{"delete", "secretexport.secretgen.carvel.dev", "secret", "-n", "sg-test1"},
 			RunOpts{NoNamespace: true})
 
 		for _, ns := range []string{"sg-test2", "sg-test3"} {

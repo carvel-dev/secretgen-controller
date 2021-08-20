@@ -92,7 +92,7 @@ stringData:
       }
     }
 ---
-apiVersion: secretgen.k14s.io/v1alpha1
+apiVersion: secretgen.carvel.dev/v1alpha1
 kind: SecretExport
 metadata:
   name: secret-kappa
@@ -178,7 +178,7 @@ stringData:
 
 	yaml3 := `
 ---
-apiVersion: secretgen.k14s.io/v1alpha1
+apiVersion: secretgen.carvel.dev/v1alpha1
 kind: SecretExport
 metadata:
   name: secret-mu
@@ -190,7 +190,7 @@ spec:
 `
 	yaml4 := `
 ---
-apiVersion: secretgen.k14s.io/v1alpha1
+apiVersion: secretgen.carvel.dev/v1alpha1
 kind: SecretExport
 metadata:
   name: secret-mu
