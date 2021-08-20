@@ -21,6 +21,14 @@ const (
 	WeightAnnKey = "secretgen.carvel.dev/weight"
 )
 
+// SecretExportsProvider provides a way to record and
+// later query secrets based on a given criteria.
+type SecretExportsProvider interface {
+	Export(*sgv1alpha1.SecretExport, *corev1.Secret)
+	Unexport(*sgv1alpha1.SecretExport)
+	MatchedSecretsForImport(SecretMatcher) []*corev1.Secret
+}
+
 // SecretExports is an in-memory cache of exported secrets.
 // It can be asked to return secrets that match specific criteria for importing.
 // (SecretExports is used by SecretExportReconciler to export/unexport secrets;
@@ -31,6 +39,8 @@ type SecretExports struct {
 	exportedSecretsLock sync.RWMutex
 	exportedSecrets     map[string]exportedSecret
 }
+
+var _ SecretExportsProvider = &SecretExports{}
 
 // NewSecretExports constructs new SecretExports cache.
 func NewSecretExports(log logr.Logger) *SecretExports {

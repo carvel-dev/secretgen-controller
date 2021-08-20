@@ -20,13 +20,11 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 const (
@@ -65,43 +63,32 @@ func main() {
 	exitIfErr(entryLog, "building secretgen client", err)
 
 	certReconciler := generator.NewCertificateReconciler(sgClient, coreClient, log.WithName("cert"))
-	_, err = registerCtrl("cert", mgr, certReconciler, &source.Kind{Type: &sgv1alpha1.Certificate{}})
-	exitIfErr(entryLog, "registering certificate controller", err)
+	exitIfErr(entryLog, "registering", registerCtrl("cert", mgr, certReconciler))
 
 	passwordReconciler := generator.NewPasswordReconciler(sgClient, coreClient, log.WithName("password"))
-	_, err = registerCtrl("password", mgr, passwordReconciler, &source.Kind{Type: &sgv1alpha1.Password{}})
-	exitIfErr(entryLog, "registering password controller", err)
+	exitIfErr(entryLog, "registering", registerCtrl("password", mgr, passwordReconciler))
 
 	rsaKeyReconciler := generator.NewRSAKeyReconciler(sgClient, coreClient, log.WithName("rsakey"))
-	_, err = registerCtrl("rsakey", mgr, rsaKeyReconciler, &source.Kind{Type: &sgv1alpha1.RSAKey{}})
-	exitIfErr(entryLog, "registering rsakey controller", err)
+	exitIfErr(entryLog, "registering", registerCtrl("rsakey", mgr, rsaKeyReconciler))
 
 	sshKeyReconciler := generator.NewSSHKeyReconciler(sgClient, coreClient, log.WithName("sshkey"))
-	_, err = registerCtrl("sshkey", mgr, sshKeyReconciler, &source.Kind{Type: &sgv1alpha1.SSHKey{}})
-	exitIfErr(entryLog, "registering sshkey controller", err)
+	exitIfErr(entryLog, "registering", registerCtrl("sshkey", mgr, sshKeyReconciler))
 
-	secretExports := sharing.NewSecretExports(log.WithName("secretexports"))
+	secretExports := sharing.NewSecretExportsWarmedUp(
+		sharing.NewSecretExports(log.WithName("secretexports")))
 
-	{
-		secretExportReconciler := sharing.NewSecretExportReconciler(
-			mgr.GetClient(), secretExports, log.WithName("secexp"))
+	secretExportReconciler := sharing.NewSecretExportReconciler(
+		mgr.GetClient(), secretExports, log.WithName("secexp"))
+	secretExports.WarmUpFunc = secretExportReconciler.WarmUp
+	exitIfErr(entryLog, "registering", registerCtrl("secexp", mgr, secretExportReconciler))
 
-		err = registerCtrlMinimal("secexp", mgr, secretExportReconciler)
-		exitIfErr(entryLog, "registering secexp controller", err)
-	}
+	secretRequestReconciler := sharing.NewSecretRequestReconciler(
+		mgr.GetClient(), secretExports, log.WithName("secreq"))
+	exitIfErr(entryLog, "registering", registerCtrl("secreq", mgr, secretRequestReconciler))
 
-	{
-		secretRequestReconciler := sharing.NewSecretRequestReconciler(
-			mgr.GetClient(), secretExports, log.WithName("secreq"))
-		err := registerCtrlMinimal("secreq", mgr, secretRequestReconciler)
-		exitIfErr(entryLog, "registering secreq controller", err)
-	}
-
-	// Start after warming up secret exports
 	secretReconciler := sharing.NewSecretReconciler(
 		mgr.GetClient(), secretExports, log.WithName("secret"))
-	err = registerCtrlMinimal("secret", mgr, secretReconciler)
-	exitIfErr(entryLog, "registering secret controller", err)
+	exitIfErr(entryLog, "registering", registerCtrl("secret", mgr, secretReconciler))
 
 	entryLog.Info("starting manager")
 
@@ -109,35 +96,13 @@ func main() {
 	exitIfErr(entryLog, "unable to run manager", err)
 }
 
-func registerCtrl(desc string, mgr manager.Manager,
-	reconciler reconcile.Reconciler, src source.Source) (controller.Controller, error) {
-
-	ctrlOpts := controller.Options{
-		Reconciler: reconciler,
-		// Default MaxConcurrentReconciles is 1. Keeping at that
-		// since we are not doing anything that we need to parallelize for.
-	}
-
-	ctrl, err := controller.New("sg-"+desc, mgr, ctrlOpts)
-	if err != nil {
-		return ctrl, fmt.Errorf("unable to set up secretgen-controller-%s: %s", desc, err)
-	}
-
-	err = ctrl.Watch(src, &handler.EnqueueRequestForObject{})
-	if err != nil {
-		return ctrl, fmt.Errorf("unable to watch %s: %s", desc, err)
-	}
-
-	return ctrl, nil
-}
-
 type reconcilerWithWatches interface {
 	reconcile.Reconciler
-	AttachWatches(controller controller.Controller) error
+	AttachWatches(controller.Controller) error
 }
 
-func registerCtrlMinimal(desc string, mgr manager.Manager,
-	reconciler reconcilerWithWatches) error {
+func registerCtrl(desc string, mgr manager.Manager, reconciler reconcilerWithWatches) error {
+	ctrlName := "sg-" + desc
 
 	ctrlOpts := controller.Options{
 		Reconciler: reconciler,
@@ -145,14 +110,14 @@ func registerCtrlMinimal(desc string, mgr manager.Manager,
 		// since we are not doing anything that we need to parallelize for.
 	}
 
-	ctrl, err := controller.New("sg-"+desc, mgr, ctrlOpts)
+	ctrl, err := controller.New(ctrlName, mgr, ctrlOpts)
 	if err != nil {
-		return fmt.Errorf("unable to set up secretgen-controller-%s: %s", desc, err)
+		return fmt.Errorf("%s: unable to set up: %s", ctrlName, err)
 	}
 
 	err = reconciler.AttachWatches(ctrl)
 	if err != nil {
-		return fmt.Errorf("unable to attaches watches: %s", err)
+		return fmt.Errorf("%s: unable to attaches watches: %s", ctrlName, err)
 	}
 
 	return nil

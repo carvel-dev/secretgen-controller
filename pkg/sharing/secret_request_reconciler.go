@@ -24,7 +24,7 @@ import (
 // SecretRequestReconciler creates an imported Secret if it was exported.
 type SecretRequestReconciler struct {
 	client        client.Client
-	secretExports *SecretExports
+	secretExports SecretExportsProvider
 	log           logr.Logger
 }
 
@@ -32,7 +32,7 @@ var _ reconcile.Reconciler = &SecretRequestReconciler{}
 
 // NewSecretRequestReconciler constructs SecretRequestReconciler.
 func NewSecretRequestReconciler(client client.Client,
-	secretExports *SecretExports, log logr.Logger) *SecretRequestReconciler {
+	secretExports SecretExportsProvider, log logr.Logger) *SecretRequestReconciler {
 	return &SecretRequestReconciler{client, secretExports, log}
 }
 

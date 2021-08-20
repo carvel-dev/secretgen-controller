@@ -25,17 +25,16 @@ import (
 // so that they could be imported in other namespaces.
 type SecretExportReconciler struct {
 	client        client.Client
-	secretExports *SecretExports
+	secretExports SecretExportsProvider
 	log           logr.Logger
-	isWarmedUp    bool
 }
 
 var _ reconcile.Reconciler = &SecretExportReconciler{}
 
 // NewSecretExportReconciler constructs SecretExportReconciler.
 func NewSecretExportReconciler(client client.Client,
-	secretExports *SecretExports, log logr.Logger) *SecretExportReconciler {
-	return &SecretExportReconciler{client, secretExports, log, false}
+	secretExports SecretExportsProvider, log logr.Logger) *SecretExportReconciler {
+	return &SecretExportReconciler{client, secretExports, log}
 }
 
 func (r *SecretExportReconciler) AttachWatches(controller controller.Controller) error {
@@ -58,39 +57,32 @@ func (r *SecretExportReconciler) AttachWatches(controller controller.Controller)
 // WarmUp hydrates SecretExports given to this SecretExportReconciler with latest
 // secret exports. If this method is not called before using SecretExports then
 // users of SecretExports such as SecretReconciler will not have complete/accurate data.
-func (r *SecretExportReconciler) WarmUp(ctx context.Context) error {
+func (r *SecretExportReconciler) WarmUp() {
 	r.log.Info("Running WarmUp")
 	defer func() { r.log.Info("Done running WarmUp") }()
 
+	ctx := context.Background()
 	var secretExportList sgv1alpha1.SecretExportList
 
 	err := r.client.List(ctx, &secretExportList)
 	if err != nil {
-		return err
+		r.log.Error(err, "Warm up: Listing secret exports")
+		return
 	}
 
-	r.log.Info("Warming up with N exports", "len", len(secretExportList.Items))
+	r.log.Info("Warm up: found N exports", "len", len(secretExportList.Items))
 
 	for _, se := range secretExportList.Items {
 		_, err := r.reconcile(ctx, &se, r.log)
 		if err != nil {
-			// Ignore error
+			r.log.Error(err, "Warm up: Reconciling secret export")
 		}
 	}
-
-	return nil
 }
 
 // Reconcile acs on a request for a SecretExport to implement a kubernetes reconciler
 func (r *SecretExportReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := r.log.WithValues("request", request)
-	if !r.isWarmedUp {
-		if err := r.WarmUp(ctx); err != nil {
-			return reconcile.Result{}, nil // TODO : how should we handle a warmup failure here?
-		}
-		r.isWarmedUp = true
-	}
-
 	log.Info("Reconciling")
 
 	var secretExport sgv1alpha1.SecretExport

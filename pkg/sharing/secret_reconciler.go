@@ -32,7 +32,7 @@ import (
 // import criteria for that Secret.
 type SecretReconciler struct {
 	client        client.Client
-	secretExports *SecretExports
+	secretExports SecretExportsProvider
 	log           logr.Logger
 }
 
@@ -40,7 +40,7 @@ var _ reconcile.Reconciler = &SecretReconciler{}
 
 // NewSecretReconciler constructs SecretReconciler.
 func NewSecretReconciler(client client.Client,
-	secretExports *SecretExports, log logr.Logger) *SecretReconciler {
+	secretExports SecretExportsProvider, log logr.Logger) *SecretReconciler {
 	return &SecretReconciler{client, secretExports, log}
 }
 
@@ -208,7 +208,7 @@ func (*SecretReconciler) statusSecretNames(secrets []*corev1.Secret) []string {
 // tracking SecretExport events. It tries to result in minimum number of
 // Secret reconile requests.
 type enqueueSecretExportToSecret struct {
-	SecretExports *SecretExports
+	SecretExports SecretExportsProvider
 	ToRequests    handler.MapFunc
 	Log           logr.Logger
 }

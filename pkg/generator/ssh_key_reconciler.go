@@ -16,7 +16,10 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 type SSHKeyReconciler struct {
@@ -30,6 +33,11 @@ var _ reconcile.Reconciler = &SSHKeyReconciler{}
 func NewSSHKeyReconciler(sgClient sgclient.Interface,
 	coreClient kubernetes.Interface, log logr.Logger) *SSHKeyReconciler {
 	return &SSHKeyReconciler{sgClient, coreClient, log}
+}
+
+// AttachWatches adds starts watches this reconciler requires.
+func (r *SSHKeyReconciler) AttachWatches(controller controller.Controller) error {
+	return controller.Watch(&source.Kind{Type: &sgv1alpha1.SSHKey{}}, &handler.EnqueueRequestForObject{})
 }
 
 // Reconcile is the entrypoint for incoming requests from k8s
