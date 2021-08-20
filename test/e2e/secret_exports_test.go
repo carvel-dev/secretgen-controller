@@ -161,7 +161,7 @@ stringData:
 	})
 
 	logger.Section("Delete export to see exported secrets deleted", func() {
-		kubectl.RunWithOpts([]string{"delete", "secretexport", "secret", "-n", "sg-test1"},
+		kubectl.RunWithOpts([]string{"delete", "secretexport.secretgen.k14s.io", "secret", "-n", "sg-test1"},
 			RunOpts{NoNamespace: true})
 
 		// TODO proper waiting

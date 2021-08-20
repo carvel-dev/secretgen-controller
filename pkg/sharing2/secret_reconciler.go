@@ -13,6 +13,7 @@ import (
 
 	"github.com/go-logr/logr"
 	sgv1alpha1 "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/apis/secretgen/v1alpha1"
+	sg2v1alpha1 "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/apis/secretgen2/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -50,7 +51,7 @@ func (r *SecretReconciler) AttachWatches(controller controller.Controller) error
 		return fmt.Errorf("Watching secrets: %s", err)
 	}
 
-	return controller.Watch(&source.Kind{Type: &sgv1alpha1.SecretExport{}}, &enqueueSecretExportToSecret{
+	return controller.Watch(&source.Kind{Type: &sg2v1alpha1.SecretExport{}}, &enqueueSecretExportToSecret{
 		SecretExports: r.secretExports,
 		ToRequests:    r.mapSecretExportToSecret,
 		Log:           r.log,
@@ -220,8 +221,8 @@ func (e *enqueueSecretExportToSecret) Create(evt event.CreateEvent, q workqueue.
 
 // Update only enqueues when SecretExport's status has changed
 func (e *enqueueSecretExportToSecret) Update(evt event.UpdateEvent, q workqueue.RateLimitingInterface) {
-	typedExportOld, okOld := evt.ObjectOld.(*sgv1alpha1.SecretExport)
-	typedExportNew, okNew := evt.ObjectNew.(*sgv1alpha1.SecretExport)
+	typedExportOld, okOld := evt.ObjectOld.(*sg2v1alpha1.SecretExport)
+	typedExportNew, okNew := evt.ObjectNew.(*sg2v1alpha1.SecretExport)
 	if okOld && okNew && reflect.DeepEqual(typedExportOld.Status, typedExportNew.Status) {
 		e.Log.Info("Skipping SecretExport update since status did not change")
 		return // Skip when status of SecretExport did not change
@@ -235,7 +236,7 @@ func (e *enqueueSecretExportToSecret) Delete(evt event.DeleteEvent, q workqueue.
 	// however it's currently necessary because SecretReconciler
 	// may react to deleted secret export before SecretExports reconciler
 	// (which also clears the shared cache).
-	e.SecretExports.Unexport(&sgv1alpha1.SecretExport{
+	e.SecretExports.Unexport(&sg2v1alpha1.SecretExport{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      evt.Object.GetName(),
 			Namespace: evt.Object.GetNamespace(),

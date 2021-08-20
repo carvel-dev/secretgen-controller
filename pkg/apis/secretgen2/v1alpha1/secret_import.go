@@ -6,6 +6,7 @@ package v1alpha1
 import (
 	"fmt"
 
+	sgv1alpha1 "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/apis/secretgen/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -39,7 +40,7 @@ type SecretImportSpec struct {
 }
 
 type SecretImportStatus struct {
-	GenericStatus `json:",inline"`
+	sgv1alpha1.GenericStatus `json:",inline"`
 }
 
 func (r SecretImport) Validate() error {

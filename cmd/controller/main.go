@@ -12,9 +12,11 @@ import (
 
 	"github.com/go-logr/logr"
 	sgv1alpha1 "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/apis/secretgen/v1alpha1"
+	sg2v1alpha1 "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/apis/secretgen2/v1alpha1"
 	sgclient "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/client/clientset/versioned"
 	"github.com/vmware-tanzu/carvel-secretgen-controller/pkg/generator"
 	"github.com/vmware-tanzu/carvel-secretgen-controller/pkg/sharing"
+	sharing2 "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/sharing2"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
@@ -48,6 +50,7 @@ func main() {
 
 	// Register sg API types so they can be watched
 	sgv1alpha1.AddToScheme(scheme.Scheme)
+	sg2v1alpha1.AddToScheme(scheme.Scheme)
 
 	mgr, err := manager.New(restConfig, manager.Options{Namespace: ctrlNamespace})
 	exitIfErr(entryLog, "unable to set up controller manager", err)
@@ -72,21 +75,37 @@ func main() {
 	sshKeyReconciler := generator.NewSSHKeyReconciler(sgClient, coreClient, log.WithName("sshkey"))
 	exitIfErr(entryLog, "registering", registerCtrl("sshkey", mgr, sshKeyReconciler))
 
-	secretExports := sharing.NewSecretExportsWarmedUp(
-		sharing.NewSecretExports(log.WithName("secretexports")))
+	{ // Lives under secretgen.k14s.io
+		secretExports := sharing.NewSecretExportsWarmedUp(
+			sharing.NewSecretExports(log.WithName("secretexports")))
 
-	secretExportReconciler := sharing.NewSecretExportReconciler(
-		mgr.GetClient(), secretExports, log.WithName("secexp"))
-	secretExports.WarmUpFunc = secretExportReconciler.WarmUp
-	exitIfErr(entryLog, "registering", registerCtrl("secexp", mgr, secretExportReconciler))
+		secretExportReconciler := sharing.NewSecretExportReconciler(
+			mgr.GetClient(), secretExports, log.WithName("secexp"))
+		secretExports.WarmUpFunc = secretExportReconciler.WarmUp
+		exitIfErr(entryLog, "registering", registerCtrl("secexp", mgr, secretExportReconciler))
 
-	secretRequestReconciler := sharing.NewSecretRequestReconciler(
-		mgr.GetClient(), secretExports, log.WithName("secreq"))
-	exitIfErr(entryLog, "registering", registerCtrl("secreq", mgr, secretRequestReconciler))
+		secretRequestReconciler := sharing.NewSecretRequestReconciler(
+			mgr.GetClient(), secretExports, log.WithName("secreq"))
+		exitIfErr(entryLog, "registering", registerCtrl("secreq", mgr, secretRequestReconciler))
+	}
 
-	secretReconciler := sharing.NewSecretReconciler(
-		mgr.GetClient(), secretExports, log.WithName("secret"))
-	exitIfErr(entryLog, "registering", registerCtrl("secret", mgr, secretReconciler))
+	{ // Lives under secretgen.carvel.dev
+		secretExports := sharing2.NewSecretExportsWarmedUp(
+			sharing2.NewSecretExports(log.WithName("secretexports")))
+
+		secretExportReconciler := sharing2.NewSecretExportReconciler(
+			mgr.GetClient(), secretExports, log.WithName("secexp"))
+		secretExports.WarmUpFunc = secretExportReconciler.WarmUp
+		exitIfErr(entryLog, "registering", registerCtrl("secexp", mgr, secretExportReconciler))
+
+		secretImportReconciler := sharing2.NewSecretImportReconciler(
+			mgr.GetClient(), secretExports, log.WithName("secimp"))
+		exitIfErr(entryLog, "registering", registerCtrl("secimp", mgr, secretImportReconciler))
+
+		secretReconciler := sharing2.NewSecretReconciler(
+			mgr.GetClient(), secretExports, log.WithName("secret"))
+		exitIfErr(entryLog, "registering", registerCtrl("secret", mgr, secretReconciler))
+	}
 
 	entryLog.Info("starting manager")
 
