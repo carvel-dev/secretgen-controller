@@ -1,6 +1,6 @@
 FROM photon:3.0
 
-ARG SG_VER=development
+ARG SGCTRL_VER=development
 
 RUN tdnf install -y tar wget gzip
 
@@ -24,7 +24,8 @@ RUN mkdir -p "$GOPATH/src" "$GOPATH/bin" && chmod -R 777 "$GOPATH"
 WORKDIR /go/src/github.com/vmware-tanzu/carvel-secretgen-controller/
 
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -mod=vendor -ldflags=-buildid= -trimpath -o controller ./cmd/controller/...
+# helpful ldflags reference: https://www.digitalocean.com/community/tutorials/using-ldflags-to-set-version-information-for-go-applications
+RUN CGO_ENABLED=0 GOOS=linux go build -mod=vendor -ldflags="-X 'main.Version=$SGCTRL_VER' -buildid=" -trimpath -o controller ./cmd/controller/...
 
 # --- run ---
 FROM photon:3.0

@@ -27,12 +27,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-const (
-	// Version of secretgen-controller that will be visible to users
-	Version = "0.4.0-alpha.1"
-)
-
 var (
+	// Version of secretgen-controller is set via ldflags at build-time from most recent git tag
+	Version = "develop"
+
 	log           = logf.Log.WithName("sg")
 	ctrlNamespace = ""
 )
