@@ -18,4 +18,4 @@ issues:
   max-issues-per-linter: 0
   max-same-issues: 0
   exclude-use-default: false
-  new-from-rev: 3f7427bfdd28067b58ba827eb806bd5783f9b5bb
+  new-from-rev: ae7b7b79a75756ae3cec92e8bb8c6bf0c4dab48e
