@@ -21,10 +21,12 @@ const (
 	WeightAnnKey = "secretgen.carvel.dev/weight"
 )
 
+// SecretExportsProvider provides a way to record and
+// later query secrets based on a given criteria.
 type SecretExportsProvider interface {
-	MatchedSecretsForImport(SecretMatcher) []*corev1.Secret
 	Export(*sgv1alpha1.SecretExport, *corev1.Secret)
 	Unexport(*sgv1alpha1.SecretExport)
+	MatchedSecretsForImport(SecretMatcher) []*corev1.Secret
 }
 
 // SecretExports is an in-memory cache of exported secrets.

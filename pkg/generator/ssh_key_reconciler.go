@@ -35,6 +35,7 @@ func NewSSHKeyReconciler(sgClient sgclient.Interface,
 	return &SSHKeyReconciler{sgClient, coreClient, log}
 }
 
+// AttachWatches adds starts watches this reconciler requires.
 func (r *SSHKeyReconciler) AttachWatches(controller controller.Controller) error {
 	return controller.Watch(&source.Kind{Type: &sgv1alpha1.SSHKey{}}, &handler.EnqueueRequestForObject{})
 }

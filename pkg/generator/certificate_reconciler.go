@@ -36,6 +36,7 @@ func NewCertificateReconciler(sgClient sgclient.Interface,
 	return &CertificateReconciler{sgClient, coreClient, log}
 }
 
+// AttachWatches adds starts watches this reconciler requires.
 func (r *CertificateReconciler) AttachWatches(controller controller.Controller) error {
 	return controller.Watch(&source.Kind{Type: &sgv1alpha1.Certificate{}}, &handler.EnqueueRequestForObject{})
 }

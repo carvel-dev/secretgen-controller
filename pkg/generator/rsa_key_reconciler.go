@@ -35,6 +35,7 @@ func NewRSAKeyReconciler(sgClient sgclient.Interface,
 	return &RSAKeyReconciler{sgClient, coreClient, log}
 }
 
+// AttachWatches adds starts watches this reconciler requires.
 func (r *RSAKeyReconciler) AttachWatches(controller controller.Controller) error {
 	return controller.Watch(&source.Kind{Type: &sgv1alpha1.RSAKey{}}, &handler.EnqueueRequestForObject{})
 }
