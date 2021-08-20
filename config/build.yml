@@ -11,6 +11,7 @@ sources:
       #! Always rebuild image
       pull: true
       noCache: true
+      rawOptions: #@ ["--build-arg", "SGCTRL_VER="+data.values.secretgen_controller_version]
 
 #@ if/end data.values.push_images:
 ---

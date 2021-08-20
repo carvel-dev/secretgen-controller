@@ -5,6 +5,8 @@ kind: Deployment
 metadata:
   name: secretgen-controller
   namespace: #@ data.values.namespace
+  annotations:
+    secretgen-controller.carvel.dev/version: #@ data.values.secretgen_controller_version
 spec:
   selector:
     matchLabels:
