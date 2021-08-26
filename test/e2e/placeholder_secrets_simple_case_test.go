@@ -62,7 +62,6 @@ metadata:
 spec:
   toNamespaces:
   - sg-test2
-  - sg-test3
 ---
 apiVersion: v1
 kind: Secret
@@ -71,17 +70,6 @@ metadata:
     secretgen.carvel.dev/image-pull-secret: ""
   name: placeholder-secret
   namespace: sg-test2
-type: kubernetes.io/dockerconfigjson
-data:
-  .dockerconfigjson: "e30K"
----
-apiVersion: v1
-kind: Secret
-metadata:
-  annotations:
-    secretgen.carvel.dev/image-pull-secret: ""
-  name: placeholder-secret
-  namespace: sg-test3
 type: kubernetes.io/dockerconfigjson
 data:
   .dockerconfigjson: "e30K"
@@ -120,7 +108,7 @@ stringData:
 		kapp.RunWithOpts([]string{"deploy", "-f", "-", "-a", name},
 			RunOpts{StdinReader: strings.NewReader(yaml1)})
 
-		for _, ns := range []string{"sg-test2", "sg-test3"} {
+		for _, ns := range []string{"sg-test2"} {
 			out := waitUntilSecretInNsPopulated(t, kubectl, ns, "placeholder-secret", func(secret *corev1.Secret) bool {
 				return len(secret.Data[".dockerconfigjson"]) > 20
 			})
@@ -142,7 +130,7 @@ stringData:
 		kapp.RunWithOpts([]string{"deploy", "-f", "-", "-a", name, "-p"},
 			RunOpts{StdinReader: strings.NewReader(yaml2)})
 
-		for _, ns := range []string{"sg-test2", "sg-test3"} {
+		for _, ns := range []string{"sg-test2"} {
 			out := waitUntilSecretInNsPopulated(t, kubectl, ns, "placeholder-secret", func(secret *corev1.Secret) bool {
 				return strings.Contains(string(secret.Data[".dockerconfigjson"]), "user2")
 			})
@@ -162,7 +150,7 @@ stringData:
 		kubectl.RunWithOpts([]string{"delete", "secretexport.secretgen.carvel.dev", "secret", "-n", "sg-test1"},
 			RunOpts{NoNamespace: true})
 
-		for _, ns := range []string{"sg-test2", "sg-test3"} {
+		for _, ns := range []string{"sg-test2"} {
 			out := waitUntilSecretInNsPopulated(t, kubectl, ns, "placeholder-secret", func(secret *corev1.Secret) bool {
 				return len(secret.Data[".dockerconfigjson"]) < 20
 			})

@@ -23,6 +23,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
@@ -181,9 +182,11 @@ func (r *SecretReconciler) updateSecret(ctx context.Context, secret corev1.Secre
 		return reconcile.Result{}, nil
 	}
 
+	log.Log.Info("updating secret", "secret namespace", secret.Namespace, "secret name", secret.Name, "status", string(encodedStatus))
 	// TODO bother to retry to avoid having to recalculate matched secrets?
 	err = r.client.Update(ctx, &secret)
 	if err != nil {
+		log.Log.Info("failed updating secret", "secret namespace", secret.Namespace, "secret name", secret.Name, "error", err.Error())
 		// Requeue to try to update a bit later
 		return reconcile.Result{Requeue: true}, fmt.Errorf("Updating secret: %s", err)
 	}
@@ -224,7 +227,7 @@ func (e *enqueueSecretExportToSecret) Update(evt event.UpdateEvent, q workqueue.
 	typedExportOld, okOld := evt.ObjectOld.(*sg2v1alpha1.SecretExport)
 	typedExportNew, okNew := evt.ObjectNew.(*sg2v1alpha1.SecretExport)
 	if okOld && okNew && reflect.DeepEqual(typedExportOld.Status, typedExportNew.Status) {
-		e.Log.Info("Skipping SecretExport update since status did not change")
+		e.Log.Info("Skipping SecretExport update since status did not change", "SecretExport Name", typedExportOld.Name)
 		return // Skip when status of SecretExport did not change
 	}
 	e.mapAndEnqueue(q, evt.ObjectNew)
