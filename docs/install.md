@@ -5,9 +5,9 @@ Grab latest copy of YAML from the [Releases page](https://github.com/vmware-tanz
 Example:
 
 ```bash
-$ kapp deploy -a sg -f https://github.com/vmware-tanzu/carvel-secretgen-controller/releases/download/v0.2.0/release.yml
+$ kapp deploy -a sg -f https://github.com/vmware-tanzu/carvel-secretgen-controller/releases/latest/download/release.yml
 or
-$ kubectl apply -f https://github.com/vmware-tanzu/carvel-secretgen-controller/releases/download/v0.2.0/release.yml
+$ kubectl apply -f https://github.com/vmware-tanzu/carvel-secretgen-controller/releases/latest/download/release.yml
 ```
 
 ### Advanced
@@ -16,7 +16,7 @@ $ kubectl apply -f https://github.com/vmware-tanzu/carvel-secretgen-controller/r
 
 Example:
 
-```
+```bash
 $ git clone ...
 $ kapp deploy -a sg -f <(ytt -f config/ | kbld -f-)
 ```
