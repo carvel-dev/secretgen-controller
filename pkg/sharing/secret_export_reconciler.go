@@ -91,7 +91,6 @@ func (r *SecretExportReconciler) Reconcile(ctx context.Context, request reconcil
 	err := r.client.Get(ctx, request.NamespacedName, &secretExport)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			log.Info("did not find a SecretExport for request.")
 			r.secretExports.Unexport(&sg2v1alpha1.SecretExport{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      request.Name,
@@ -168,7 +167,8 @@ func (r *SecretExportReconciler) reconcile(ctx context.Context, secretExport *sg
 }
 
 func (r *SecretExportReconciler) updateStatus(ctx context.Context, secretExport sg2v1alpha1.SecretExport) error {
-	r.log.Info("Updating secret export", "secretExport Name", secretExport.Name, "status", secretExport.Status)
+	log := r.log.WithValues("secretExport Name", secretExport.Name, "status", secretExport.Status)
+	log.Info("Updating secretExport")
 
 	err := r.client.Status().Update(ctx, &secretExport)
 	if err != nil {
