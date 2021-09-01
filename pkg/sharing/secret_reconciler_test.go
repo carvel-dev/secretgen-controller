@@ -86,6 +86,7 @@ func Test_SecretReconciler_updatesStatus(t *testing.T) {
 	t.Run("happy path", func(t *testing.T) {
 		sourceSecret, placeholderSecret, secretExport := resourcesUnderTest()
 		secretExportReconciler, secretReconciler, k8sClient := reconcilersUnderTest(&sourceSecret, &placeholderSecret, &secretExport)
+		assert.Equal(t, 0, len(secretExport.Status.Conditions))
 
 		reconcileObject(t, secretExportReconciler, &secretExport)
 		reconcileObject(t, secretReconciler, &placeholderSecret)
@@ -98,10 +99,9 @@ func Test_SecretReconciler_updatesStatus(t *testing.T) {
 		expectedStatus := map[string]interface{}{"conditions": []interface{}{map[string]interface{}{"status": "True", "type": "ReconcileSucceeded"}}, "secretNames": []interface{}{"test-source/test-secret"}}
 		assert.Equal(t, expectedStatus, observedStatus)
 
-		assert.Equal(t, 0, len(secretExport.Status.Conditions))
 		reload(t, &secretExport, k8sClient)
 		assert.Equal(t, 1, len(secretExport.Status.Conditions))
-		assert.Equal(t, secretExport.Status.FriendlyDescription, "Reconcile succeeded")
+		assert.Equal(t, "Reconcile succeeded", secretExport.Status.FriendlyDescription)
 	})
 
 	t.Run("wrong placeholder secret type gets informative status", func(t *testing.T) {
@@ -126,7 +126,7 @@ func Test_SecretReconciler_updatesStatus(t *testing.T) {
 
 		// from secret export's perspective it still reconciled successfully.
 		reload(t, &secretExport, k8sClient)
-		assert.Equal(t, secretExport.Status.FriendlyDescription, "Reconcile succeeded")
+		assert.Equal(t, "Reconcile succeeded", secretExport.Status.FriendlyDescription)
 	})
 
 	t.Run("wrong source secret type gets informative status", func(t *testing.T) {
@@ -152,7 +152,7 @@ func Test_SecretReconciler_updatesStatus(t *testing.T) {
 
 		// from secret export's perspective it still reconciled successfully.
 		reload(t, &secretExport, k8sClient)
-		assert.Equal(t, secretExport.Status.FriendlyDescription, "Reconcile succeeded")
+		assert.Equal(t, "Reconcile succeeded", secretExport.Status.FriendlyDescription)
 	})
 }
 
