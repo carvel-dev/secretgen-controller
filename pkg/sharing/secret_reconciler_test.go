@@ -195,7 +195,7 @@ func Test_SecretReconciler_updatesStatus(t *testing.T) {
 		return
 	}
 
-	t.Run("happy path", func(t *testing.T) {
+	t.Run("one secret exports successfully to placeholder", func(t *testing.T) {
 		sourceSecret, placeholderSecret, secretExport := resourcesUnderTest()
 		secretExportReconciler, secretReconciler, k8sClient := reconcilersUnderTest(&sourceSecret, &placeholderSecret, &secretExport)
 		assert.Equal(t, 0, len(secretExport.Status.Conditions))
@@ -267,7 +267,7 @@ func Test_SecretReconciler_updatesStatus(t *testing.T) {
 		assert.Equal(t, "Reconcile succeeded", secretExport.Status.FriendlyDescription)
 	})
 
-	t.Run("Two source secrets are both included in status", func(t *testing.T) {
+	t.Run("Two source secrets are both exported", func(t *testing.T) {
 		sourceSecret1, placeholderSecret, secretExport := resourcesUnderTest()
 		sourceSecret2 := sourceSecret1.DeepCopy()
 		sourceSecret2.Name = "test-secret-2"
