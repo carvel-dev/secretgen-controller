@@ -27,12 +27,8 @@ func Test_SecretReconciler_respectsNamespaces(t *testing.T) {
 	sg2v1alpha1.AddToScheme(scheme.Scheme)
 	testLogr := zap.New(zap.UseDevMode(true))
 
-	resourcesUnderTest := func() (sourceSecret corev1.Secret, placeholderSecret1 corev1.Secret, placeholderSecret2 corev1.Secret, secretExport sg2v1alpha1.SecretExport) {
+	resourcesUnderTest := func() (sourceSecret corev1.Secret, placeholderSecret1 corev1.Secret, placeholderSecret2 corev1.Secret) {
 		sourceSecret = corev1.Secret{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "Secret",
-				APIVersion: "v1",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test-secret",
 				Namespace: "test-source",
@@ -43,10 +39,6 @@ func Test_SecretReconciler_respectsNamespaces(t *testing.T) {
 			Type: "kubernetes.io/dockerconfigjson",
 		}
 		placeholderSecret1 = corev1.Secret{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "Secret",
-				APIVersion: "v1",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:        "placeholder-secret",
 				Namespace:   "test-target-1",
@@ -58,10 +50,6 @@ func Test_SecretReconciler_respectsNamespaces(t *testing.T) {
 			Type: "kubernetes.io/dockerconfigjson",
 		}
 		placeholderSecret2 = corev1.Secret{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "Secret",
-				APIVersion: "v1",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:        "placeholder-secret",
 				Namespace:   "test-target-2",
@@ -72,20 +60,6 @@ func Test_SecretReconciler_respectsNamespaces(t *testing.T) {
 			},
 			Type: "kubernetes.io/dockerconfigjson",
 		}
-
-		secretExport = sg2v1alpha1.SecretExport{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "SecretExport",
-				APIVersion: "secretgen.k14s.io/v1alpha1",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "test-secret",
-				Namespace: "test-source",
-			},
-			Spec: sg2v1alpha1.SecretExportSpec{
-				ToNamespaces: []string{"*"},
-			},
-		}
 		return
 	}
 
@@ -95,11 +69,22 @@ func Test_SecretReconciler_respectsNamespaces(t *testing.T) {
 		secretExportReconciler = sharing.NewSecretExportReconciler(k8sClient, secretExports, testLogr)
 		secretReconciler = sharing.NewSecretReconciler(k8sClient, secretExports, testLogr)
 		secretExports.WarmUpFunc = secretExportReconciler.WarmUp
-
 		return
 	}
+
 	t.Run("star export goes to all namespaces", func(t *testing.T) {
-		sourceSecret, placeholderSecret1, placeholderSecret2, secretExport := resourcesUnderTest()
+		sourceSecret, placeholderSecret1, placeholderSecret2 := resourcesUnderTest()
+
+		secretExport := sg2v1alpha1.SecretExport{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      sourceSecret.Name,
+				Namespace: sourceSecret.Namespace,
+			},
+			Spec: sg2v1alpha1.SecretExportSpec{
+				ToNamespaces: []string{"*"},
+			},
+		}
+
 		secretExportReconciler, secretReconciler, k8sClient := reconcilersUnderTest(&sourceSecret, &placeholderSecret1, &placeholderSecret2, &secretExport)
 
 		reconcileObject(t, secretExportReconciler, &secretExport)
@@ -114,25 +99,34 @@ func Test_SecretReconciler_respectsNamespaces(t *testing.T) {
 	})
 
 	t.Run("specific export goes only to specific namespace", func(t *testing.T) {
-		sourceSecret, placeholderSecret1, placeholderSecret2, secretExport := resourcesUnderTest()
-		secretExport.Spec = sg2v1alpha1.SecretExportSpec{ToNamespaces: []string{placeholderSecret1.Namespace}}
+		sourceSecret, placeholderSecret1, placeholderSecret2 := resourcesUnderTest()
+
+		secretExport := sg2v1alpha1.SecretExport{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      sourceSecret.Name,
+				Namespace: sourceSecret.Namespace,
+			},
+			Spec: sg2v1alpha1.SecretExportSpec{
+				ToNamespaces: []string{placeholderSecret1.Namespace},
+			},
+		}
+
 		secretExportReconciler, secretReconciler, k8sClient := reconcilersUnderTest(&sourceSecret, &placeholderSecret1, &placeholderSecret2, &secretExport)
 		reconcileObject(t, secretExportReconciler, &secretExport)
 		reconcileObject(t, secretReconciler, &placeholderSecret1)
 		reconcileObject(t, secretReconciler, &placeholderSecret2)
 
 		// placeholder secret2 should have its original contents for auths and a helpful status message
-		originalPlaceholder2Data := make([]byte, len(placeholderSecret2.Data[".dockerconfigjson"]))
-		copy(originalPlaceholder2Data, placeholderSecret2.Data[".dockerconfigjson"])
+		originalPlaceholder2Data := append([]byte{}, placeholderSecret2.Data[".dockerconfigjson"]...)
 
 		reload(t, &placeholderSecret1, k8sClient)
 		reload(t, &placeholderSecret2, k8sClient)
 
 		assert.Equal(t, sourceSecret.Data[".dockerconfigjson"], placeholderSecret1.Data[".dockerconfigjson"])
+
 		assert.Equal(t, originalPlaceholder2Data, placeholderSecret2.Data[".dockerconfigjson"])
 		assert.NotEqual(t, placeholderSecret1.Data[".dockerconfigjson"], placeholderSecret2.Data[".dockerconfigjson"])
 	})
-
 }
 
 func Test_SecretReconciler_updatesStatus(t *testing.T) {
@@ -172,7 +166,7 @@ func Test_SecretReconciler_updatesStatus(t *testing.T) {
 		secretExport = sg2v1alpha1.SecretExport{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "SecretExport",
-				APIVersion: "secretgen.k14s.io/v1alpha1",
+				APIVersion: "secretgen.carvel.dev/v1alpha1",
 			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test-secret",
