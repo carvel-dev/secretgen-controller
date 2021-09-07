@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	sg2v1alpha1 "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/apis/secretgen2/v1alpha1"
@@ -23,32 +24,16 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-func Test_SecretReconciler_respectsNamespaces(t *testing.T) {
-	sg2v1alpha1.AddToScheme(scheme.Scheme)
-	testLogr := zap.New(zap.UseDevMode(true))
+var testLogr logr.Logger
 
+func init() {
+	sg2v1alpha1.AddToScheme(scheme.Scheme)
+	testLogr = zap.New(zap.UseDevMode(true))
+}
+
+func Test_SecretReconciler_respectsNamespaces(t *testing.T) {
 	resourcesUnderTest := func() (sourceSecret corev1.Secret, placeholderSecret1 corev1.Secret, placeholderSecret2 corev1.Secret) {
-		sourceSecret = corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "test-secret",
-				Namespace: "test-source",
-			},
-			Data: map[string][]byte{
-				corev1.DockerConfigJsonKey: []byte(`{"auths":{"server":{"username":"correctUser","password":"correctPassword","auth":"correctAuth"}}}`),
-			},
-			Type: "kubernetes.io/dockerconfigjson",
-		}
-		placeholderSecret1 = corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:        "placeholder-secret",
-				Namespace:   "test-target-1",
-				Annotations: map[string]string{"secretgen.carvel.dev/image-pull-secret": ""},
-			},
-			Data: map[string][]byte{
-				corev1.DockerConfigJsonKey: []byte(`{"auths":{}}`),
-			},
-			Type: "kubernetes.io/dockerconfigjson",
-		}
+		sourceSecret, placeholderSecret1 = sourceAndPlaceholder()
 		placeholderSecret2 = corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:        "placeholder-secret",
@@ -63,28 +48,10 @@ func Test_SecretReconciler_respectsNamespaces(t *testing.T) {
 		return
 	}
 
-	reconcilersUnderTest := func(objects ...runtime.Object) (secretExportReconciler *sharing.SecretExportReconciler, secretReconciler *sharing.SecretReconciler, k8sClient client.Client) {
-		secretExports := sharing.NewSecretExportsWarmedUp(sharing.NewSecretExports(testLogr))
-		k8sClient = fakeClient.NewFakeClient(objects...)
-		secretExportReconciler = sharing.NewSecretExportReconciler(k8sClient, secretExports, testLogr)
-		secretReconciler = sharing.NewSecretReconciler(k8sClient, secretExports, testLogr)
-		secretExports.WarmUpFunc = secretExportReconciler.WarmUp
-		return
-	}
-
 	t.Run("star export goes to all namespaces", func(t *testing.T) {
 		sourceSecret, placeholderSecret1, placeholderSecret2 := resourcesUnderTest()
 
-		secretExport := sg2v1alpha1.SecretExport{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      sourceSecret.Name,
-				Namespace: sourceSecret.Namespace,
-			},
-			Spec: sg2v1alpha1.SecretExportSpec{
-				ToNamespaces: []string{"*"},
-			},
-		}
-
+		secretExport := buildSecretExport(sourceSecret, "*")
 		secretExportReconciler, secretReconciler, k8sClient := reconcilersUnderTest(&sourceSecret, &placeholderSecret1, &placeholderSecret2, &secretExport)
 
 		reconcileObject(t, secretExportReconciler, &secretExport)
@@ -101,16 +68,7 @@ func Test_SecretReconciler_respectsNamespaces(t *testing.T) {
 	t.Run("specific export goes only to specific namespace", func(t *testing.T) {
 		sourceSecret, placeholderSecret1, placeholderSecret2 := resourcesUnderTest()
 
-		secretExport := sg2v1alpha1.SecretExport{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      sourceSecret.Name,
-				Namespace: sourceSecret.Namespace,
-			},
-			Spec: sg2v1alpha1.SecretExportSpec{
-				ToNamespaces: []string{placeholderSecret1.Namespace},
-			},
-		}
-
+		secretExport := buildSecretExport(sourceSecret, placeholderSecret1.Namespace)
 		secretExportReconciler, secretReconciler, k8sClient := reconcilersUnderTest(&sourceSecret, &placeholderSecret1, &placeholderSecret2, &secretExport)
 		reconcileObject(t, secretExportReconciler, &secretExport)
 		reconcileObject(t, secretReconciler, &placeholderSecret1)
@@ -130,67 +88,9 @@ func Test_SecretReconciler_respectsNamespaces(t *testing.T) {
 }
 
 func Test_SecretReconciler_updatesStatus(t *testing.T) {
-	sg2v1alpha1.AddToScheme(scheme.Scheme)
-	testLogr := zap.New(zap.UseDevMode(true))
-
-	resourcesUnderTest := func() (sourceSecret corev1.Secret, placeholderSecret corev1.Secret, secretExport sg2v1alpha1.SecretExport) {
-		sourceSecret = corev1.Secret{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "Secret",
-				APIVersion: "v1",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "test-secret",
-				Namespace: "test-source",
-			},
-			Data: map[string][]byte{
-				corev1.DockerConfigJsonKey: []byte(`{"auths":{"server":{"username":"correctUser","password":"correctPassword","auth":"correctAuth"}}}`),
-			},
-			Type: "kubernetes.io/dockerconfigjson",
-		}
-		placeholderSecret = corev1.Secret{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "Secret",
-				APIVersion: "v1",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:        "placeholder-secret",
-				Namespace:   "test-target",
-				Annotations: map[string]string{"secretgen.carvel.dev/image-pull-secret": ""},
-			},
-			Data: map[string][]byte{
-				corev1.DockerConfigJsonKey: []byte(`{"auths":{}}`),
-			},
-			Type: "kubernetes.io/dockerconfigjson",
-		}
-		secretExport = sg2v1alpha1.SecretExport{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "SecretExport",
-				APIVersion: "secretgen.carvel.dev/v1alpha1",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "test-secret",
-				Namespace: "test-source",
-			},
-			Spec: sg2v1alpha1.SecretExportSpec{
-				ToNamespaces: []string{"test-target"},
-			},
-		}
-		return
-	}
-
-	reconcilersUnderTest := func(objects ...runtime.Object) (secretExportReconciler *sharing.SecretExportReconciler, secretReconciler *sharing.SecretReconciler, k8sClient client.Client) {
-		secretExports := sharing.NewSecretExportsWarmedUp(sharing.NewSecretExports(testLogr))
-		k8sClient = fakeClient.NewFakeClient(objects...)
-		secretExportReconciler = sharing.NewSecretExportReconciler(k8sClient, secretExports, testLogr)
-		secretReconciler = sharing.NewSecretReconciler(k8sClient, secretExports, testLogr)
-		secretExports.WarmUpFunc = secretExportReconciler.WarmUp
-
-		return
-	}
-
 	t.Run("one secret exports successfully to placeholder", func(t *testing.T) {
-		sourceSecret, placeholderSecret, secretExport := resourcesUnderTest()
+		sourceSecret, placeholderSecret := sourceAndPlaceholder()
+		secretExport := buildSecretExport(sourceSecret, placeholderSecret.Namespace)
 		secretExportReconciler, secretReconciler, k8sClient := reconcilersUnderTest(&sourceSecret, &placeholderSecret, &secretExport)
 		assert.Equal(t, 0, len(secretExport.Status.Conditions))
 
@@ -211,8 +111,9 @@ func Test_SecretReconciler_updatesStatus(t *testing.T) {
 	})
 
 	t.Run("wrong placeholder secret type gets informative status", func(t *testing.T) {
-		sourceSecret, placeholderSecret, secretExport := resourcesUnderTest()
+		sourceSecret, placeholderSecret := sourceAndPlaceholder()
 		placeholderSecret.Type = ""
+		secretExport := buildSecretExport(sourceSecret, placeholderSecret.Namespace)
 		secretExportReconciler, secretReconciler, k8sClient := reconcilersUnderTest(&sourceSecret, &placeholderSecret, &secretExport)
 
 		reconcileObject(t, secretExportReconciler, &secretExport)
@@ -236,8 +137,9 @@ func Test_SecretReconciler_updatesStatus(t *testing.T) {
 	})
 
 	t.Run("wrong source secret type gets informative status", func(t *testing.T) {
-		sourceSecret, placeholderSecret, secretExport := resourcesUnderTest()
+		sourceSecret, placeholderSecret := sourceAndPlaceholder()
 		sourceSecret.Type = ""
+		secretExport := buildSecretExport(sourceSecret, placeholderSecret.Namespace)
 		secretExportReconciler, secretReconciler, k8sClient := reconcilersUnderTest(&sourceSecret, &placeholderSecret, &secretExport)
 
 		reconcileObject(t, secretExportReconciler, &secretExport)
@@ -262,16 +164,18 @@ func Test_SecretReconciler_updatesStatus(t *testing.T) {
 	})
 
 	t.Run("Two source secrets are both exported", func(t *testing.T) {
-		sourceSecret1, placeholderSecret, secretExport := resourcesUnderTest()
+		sourceSecret1, placeholderSecret := sourceAndPlaceholder()
 		sourceSecret2 := sourceSecret1.DeepCopy()
 		sourceSecret2.Name = "test-secret-2"
 		sourceSecret2.Data[corev1.DockerConfigJsonKey] = []byte(`{"auths":{"server2":{"username":"correctUser2","password":"correctPassword2","auth":"correctAuth2"}}}`)
-		secretExport2 := secretExport.DeepCopy()
+
+		secretExport1 := buildSecretExport(sourceSecret1, placeholderSecret.Namespace)
+		secretExport2 := secretExport1.DeepCopy()
 		secretExport2.Name = sourceSecret2.Name
 
-		secretExportReconciler, secretReconciler, k8sClient := reconcilersUnderTest(&sourceSecret1, sourceSecret2, &placeholderSecret, &secretExport, secretExport2)
+		secretExportReconciler, secretReconciler, k8sClient := reconcilersUnderTest(&sourceSecret1, sourceSecret2, &placeholderSecret, &secretExport1, secretExport2)
 
-		reconcileObject(t, secretExportReconciler, &secretExport)
+		reconcileObject(t, secretExportReconciler, &secretExport1)
 		reconcileObject(t, secretExportReconciler, secretExport2)
 		reconcileObject(t, secretReconciler, &placeholderSecret)
 
@@ -284,6 +188,53 @@ func Test_SecretReconciler_updatesStatus(t *testing.T) {
 		expectedData := []byte(`{"auths":{"server":{"username":"correctUser","password":"correctPassword","auth":"correctAuth"},"server2":{"username":"correctUser2","password":"correctPassword2","auth":"correctAuth2"}}}`)
 		assert.Equal(t, expectedData, placeholderSecret.Data[corev1.DockerConfigJsonKey])
 	})
+}
+
+func sourceAndPlaceholder() (sourceSecret corev1.Secret, placeholderSecret corev1.Secret) {
+	sourceSecret = corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-secret",
+			Namespace: "test-source",
+		},
+		Data: map[string][]byte{
+			corev1.DockerConfigJsonKey: []byte(`{"auths":{"server":{"username":"correctUser","password":"correctPassword","auth":"correctAuth"}}}`),
+		},
+		Type: "kubernetes.io/dockerconfigjson",
+	}
+	placeholderSecret = corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        "placeholder-secret",
+			Namespace:   "test-target",
+			Annotations: map[string]string{"secretgen.carvel.dev/image-pull-secret": ""},
+		},
+		Data: map[string][]byte{
+			corev1.DockerConfigJsonKey: []byte(`{"auths":{}}`),
+		},
+		Type: "kubernetes.io/dockerconfigjson",
+	}
+	return
+}
+
+func buildSecretExport(sourceSecret corev1.Secret, toNamespace string) sg2v1alpha1.SecretExport {
+	return sg2v1alpha1.SecretExport{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      sourceSecret.Name,
+			Namespace: sourceSecret.Namespace,
+		},
+		Spec: sg2v1alpha1.SecretExportSpec{
+			ToNamespaces: []string{toNamespace},
+		},
+	}
+}
+
+func reconcilersUnderTest(objects ...runtime.Object) (secretExportReconciler *sharing.SecretExportReconciler, secretReconciler *sharing.SecretReconciler, k8sClient client.Client) {
+	secretExports := sharing.NewSecretExportsWarmedUp(sharing.NewSecretExports(testLogr))
+	k8sClient = fakeClient.NewFakeClient(objects...)
+	secretExportReconciler = sharing.NewSecretExportReconciler(k8sClient, secretExports, testLogr)
+	secretReconciler = sharing.NewSecretReconciler(k8sClient, secretExports, testLogr)
+	secretExports.WarmUpFunc = secretExportReconciler.WarmUp
+
+	return
 }
 
 // reload asks the Kubernetes runtime client to re-populate our object
