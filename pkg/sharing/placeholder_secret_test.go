@@ -51,8 +51,8 @@ func Test_SecretReconciler_respectsNamespaces(t *testing.T) {
 	t.Run("star export goes to all namespaces", func(t *testing.T) {
 		sourceSecret, placeholderSecret1, placeholderSecret2 := resourcesUnderTest()
 
-		secretExport := buildSecretExport(sourceSecret, "*")
-		secretExportReconciler, secretReconciler, k8sClient := reconcilersUnderTest(&sourceSecret, &placeholderSecret1, &placeholderSecret2, &secretExport)
+		secretExport := secretExportFor(sourceSecret, "*")
+		secretExportReconciler, secretReconciler, k8sClient := placeholderReconcilers(&sourceSecret, &placeholderSecret1, &placeholderSecret2, &secretExport)
 
 		reconcileObject(t, secretExportReconciler, &secretExport)
 		reconcileObject(t, secretReconciler, &placeholderSecret1)
@@ -68,8 +68,8 @@ func Test_SecretReconciler_respectsNamespaces(t *testing.T) {
 	t.Run("specific export goes only to specific namespace", func(t *testing.T) {
 		sourceSecret, placeholderSecret1, placeholderSecret2 := resourcesUnderTest()
 
-		secretExport := buildSecretExport(sourceSecret, placeholderSecret1.Namespace)
-		secretExportReconciler, secretReconciler, k8sClient := reconcilersUnderTest(&sourceSecret, &placeholderSecret1, &placeholderSecret2, &secretExport)
+		secretExport := secretExportFor(sourceSecret, placeholderSecret1.Namespace)
+		secretExportReconciler, secretReconciler, k8sClient := placeholderReconcilers(&sourceSecret, &placeholderSecret1, &placeholderSecret2, &secretExport)
 		reconcileObject(t, secretExportReconciler, &secretExport)
 		reconcileObject(t, secretReconciler, &placeholderSecret1)
 		reconcileObject(t, secretReconciler, &placeholderSecret2)
@@ -90,8 +90,8 @@ func Test_SecretReconciler_respectsNamespaces(t *testing.T) {
 func Test_SecretReconciler_updatesStatus(t *testing.T) {
 	t.Run("one secret exports successfully to placeholder", func(t *testing.T) {
 		sourceSecret, placeholderSecret := sourceAndPlaceholder()
-		secretExport := buildSecretExport(sourceSecret, placeholderSecret.Namespace)
-		secretExportReconciler, secretReconciler, k8sClient := reconcilersUnderTest(&sourceSecret, &placeholderSecret, &secretExport)
+		secretExport := secretExportFor(sourceSecret, placeholderSecret.Namespace)
+		secretExportReconciler, secretReconciler, k8sClient := placeholderReconcilers(&sourceSecret, &placeholderSecret, &secretExport)
 		assert.Equal(t, 0, len(secretExport.Status.Conditions))
 
 		reconcileObject(t, secretExportReconciler, &secretExport)
@@ -113,8 +113,8 @@ func Test_SecretReconciler_updatesStatus(t *testing.T) {
 	t.Run("wrong placeholder secret type gets informative status", func(t *testing.T) {
 		sourceSecret, placeholderSecret := sourceAndPlaceholder()
 		placeholderSecret.Type = ""
-		secretExport := buildSecretExport(sourceSecret, placeholderSecret.Namespace)
-		secretExportReconciler, secretReconciler, k8sClient := reconcilersUnderTest(&sourceSecret, &placeholderSecret, &secretExport)
+		secretExport := secretExportFor(sourceSecret, placeholderSecret.Namespace)
+		secretExportReconciler, secretReconciler, k8sClient := placeholderReconcilers(&sourceSecret, &placeholderSecret, &secretExport)
 
 		reconcileObject(t, secretExportReconciler, &secretExport)
 		reconcileObject(t, secretReconciler, &placeholderSecret)
@@ -139,8 +139,8 @@ func Test_SecretReconciler_updatesStatus(t *testing.T) {
 	t.Run("wrong source secret type gets informative status", func(t *testing.T) {
 		sourceSecret, placeholderSecret := sourceAndPlaceholder()
 		sourceSecret.Type = ""
-		secretExport := buildSecretExport(sourceSecret, placeholderSecret.Namespace)
-		secretExportReconciler, secretReconciler, k8sClient := reconcilersUnderTest(&sourceSecret, &placeholderSecret, &secretExport)
+		secretExport := secretExportFor(sourceSecret, placeholderSecret.Namespace)
+		secretExportReconciler, secretReconciler, k8sClient := placeholderReconcilers(&sourceSecret, &placeholderSecret, &secretExport)
 
 		reconcileObject(t, secretExportReconciler, &secretExport)
 		reconcileObject(t, secretReconciler, &placeholderSecret)
@@ -169,11 +169,11 @@ func Test_SecretReconciler_updatesStatus(t *testing.T) {
 		sourceSecret2.Name = "test-secret-2"
 		sourceSecret2.Data[corev1.DockerConfigJsonKey] = []byte(`{"auths":{"server2":{"username":"correctUser2","password":"correctPassword2","auth":"correctAuth2"}}}`)
 
-		secretExport1 := buildSecretExport(sourceSecret1, placeholderSecret.Namespace)
+		secretExport1 := secretExportFor(sourceSecret1, placeholderSecret.Namespace)
 		secretExport2 := secretExport1.DeepCopy()
 		secretExport2.Name = sourceSecret2.Name
 
-		secretExportReconciler, secretReconciler, k8sClient := reconcilersUnderTest(&sourceSecret1, sourceSecret2, &placeholderSecret, &secretExport1, secretExport2)
+		secretExportReconciler, secretReconciler, k8sClient := placeholderReconcilers(&sourceSecret1, sourceSecret2, &placeholderSecret, &secretExport1, secretExport2)
 
 		reconcileObject(t, secretExportReconciler, &secretExport1)
 		reconcileObject(t, secretExportReconciler, secretExport2)
@@ -190,8 +190,8 @@ func Test_SecretReconciler_updatesStatus(t *testing.T) {
 	})
 }
 
-func sourceAndPlaceholder() (sourceSecret corev1.Secret, placeholderSecret corev1.Secret) {
-	sourceSecret = corev1.Secret{
+func buildSourceSecret() corev1.Secret {
+	return corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-secret",
 			Namespace: "test-source",
@@ -201,6 +201,11 @@ func sourceAndPlaceholder() (sourceSecret corev1.Secret, placeholderSecret corev
 		},
 		Type: "kubernetes.io/dockerconfigjson",
 	}
+
+}
+
+func sourceAndPlaceholder() (sourceSecret corev1.Secret, placeholderSecret corev1.Secret) {
+	sourceSecret = buildSourceSecret()
 	placeholderSecret = corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        "placeholder-secret",
@@ -215,7 +220,7 @@ func sourceAndPlaceholder() (sourceSecret corev1.Secret, placeholderSecret corev
 	return
 }
 
-func buildSecretExport(sourceSecret corev1.Secret, toNamespace string) sg2v1alpha1.SecretExport {
+func secretExportFor(sourceSecret corev1.Secret, toNamespace string) sg2v1alpha1.SecretExport {
 	return sg2v1alpha1.SecretExport{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      sourceSecret.Name,
@@ -227,13 +232,12 @@ func buildSecretExport(sourceSecret corev1.Secret, toNamespace string) sg2v1alph
 	}
 }
 
-func reconcilersUnderTest(objects ...runtime.Object) (secretExportReconciler *sharing.SecretExportReconciler, secretReconciler *sharing.SecretReconciler, k8sClient client.Client) {
-	secretExports := sharing.NewSecretExportsWarmedUp(sharing.NewSecretExports(testLogr))
+func placeholderReconcilers(objects ...runtime.Object) (secretExportReconciler *sharing.SecretExportReconciler, secretReconciler *sharing.SecretReconciler, k8sClient client.Client) {
 	k8sClient = fakeClient.NewFakeClient(objects...)
+	secretExports := sharing.NewSecretExportsWarmedUp(sharing.NewSecretExports(testLogr))
 	secretExportReconciler = sharing.NewSecretExportReconciler(k8sClient, secretExports, testLogr)
-	secretReconciler = sharing.NewSecretReconciler(k8sClient, secretExports, testLogr)
 	secretExports.WarmUpFunc = secretExportReconciler.WarmUp
-
+	secretReconciler = sharing.NewSecretReconciler(k8sClient, secretExports, testLogr)
 	return
 }
 
