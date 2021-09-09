@@ -14,16 +14,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeClient "sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
-
-func init() {
-	sg2v1alpha1.AddToScheme(scheme.Scheme)
-	testLogr = zap.New(zap.UseDevMode(true))
-}
 
 func Test_Imports(t *testing.T) {
 	t.Run("reconciling secret import-export pair result in creation of a copy of a secret into another namespace", func(t *testing.T) {
@@ -64,7 +57,6 @@ func Test_Imports(t *testing.T) {
 
 func secretImportFor(sourceSecret corev1.Secret) sg2v1alpha1.SecretImport {
 	return sg2v1alpha1.SecretImport{
-
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      sourceSecret.Name,
 			Namespace: "test-target",
