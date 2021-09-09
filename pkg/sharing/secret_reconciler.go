@@ -224,7 +224,7 @@ func (e *enqueueSecretExportToSecret) Update(evt event.UpdateEvent, q workqueue.
 	typedExportOld, okOld := evt.ObjectOld.(*sg2v1alpha1.SecretExport)
 	typedExportNew, okNew := evt.ObjectNew.(*sg2v1alpha1.SecretExport)
 	if okOld && okNew && reflect.DeepEqual(typedExportOld.Status, typedExportNew.Status) {
-		e.Log.Info("Skipping SecretExport update since status did not change", "SecretExport NamespacedName", fmt.Sprintf("%s/%s", typedExportOld.Namespace, typedExportOld.Name))
+		e.Log.WithValues("request", types.NamespacedName{Namespace: typedExportOld.Namespace, Name: typedExportOld.Name}).Info("Skipping SecretExport update since status did not change")
 		return // Skip when status of SecretExport did not change
 	}
 	e.mapAndEnqueue(q, evt.ObjectNew)
