@@ -121,7 +121,7 @@ func (r *SecretExportReconciler) Reconcile(ctx context.Context, request reconcil
 
 	// Saving the status helps trigger a cascade so that
 	// the Secrets reconciler will also respond if needed
-	err = r.updateStatus(ctx, secretExport)
+	err = r.updateStatus(ctx, secretExport, log)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -166,8 +166,8 @@ func (r *SecretExportReconciler) reconcile(ctx context.Context, secretExport *sg
 	return reconcile.Result{}, nil
 }
 
-func (r *SecretExportReconciler) updateStatus(ctx context.Context, secretExport sg2v1alpha1.SecretExport) error {
-	r.log.Info("Updating secret export")
+func (r *SecretExportReconciler) updateStatus(ctx context.Context, secretExport sg2v1alpha1.SecretExport, log logr.Logger) error {
+	log.Info("Updating secretExport", "status", secretExport.Status)
 
 	err := r.client.Status().Update(ctx, &secretExport)
 	if err != nil {

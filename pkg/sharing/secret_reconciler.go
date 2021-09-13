@@ -135,7 +135,7 @@ func (r *SecretReconciler) reconcile(ctx context.Context, secret, originalSecret
 				Message: "Expected secret to have type=corev1.SecretTypeDockerConfigJson, but did not",
 			}},
 		}
-		return r.updateSecret(ctx, secret, status, originalSecret)
+		return r.updateSecret(ctx, secret, status, originalSecret, log)
 	}
 
 	matcher := SecretMatcher{ToNamespace: secret.Namespace, SecretType: secret.Type}
@@ -156,12 +156,11 @@ func (r *SecretReconciler) reconcile(ctx context.Context, secret, originalSecret
 		SecretNames: r.statusSecretNames(secrets),
 	}
 
-	return r.updateSecret(ctx, secret, status, originalSecret)
+	return r.updateSecret(ctx, secret, status, originalSecret, log)
 }
 
 func (r *SecretReconciler) updateSecret(ctx context.Context, secret corev1.Secret, status SecretStatus,
-	originalSecret corev1.Secret) (reconcile.Result, error) {
-
+	originalSecret corev1.Secret, log logr.Logger) (reconcile.Result, error) {
 	const (
 		statusFieldAnnKey = "secretgen.carvel.dev/status"
 	)
@@ -181,6 +180,7 @@ func (r *SecretReconciler) updateSecret(ctx context.Context, secret corev1.Secre
 		return reconcile.Result{}, nil
 	}
 
+	log.Info("updating secret", "status", string(encodedStatus))
 	// TODO bother to retry to avoid having to recalculate matched secrets?
 	err = r.client.Update(ctx, &secret)
 	if err != nil {
@@ -224,7 +224,7 @@ func (e *enqueueSecretExportToSecret) Update(evt event.UpdateEvent, q workqueue.
 	typedExportOld, okOld := evt.ObjectOld.(*sg2v1alpha1.SecretExport)
 	typedExportNew, okNew := evt.ObjectNew.(*sg2v1alpha1.SecretExport)
 	if okOld && okNew && reflect.DeepEqual(typedExportOld.Status, typedExportNew.Status) {
-		e.Log.Info("Skipping SecretExport update since status did not change")
+		e.Log.WithValues("request", types.NamespacedName{Namespace: typedExportOld.Namespace, Name: typedExportOld.Name}).Info("Skipping SecretExport update since status did not change")
 		return // Skip when status of SecretExport did not change
 	}
 	e.mapAndEnqueue(q, evt.ObjectNew)

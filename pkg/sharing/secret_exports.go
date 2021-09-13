@@ -100,7 +100,7 @@ func (se *SecretExports) MatchedSecretsForImport(matcher SecretMatcher) []*corev
 	var matched []exportedSecret
 
 	for _, exportedSec := range se.exportedSecrets {
-		if exportedSec.Matches(matcher) {
+		if exportedSec.Matches(matcher, se.log) {
 			matched = append(matched, exportedSec)
 		}
 	}
@@ -151,9 +151,10 @@ func (es exportedSecret) Secret() *corev1.Secret {
 	return es.secret.DeepCopy()
 }
 
-func (es exportedSecret) Matches(matcher SecretMatcher) bool {
+func (es exportedSecret) Matches(matcher SecretMatcher, log logr.Logger) bool {
 	if matcher.Subject != "" {
 		// TODO we currently do not match by subject
+		log.Info("Warning: Matcher has empty subject and will never match any secret")
 		return false
 	}
 	if len(matcher.SecretType) > 0 {
