@@ -73,7 +73,7 @@ SecretExport CRD allows to "offer" secrets for export.
 
 `spec` fields:
 
-- `toNamespace` (optional; string) Destination namespace for offer.
+- `toNamespace` (optional; string) Destination namespace for offer. Use `*` to indicate all namespaces.
 - `toNamespaces` (optional; array of strings) List of destination namespaces for offer.
 
 ### SecretImport
