@@ -6,7 +6,7 @@ Access to Secret is commonly scoped to its containing namespace (e.g. Pod can on
 
 In some cases an owner of a Secret may want to export it to other namespaces for consumption by other users/programs in the system. Currently there is no builtin way to do this in Kubernetes.
 
-This project introduces two CRDs `SecretExport` and `SecretImport` that enable sharing of Secrets across namespaces. SecretExport lets system know that particular Secret is "offered" to be shared with one or more specific namespaces. In the destination namespaces, SecretImport resource lets system know that Secret is allowed to be "copied" into this namespace. By providing a way to express intent of exporting and approving an export, we are able to securely share Secrets between namespaces, without worrying about Secrets getting "stolen" from a different namespace.
+This project introduces two CRDs `SecretExport` and `SecretImport` (and "placeholder secrets") that enable sharing of Secrets across namespaces. SecretExport lets system know that particular Secret is "offered" to be shared with one or more specific namespaces. In the destination namespaces, SecretImport resource lets system know that Secret is allowed to be "copied" into this namespace. By providing a way to express intent of exporting and approving an export, we are able to securely share Secrets between namespaces, without worrying about Secrets getting "stolen" from a different namespace.
 
 Example:
 
@@ -87,3 +87,97 @@ SecretImport CRD allows to "accept" secrets being exported.
 `spec` fields:
 
 - `fromNamespace` (optional; string) Source namespace; must be one of SecretExport's destination namespaces.
+
+### Placeholder Secrets
+
+A placeholder secret is:
+
+- a plain Kubernetes Secret
+- with `kubernetes.io/dockerconfigjson` type (more about this secret type here)
+- has `secretgen.carvel.dev/image-pull-secret` annotation
+
+Their main purpose is to provide an alternative to `SecretImport` to import combination of image pull secrets exported via `SecretExport`. The reason behind offering this feature is to allow configuration (e.g. Helm charts, kapp-controller packages, plain YAMLs) authors to not have to take a hard dependency on secretgen-controller to specify places where image pull secrets could be automatically injected. Instead by using standard Secret resource, such configuration would work in any environment regardless if secretgen-controller is installed or not.
+
+***Warning*** Since SecretExport CR allows you to export registry credentials to other namespaces, they will become visible to users of such namespaces. We strongly recommend to ensure that registry credentials you are exporting only allow read-only access to the registry with minimal necessary scope.
+
+Example of a placeholder secret:
+
+```yaml
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: reg-creds
+  annotations:
+    secretgen.carvel.dev/image-pull-secret: ""
+type: kubernetes.io/dockerconfigjson
+data:
+  .dockerconfigjson: e30K
+```
+
+Above secret could be referenced within a Pod, Deployment, ServiceAccount, etc. and would be automatically filled in by secretgen-controller at runtime, making it possible for image fetch to succeed.
+
+Related documentation on [how to use placeholder secrets can be used with kapp-controller](https://carvel.dev/kapp-controller/docs/latest/private-registry-auth/) in packaging context.
+
+Full example with multiple exported image pull secrets:
+
+```yaml
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: registry-com-creds
+  namespace: user1
+type: kubernetes.io/dockerconfigjson
+stringData:
+  .dockerconfigjson: |
+    {
+      "auths": {
+        "registry.com": {"username": ..., "password": ...}
+      }
+    }
+---
+apiVersion: secretgen.carvel.dev/v1alpha1
+kind: SecretExport
+metadata:
+  name: registry-com-creds
+  namespace: user1
+spec:
+  toNamespace: user2
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: global-reg-creds
+  namespace: user1
+type: kubernetes.io/dockerconfigjson
+stringData:
+  .dockerconfigjson: |
+    {
+      "auths": {
+        "other-registry.com": {"username": ..., "password": ...}
+      }
+    }
+---
+apiVersion: secretgen.carvel.dev/v1alpha1
+kind: SecretExport
+metadata:
+  name: global-reg-creds
+  namespace: user1
+spec:
+  # Export to all namespaces
+  toNamespace: "*"
+
+# On the importing side
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: my-reg-creds
+  namespace: user2
+  annotations:
+    secretgen.carvel.dev/image-pull-secret: ""
+type: kubernetes.io/dockerconfigjson
+data:
+  .dockerconfigjson: e30K # <-- will be filled with combination of registry-com-creds + global-reg-creds
+```
