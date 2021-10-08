@@ -117,6 +117,13 @@ data:
 
 Above secret could be referenced within a Pod, Deployment, ServiceAccount, etc. and would be automatically filled in by secretgen-controller at runtime, making it possible for image fetch to succeed.
 
+The below diagram shows a single secret being exported into two placeholder
+secrets.
+![generic placeholder secrets](placeholder-secrets-generic.jpg)
+
+In products such as [Tanzu Community Edition](https://github.com/vmware-tanzu/community-edition) kapp-controller is used to create placeholder secrets
+which are then populated and used as shown in this diagram:
+![tanzu placeholder secret and package install](placeholder-secrets-tanzu.jpg)
 Related documentation on [how to use placeholder secrets can be used with kapp-controller](https://carvel.dev/kapp-controller/docs/latest/private-registry-auth/) in packaging context.
 
 Full example with multiple exported image pull secrets:
