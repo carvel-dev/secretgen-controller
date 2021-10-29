@@ -1,4 +1,4 @@
 #@data/values
 ---
 push_images: true
-image_repo: docker.io/k14s/secretgen-controller
+image_repo: ghcr.io/vmware-tanzu/carvel-secretgen-controller
