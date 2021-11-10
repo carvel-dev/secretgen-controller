@@ -116,6 +116,30 @@ const (
 
 func (r *SecretReconciler) predictWantToReconcile(secret corev1.Secret) bool {
 	_, found := secret.Annotations[imagePullSecretAnnKey]
+	if found {
+		//func reload(t *testing.T, object client.Object, k8sClient client.Client) {
+		// err := k8sClient.Get(context.Background(), namespacedNameFor(object), object)
+		query := types.NamespacedName{
+			Name: secret.Namespace,
+		}
+		namespace := corev1.Namespace{}
+		fmt.Println("predictWantToReconcile: querying for namespace: ", secret.Namespace, query)
+		err := r.client.Get(context.Background(), query, &namespace)
+		if err != nil {
+			fmt.Println("predictWantToReconcile: FAILED query for namespace: ", secret.Namespace, query)
+			r.log.Error(err, "predictWantToReconcile couldn't find:", "namespace", secret.Namespace)
+			return false // log? this really means "we don't know and something went wrong.
+		}
+		fmt.Println("predictWantToReconcile: got namespace: ", secret.Namespace, namespace)
+		_, excluded := namespace.Annotations["secretgen.carvel.dev/excluded-from-wildcard-matching"]
+		if excluded {
+			fmt.Println("predictWantToReconcile: namespace is excluded: ", secret.Namespace, namespace)
+		} else {
+			fmt.Println("predictWantToReconcile: namespace is NOT excluded: ", secret.Namespace, namespace)
+		}
+		found = !excluded
+		fmt.Println("predictWantToReconcile: returning ", found, " for secret: ", secret.Name, " in namespace: ", secret.Namespace)
+	}
 	return found
 }
 
