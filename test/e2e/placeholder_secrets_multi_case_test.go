@@ -355,7 +355,7 @@ data:
 ---
 `
 
-	yaml1ExpectedContents := `{"auths":{"www.sg-test1-server-a.com":{"username":"sg-test1-secret-user-a","password":"sg-test1-secret-password-a","auth":"sgtest1-notbase64-a"},"www.sg-test1-server-b.com":{"username":"sg-test1-secret-user-b","password":"sg-test1-secret-password-b","auth":"sgtest1-notbase64-b"}}}`
+	populatedAuthsContents := `{"auths":{"www.sg-test1-server-a.com":{"username":"sg-test1-secret-user-a","password":"sg-test1-secret-password-a","auth":"sgtest1-notbase64-a"},"www.sg-test1-server-b.com":{"username":"sg-test1-secret-user-b","password":"sg-test1-secret-password-b","auth":"sgtest1-notbase64-b"}}}`
 	emptyAuthsContents := `{"auths":{}}`
 
 	name := "test-placeholder-export-namespace-exclusion"
@@ -372,46 +372,13 @@ data:
 	})
 
 	nsToExpected := map[string]string{
-		"sg-test2": yaml1ExpectedContents,
+		"sg-test2": populatedAuthsContents,
 		"sg-test3": emptyAuthsContents,
 	}
 
 	logger.Section("Check placeholder secrets were populated appropriately", func() {
 		assertSecretsConvergeToExpected(t, nsToExpected, kubectl)
 	})
-
-	/*
-		t.Run("star export skips annotated namespaces", func(t *testing.T) {
-			sourceSecret, placeholderSecret1, placeholderSecret2 := resourcesUnderTest()
-			excludedNs := corev1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:        placeholderSecret2.Namespace,
-					Namespace:   placeholderSecret2.Namespace, // TODO: hsould this be the same as the name?
-					Annotations: map[string]string{"secretgen.carvel.dev/excluded-from-wildcard-matching": ""},
-				},
-			}
-
-			secretExport := secretExportFor(sourceSecret, "*")
-			secretExportReconciler, secretReconciler, k8sClient := placeholderReconcilers(&sourceSecret, &placeholderSecret1, &placeholderSecret2, &secretExport, &excludedNs)
-
-			reconcileObject(t, secretExportReconciler, &secretExport)
-			reconcileObject(t, secretReconciler, &placeholderSecret1)
-			reconcileObject(t, secretReconciler, &placeholderSecret2)
-
-			// placeholder secret2 should have its original contents for auths and a helpful status message
-			originalPlaceholder2Data := append([]byte{}, placeholderSecret2.Data[".dockerconfigjson"]...)
-
-			reload(t, &placeholderSecret1, k8sClient)
-			reload(t, &placeholderSecret2, k8sClient)
-
-			assert.Equal(t, sourceSecret.Data[".dockerconfigjson"], placeholderSecret1.Data[".dockerconfigjson"])
-
-			assert.Equal(t, originalPlaceholder2Data, placeholderSecret2.Data[".dockerconfigjson"])
-			assert.NotEqual(t, placeholderSecret1.Data[".dockerconfigjson"], placeholderSecret2.Data[".dockerconfigjson"])
-		})
-
-	*/
-
 }
 
 func assertSecretsConvergeToExpected(t *testing.T, nsToExpected map[string]string, kubectl Kubectl) {
