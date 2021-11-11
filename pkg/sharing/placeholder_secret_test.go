@@ -52,6 +52,28 @@ func Test_SecretReconciler_respectsNamespaces(t *testing.T) {
 		assert.Equal(t, sourceSecret.Data[".dockerconfigjson"], placeholderSecret2.Data[".dockerconfigjson"])
 	})
 
+	t.Run("star export skips annotated namespaces", func(t *testing.T) {
+		sourceSecret, placeholderSecret1, placeholderSecret2 := resourcesUnderTest()
+		excludedNs := corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        placeholderSecret2.Namespace,
+				Annotations: map[string]string{"secretgen.carvel.dev/excluded-from-wildcard-matching": ""},
+			},
+		}
+		secretExport := secretExportFor(sourceSecret, "*")
+		secretExportReconciler, secretReconciler, k8sClient := placeholderReconcilers(&sourceSecret, &placeholderSecret1, &placeholderSecret2, &secretExport, &excludedNs)
+		reconcileObject(t, secretExportReconciler, &secretExport)
+		reconcileObject(t, secretReconciler, &placeholderSecret1)
+		reconcileObject(t, secretReconciler, &placeholderSecret2)
+		// placeholder secret2 should have its original contents for auths and a helpful status message
+		originalPlaceholder2Data := append([]byte{}, placeholderSecret2.Data[".dockerconfigjson"]...)
+		reload(t, &placeholderSecret1, k8sClient)
+		reload(t, &placeholderSecret2, k8sClient)
+		assert.Equal(t, sourceSecret.Data[".dockerconfigjson"], placeholderSecret1.Data[".dockerconfigjson"])
+		assert.Equal(t, originalPlaceholder2Data, placeholderSecret2.Data[".dockerconfigjson"])
+		assert.NotEqual(t, placeholderSecret1.Data[".dockerconfigjson"], placeholderSecret2.Data[".dockerconfigjson"])
+	})
+
 	t.Run("specific export goes only to specific namespace", func(t *testing.T) {
 		sourceSecret, placeholderSecret1, placeholderSecret2 := resourcesUnderTest()
 

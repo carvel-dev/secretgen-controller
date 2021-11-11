@@ -13,6 +13,7 @@ import (
 	"github.com/vmware-tanzu/carvel-secretgen-controller/pkg/reconciler"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+
 	// metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -151,7 +152,8 @@ func (r *SecretImportReconciler) reconcile(
 		ToNamespace:   secretImport.Namespace,
 	}
 
-	secrets := r.secretExports.MatchedSecretsForImport(matcher)
+	nscheck := makeNamespaceExclusionCheck(ctx, r.client, log)
+	secrets := r.secretExports.MatchedSecretsForImport(matcher, nscheck)
 
 	switch len(secrets) {
 	case 0:

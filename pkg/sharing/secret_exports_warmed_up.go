@@ -37,7 +37,7 @@ func (se *SecretExportsWarmedUp) Unexport(export *sg2v1alpha1.SecretExport) {
 }
 
 // MatchedSecretsForImport warms up and then delegates.
-func (se *SecretExportsWarmedUp) MatchedSecretsForImport(matcher SecretMatcher) []*corev1.Secret {
+func (se *SecretExportsWarmedUp) MatchedSecretsForImport(matcher SecretMatcher, nsIsExcluded NamespaceExclusionCheck) []*corev1.Secret {
 	se.warmUpOnce.Do(se.WarmUpFunc)
-	return se.delegate.MatchedSecretsForImport(matcher)
+	return se.delegate.MatchedSecretsForImport(matcher, nsIsExcluded)
 }

@@ -47,10 +47,13 @@ func TestSecretExports(t *testing.T) {
 		}
 		se.Export(export2, secret2)
 
-		require.Equal(t, []*corev1.Secret(nil), se.MatchedSecretsForImport(sharing.SecretMatcher{
-			ToNamespace: "dst-ns",
-			SecretType:  corev1.SecretType("Opaque"),
-		}))
+		fakeNsCheck := func(string) bool { return true }
+		require.Equal(t, []*corev1.Secret(nil),
+			se.MatchedSecretsForImport(sharing.SecretMatcher{
+				ToNamespace: "dst-ns",
+				SecretType:  corev1.SecretType("Opaque"),
+			},
+				fakeNsCheck))
 
 		// Everything matches
 		secret3 := &corev1.Secret{
@@ -69,7 +72,7 @@ func TestSecretExports(t *testing.T) {
 		require.Equal(t, []*corev1.Secret{secret3}, se.MatchedSecretsForImport(sharing.SecretMatcher{
 			ToNamespace: "dst-ns",
 			SecretType:  corev1.SecretType("Opaque"),
-		}))
+		}, fakeNsCheck))
 
 		// Everything matches but from different namespace
 		secret4 := &corev1.Secret{
@@ -90,7 +93,7 @@ func TestSecretExports(t *testing.T) {
 			se.MatchedSecretsForImport(sharing.SecretMatcher{
 				ToNamespace: "dst-ns",
 				SecretType:  corev1.SecretType("Opaque"),
-			}),
+			}, fakeNsCheck),
 		)
 
 		// Everything matches; exports to all namespaces
@@ -127,7 +130,7 @@ func TestSecretExports(t *testing.T) {
 			se.MatchedSecretsForImport(sharing.SecretMatcher{
 				ToNamespace: "dst-ns",
 				SecretType:  corev1.SecretType("Opaque"),
-			}),
+			}, fakeNsCheck),
 		)
 
 		// No matches are produced when subject is offered for matching
@@ -135,7 +138,7 @@ func TestSecretExports(t *testing.T) {
 			Subject:     "non-empty", // Currently not supported
 			ToNamespace: "dst-ns",
 			SecretType:  corev1.SecretType("Opaque"),
-		}))
+		}, fakeNsCheck))
 
 		se.Unexport(export4)
 
@@ -144,7 +147,7 @@ func TestSecretExports(t *testing.T) {
 			se.MatchedSecretsForImport(sharing.SecretMatcher{
 				ToNamespace: "dst-ns",
 				SecretType:  corev1.SecretType("Opaque"),
-			}),
+			}, fakeNsCheck),
 		)
 
 		// Update secret export to no longer match namespace
@@ -162,7 +165,7 @@ func TestSecretExports(t *testing.T) {
 			se.MatchedSecretsForImport(sharing.SecretMatcher{
 				ToNamespace: "dst-ns",
 				SecretType:  corev1.SecretType("Opaque"),
-			}),
+			}, fakeNsCheck),
 		)
 	})
 
@@ -264,7 +267,7 @@ func TestSecretExports(t *testing.T) {
 		result := se.MatchedSecretsForImport(sharing.SecretMatcher{
 			ToNamespace: "dst-ns",
 			SecretType:  corev1.SecretType("Opaque"),
-		})
+		}, func(string) bool { return true })
 
 		// Check based on metas since assertion diff will be more readable
 		var actualMetas []string
