@@ -100,6 +100,12 @@ Their main purpose is to provide an alternative to `SecretImport` to import comb
 
 ***Warning*** Since SecretExport CR allows you to export registry credentials to other namespaces, they will become visible to users of such namespaces. We strongly recommend to ensure that registry credentials you are exporting only allow read-only access to the registry with minimal necessary scope.
 
+***Exclude From Wildcard Matching***
+You can mark a namespace as exempt from wildcard matching (i.e. `*` exports) so
+that placeholder secrets in that ns will only be populated by secretExports that
+explicitly list that namespace in their `toNamespace(s)` field. To mark a
+namespace, give it the annotation `secretgen.carvel.dev/excluded-from-wildcard-matching` with any value (e.g. empty string).
+
 Example of a placeholder secret:
 
 ```yaml
