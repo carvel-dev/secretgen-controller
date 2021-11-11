@@ -14,13 +14,13 @@ import (
 
 // makeNamespaceExclusionCheck returns a function that uses reconciler-level tools (k8s client, logger, context) to
 // check the presence of a namespace annotation that we mostly only care about in the inner workings of SecretExport.
-func makeNamespaceExclusionCheck(ctx context.Context, cli client.Client, log logr.Logger) NamespaceExclusionCheck {
+func makeNamespaceExclusionCheck(ctx context.Context, kubernetesClient client.Client, log logr.Logger) NamespaceExclusionCheck {
 	return func(nsName string) bool {
 		query := types.NamespacedName{
 			Name: nsName,
 		}
 		namespace := corev1.Namespace{}
-		err := cli.Get(ctx, query, &namespace)
+		err := kubernetesClient.Get(ctx, query, &namespace)
 		if err != nil {
 			log.Error(err, "Called to check annotation on a namespace but couldn't find:", "namespace", nsName)
 			return false
