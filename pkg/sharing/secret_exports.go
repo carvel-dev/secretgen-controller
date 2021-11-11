@@ -186,8 +186,8 @@ func (es exportedSecret) matchesNamespace(nsToMatch string, nsIsExcluded Namespa
 		if ns == nsToMatch {
 			return true
 		}
-		if ns == sg2v1alpha1.AllNamespaces {
-			return !nsIsExcluded(nsToMatch)
+		if ns == sg2v1alpha1.AllNamespaces && !nsIsExcluded(nsToMatch) {
+			return true
 		}
 	}
 	return false
