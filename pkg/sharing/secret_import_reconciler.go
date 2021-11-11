@@ -152,7 +152,7 @@ func (r *SecretImportReconciler) reconcile(
 		ToNamespace:   secretImport.Namespace,
 	}
 
-	nscheck := makeNamespaceExclusionCheck(ctx, r.client, log)
+	nscheck := makeNamespaceWildcardExclusionCheck(ctx, r.client, log)
 	secrets := r.secretExports.MatchedSecretsForImport(matcher, nscheck)
 
 	switch len(secrets) {

@@ -60,8 +60,13 @@ func Test_SecretReconciler_respectsNamespaces(t *testing.T) {
 				Annotations: map[string]string{"secretgen.carvel.dev/excluded-from-wildcard-matching": ""},
 			},
 		}
+		includedNs := corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: placeholderSecret1.Namespace,
+			},
+		}
 		secretExport := secretExportFor(sourceSecret, "*")
-		secretExportReconciler, secretReconciler, k8sClient := placeholderReconcilers(&sourceSecret, &placeholderSecret1, &placeholderSecret2, &secretExport, &excludedNs)
+		secretExportReconciler, secretReconciler, k8sClient := placeholderReconcilers(&sourceSecret, &placeholderSecret1, &placeholderSecret2, &secretExport, &excludedNs, &includedNs)
 		reconcileObject(t, secretExportReconciler, &secretExport)
 		reconcileObject(t, secretReconciler, &placeholderSecret1)
 		reconcileObject(t, secretReconciler, &placeholderSecret2)
@@ -72,6 +77,20 @@ func Test_SecretReconciler_respectsNamespaces(t *testing.T) {
 		assert.Equal(t, sourceSecret.Data[".dockerconfigjson"], placeholderSecret1.Data[".dockerconfigjson"])
 		assert.Equal(t, originalPlaceholder2Data, placeholderSecret2.Data[".dockerconfigjson"])
 		assert.NotEqual(t, placeholderSecret1.Data[".dockerconfigjson"], placeholderSecret2.Data[".dockerconfigjson"])
+
+		// if the annotated ns is explicitly listed it should still get it though:
+		secretExport.Spec.ToNamespaces = append(secretExport.Spec.ToNamespaces, placeholderSecret2.Namespace)
+		// you have to re-make the k8sClient and the reconcilers for them to see the change in the object, there's no pointer magic.
+		secretExportReconciler, secretReconciler, k8sClient = placeholderReconcilers(&sourceSecret, &placeholderSecret1, &placeholderSecret2, &secretExport, &excludedNs, &includedNs)
+		reconcileObject(t, secretExportReconciler, &secretExport)
+		reconcileObject(t, secretReconciler, &placeholderSecret1)
+		reconcileObject(t, secretReconciler, &placeholderSecret2)
+
+		reload(t, &placeholderSecret1, k8sClient)
+		reload(t, &placeholderSecret2, k8sClient)
+		assert.Equal(t, sourceSecret.Data[".dockerconfigjson"], placeholderSecret1.Data[".dockerconfigjson"])
+		assert.Equal(t, sourceSecret.Data[".dockerconfigjson"], placeholderSecret2.Data[".dockerconfigjson"])
+
 	})
 
 	t.Run("specific export goes only to specific namespace", func(t *testing.T) {

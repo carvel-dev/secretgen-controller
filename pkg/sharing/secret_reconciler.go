@@ -139,7 +139,7 @@ func (r *SecretReconciler) reconcile(ctx context.Context, secret, originalSecret
 	}
 
 	matcher := SecretMatcher{ToNamespace: secret.Namespace, SecretType: secret.Type}
-	nscheck := makeNamespaceExclusionCheck(ctx, r.client, log)
+	nscheck := makeNamespaceWildcardExclusionCheck(ctx, r.client, log)
 	secrets := r.secretExports.MatchedSecretsForImport(matcher, nscheck)
 
 	newData, err := NewCombinedDockerConfigJSON(secrets)
