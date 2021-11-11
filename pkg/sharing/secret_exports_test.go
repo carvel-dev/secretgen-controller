@@ -47,7 +47,7 @@ func TestSecretExports(t *testing.T) {
 		}
 		se.Export(export2, secret2)
 
-		fakeNsCheck := func(string) bool { return true }
+		fakeNsCheck := func(string) bool { return false }
 		require.Equal(t, []*corev1.Secret(nil),
 			se.MatchedSecretsForImport(sharing.SecretMatcher{
 				ToNamespace: "dst-ns",
@@ -267,7 +267,7 @@ func TestSecretExports(t *testing.T) {
 		result := se.MatchedSecretsForImport(sharing.SecretMatcher{
 			ToNamespace: "dst-ns",
 			SecretType:  corev1.SecretType("Opaque"),
-		}, func(string) bool { return true })
+		}, func(string) bool { return false })
 
 		// Check based on metas since assertion diff will be more readable
 		var actualMetas []string

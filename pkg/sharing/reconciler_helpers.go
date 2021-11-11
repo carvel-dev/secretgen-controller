@@ -12,6 +12,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+// makeNamespaceExclusionCheck returns a function that uses reconciler-level tools (k8s client, logger, context) to
+// check the presence of a namespace annotation that we mostly only care about in the inner workings of SecretExport.
 func makeNamespaceExclusionCheck(ctx context.Context, cli client.Client, log logr.Logger) NamespaceExclusionCheck {
 	return func(nsName string) bool {
 		query := types.NamespacedName{

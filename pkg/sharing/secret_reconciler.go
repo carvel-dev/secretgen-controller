@@ -116,19 +116,6 @@ const (
 
 func (r *SecretReconciler) predictWantToReconcile(secret corev1.Secret) bool {
 	_, found := secret.Annotations[imagePullSecretAnnKey]
-	if found {
-		query := types.NamespacedName{
-			Name: secret.Namespace,
-		}
-		namespace := corev1.Namespace{}
-		err := r.client.Get(context.Background(), query, &namespace)
-		if err != nil {
-			r.log.Error(err, "predictWantToReconcile couldn't find:", "namespace", secret.Namespace)
-			return false
-		}
-		_, excluded := namespace.Annotations["secretgen.carvel.dev/excluded-from-wildcard-matching"]
-		found = !excluded
-	}
 	return found
 }
 
