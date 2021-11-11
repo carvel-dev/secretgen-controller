@@ -166,6 +166,14 @@ func TestSecretExports(t *testing.T) {
 				SecretType:  corev1.SecretType("Opaque"),
 			}, nsCheck),
 		)
+
+		// now if the nsCheck returns true for a ns under a * match it shouldn't share that secret
+		require.Equal(t,
+			[]*corev1.Secret{secret3},
+			se.MatchedSecretsForImport(sharing.SecretMatcher{
+				ToNamespace: "dst-ns",
+				SecretType:  corev1.SecretType("Opaque"),
+			}, func(ns string) bool { return true }))
 	})
 
 	t.Run("returns secrets in specific order (last secret is most preferred)", func(t *testing.T) {
