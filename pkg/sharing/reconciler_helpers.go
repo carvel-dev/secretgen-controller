@@ -27,7 +27,11 @@ func makeNamespaceWildcardExclusionCheck(ctx context.Context,
 			log.Error(err, "Called to check annotation on a namespace but couldn't find:", "namespace", nsName)
 			return false
 		}
-		_, excluded := namespace.Annotations["secretgen.carvel.dev/excluded-from-wildcard-matching"]
-		return excluded
+		return nsHasExclusionAnnotation(namespace)
 	}
+}
+
+func nsHasExclusionAnnotation(ns corev1.Namespace) bool {
+	_, excluded := ns.Annotations["secretgen.carvel.dev/excluded-from-wildcard-matching"]
+	return excluded
 }
