@@ -51,11 +51,49 @@ func (r *SecretReconciler) AttachWatches(controller controller.Controller) error
 		return fmt.Errorf("Watching secrets: %s", err)
 	}
 
-	return controller.Watch(&source.Kind{Type: &sg2v1alpha1.SecretExport{}}, &enqueueSecretExportToSecret{
+	err = controller.Watch(&source.Kind{Type: &sg2v1alpha1.SecretExport{}}, &enqueueSecretExportToSecret{
 		SecretExports: r.secretExports,
 		ToRequests:    r.mapSecretExportToSecret,
 		Log:           r.log,
 	})
+	if err != nil {
+		return fmt.Errorf("Watching secretExports: %s", err)
+	}
+
+	// Watch namespaces partly so that we cache them because we migh be doing a lot of lookups
+	// note that for now we are using the same enqueueNamespaceToSecret as the secretImportReconciler
+	return controller.Watch(&source.Kind{Type: &sg2v1alpha1.SecretExport{}}, &enqueueNamespaceToSecret{
+		ToRequests: r.mapNamespaceToSecret,
+		Log:        r.log,
+	})
+}
+
+func (r *SecretReconciler) mapNamespaceToSecret(ns client.Object) []reconcile.Request {
+	var secretList corev1.SecretList
+	// TODO: scope the secret list to the namespace, which i think is the client.Object that got passed in...
+	err := r.client.List(context.Background(), &secretList)
+	if err != nil {
+		// TODO what should we really do here?
+		r.log.Error(err, "Failed fetching list of all secrets")
+		return nil
+	}
+
+	var result []reconcile.Request
+	for _, secret := range secretList.Items {
+		if secret.Namespace == ns.GetName() {
+			result = append(result, reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Name:      secret.Name,
+					Namespace: secret.Namespace,
+				},
+			})
+		}
+	}
+
+	r.log.Info("Planning to reconcile matched secrets",
+		"all", len(secretList.Items), "matched", len(result))
+
+	return result
 }
 
 func (r *SecretReconciler) mapSecretExportToSecret(_ client.Object) []reconcile.Request {
