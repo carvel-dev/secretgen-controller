@@ -89,7 +89,7 @@ func (r *SecretImportReconciler) AttachWatches(controller controller.Controller)
 			}
 
 			r.log.Info("Planning to reconcile matched secret requests",
-				"all", len(secretReqList.Items))
+				"count", len(secretReqList.Items))
 
 			return result
 		},
@@ -116,14 +116,12 @@ func (r *SecretImportReconciler) mapNamespaceToSecret(ns client.Object) []reconc
 
 	var result []reconcile.Request
 	for _, secret := range secretList.Items {
-		if secret.Namespace == ns.GetName() {
-			result = append(result, reconcile.Request{
-				NamespacedName: types.NamespacedName{
-					Name:      secret.Name,
-					Namespace: secret.Namespace,
-				},
-			})
-		}
+		result = append(result, reconcile.Request{
+			NamespacedName: types.NamespacedName{
+				Name:      secret.Name,
+				Namespace: secret.Namespace,
+			},
+		})
 	}
 
 	r.log.Info("Planning to reconcile matched secrets",
@@ -288,7 +286,7 @@ type enqueueNamespaceToSecret struct {
 // Create doesn't do anything
 func (e *enqueueNamespaceToSecret) Create(evt event.CreateEvent, q workqueue.RateLimitingInterface) {}
 
-// Update checks whether the exclusion annotation has been added or removed and then touches the secrets in that namespace
+// Update checks whether the exclusion annotation has been added or removed and then queues the secrets in that namespace
 func (e *enqueueNamespaceToSecret) Update(evt event.UpdateEvent, q workqueue.RateLimitingInterface) {
 	typedNsOld, okOld := evt.ObjectOld.(*corev1.Namespace)
 	typedNsNew, okNew := evt.ObjectNew.(*corev1.Namespace)

@@ -70,6 +70,8 @@ func Test_SecretReconciler_respectsNamespaces(t *testing.T) {
 		reconcileObject(t, secretExportReconciler, &secretExport)
 		reconcileObject(t, secretReconciler, &placeholderSecret1)
 		reconcileObject(t, secretReconciler, &placeholderSecret2)
+		// NOTE the reconcile calls above don't change the structs that we have - even though we pass pointers there's a copy happening
+		// so our local structs won't reflect the reconciler run until after we reload
 		// placeholder secret2 should have its original contents for auths and a helpful status message
 		originalPlaceholder2Data := append([]byte{}, placeholderSecret2.Data[".dockerconfigjson"]...)
 		reload(t, &placeholderSecret1, k8sClient)

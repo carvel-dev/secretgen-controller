@@ -70,7 +70,6 @@ func (r *SecretReconciler) AttachWatches(controller controller.Controller) error
 
 func (r *SecretReconciler) mapNamespaceToSecret(ns client.Object) []reconcile.Request {
 	var secretList corev1.SecretList
-	// TODO: scope the secret list to the namespace, which i think is the client.Object that got passed in...
 	err := r.client.List(context.Background(), &secretList, client.InNamespace(ns.GetName()))
 	if err != nil {
 		// TODO what should we really do here?
@@ -80,18 +79,16 @@ func (r *SecretReconciler) mapNamespaceToSecret(ns client.Object) []reconcile.Re
 
 	var result []reconcile.Request
 	for _, secret := range secretList.Items {
-		if secret.Namespace == ns.GetName() {
-			result = append(result, reconcile.Request{
-				NamespacedName: types.NamespacedName{
-					Name:      secret.Name,
-					Namespace: secret.Namespace,
-				},
-			})
-		}
+		result = append(result, reconcile.Request{
+			NamespacedName: types.NamespacedName{
+				Name:      secret.Name,
+				Namespace: secret.Namespace,
+			},
+		})
 	}
 
 	r.log.Info("Planning to reconcile matched secrets",
-		"all", len(secretList.Items), "matched", len(result))
+		"count", len(result))
 
 	return result
 }
