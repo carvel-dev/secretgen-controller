@@ -99,7 +99,7 @@ func (r *SecretImportReconciler) AttachWatches(controller controller.Controller)
 	}
 
 	// Watch namespaces partly so that we cache them because we migh be doing a lot of lookups
-	return controller.Watch(&source.Kind{Type: &sg2v1alpha1.SecretExport{}}, &enqueueNamespaceToSecret{
+	return controller.Watch(&source.Kind{Type: &corev1.Namespace{}}, &enqueueNamespaceToSecret{
 		ToRequests: r.mapNamespaceToSecret,
 		Log:        r.log,
 	})
@@ -107,8 +107,7 @@ func (r *SecretImportReconciler) AttachWatches(controller controller.Controller)
 
 func (r *SecretImportReconciler) mapNamespaceToSecret(ns client.Object) []reconcile.Request {
 	var secretList corev1.SecretList
-	// TODO: scope the secret list to the namespace, which i think is the client.Object that got passed in...
-	err := r.client.List(context.Background(), &secretList)
+	err := r.client.List(context.Background(), &secretList, client.InNamespace(ns.GetName()))
 	if err != nil {
 		// TODO what should we really do here?
 		r.log.Error(err, "Failed fetching list of all secrets")
@@ -287,8 +286,7 @@ type enqueueNamespaceToSecret struct {
 }
 
 // Create doesn't do anything
-func (e *enqueueNamespaceToSecret) Create(evt event.CreateEvent, q workqueue.RateLimitingInterface) {
-}
+func (e *enqueueNamespaceToSecret) Create(evt event.CreateEvent, q workqueue.RateLimitingInterface) {}
 
 // Update checks whether the exclusion annotation has been added or removed and then touches the secrets in that namespace
 func (e *enqueueNamespaceToSecret) Update(evt event.UpdateEvent, q workqueue.RateLimitingInterface) {
@@ -302,14 +300,12 @@ func (e *enqueueNamespaceToSecret) Update(evt event.UpdateEvent, q workqueue.Rat
 }
 
 // Delete doesn't do anything
-func (e *enqueueNamespaceToSecret) Delete(evt event.DeleteEvent, q workqueue.RateLimitingInterface) {
-
-}
+func (e *enqueueNamespaceToSecret) Delete(evt event.DeleteEvent, q workqueue.RateLimitingInterface) {}
 
 // Generic doesn't do anything
 func (e *enqueueNamespaceToSecret) Generic(evt event.GenericEvent, q workqueue.RateLimitingInterface) {
-
 }
+
 func (e *enqueueNamespaceToSecret) mapAndEnqueue(q workqueue.RateLimitingInterface, object client.Object) {
 	for _, req := range e.ToRequests(object) {
 		q.Add(req)

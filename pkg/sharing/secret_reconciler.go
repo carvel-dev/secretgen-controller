@@ -62,7 +62,7 @@ func (r *SecretReconciler) AttachWatches(controller controller.Controller) error
 
 	// Watch namespaces partly so that we cache them because we migh be doing a lot of lookups
 	// note that for now we are using the same enqueueNamespaceToSecret as the secretImportReconciler
-	return controller.Watch(&source.Kind{Type: &sg2v1alpha1.SecretExport{}}, &enqueueNamespaceToSecret{
+	return controller.Watch(&source.Kind{Type: &corev1.Namespace{}}, &enqueueNamespaceToSecret{
 		ToRequests: r.mapNamespaceToSecret,
 		Log:        r.log,
 	})
@@ -71,7 +71,7 @@ func (r *SecretReconciler) AttachWatches(controller controller.Controller) error
 func (r *SecretReconciler) mapNamespaceToSecret(ns client.Object) []reconcile.Request {
 	var secretList corev1.SecretList
 	// TODO: scope the secret list to the namespace, which i think is the client.Object that got passed in...
-	err := r.client.List(context.Background(), &secretList)
+	err := r.client.List(context.Background(), &secretList, client.InNamespace(ns.GetName()))
 	if err != nil {
 		// TODO what should we really do here?
 		r.log.Error(err, "Failed fetching list of all secrets")
