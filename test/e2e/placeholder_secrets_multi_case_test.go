@@ -4,7 +4,9 @@
 package e2e
 
 import (
+	"bytes"
 	"fmt"
+	"os/exec"
 	"strings"
 	"testing"
 
@@ -271,6 +273,132 @@ spec:
 		nsToExpected["sg-test3"] = emptyAuthsContents
 		assertSecretsConvergeToExpected(t, nsToExpected, kubectl)
 	})
+}
+
+func TestPlaceholderNamespaceExclusion(t *testing.T) {
+	env := BuildEnv(t)
+	logger := Logger{}
+	kapp := Kapp{t, env.Namespace, logger}
+	kubectl := Kubectl{t, env.Namespace, logger}
+
+	yaml1 := `
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: sg-test1
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: sg-test2
+  annotations:
+    secretgen.carvel.dev/excluded-from-wildcard-matching: ""
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: sg-test3
+  annotations:
+    secretgen.carvel.dev/excluded-from-wildcard-matching: ""
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: secret-kappa
+  namespace: sg-test1
+type: kubernetes.io/dockerconfigjson
+stringData:
+  .dockerconfigjson: |
+    {
+      "auths": {
+        "www.sg-test1-server-a.com": {
+          "username": "sg-test1-secret-user-a",
+          "password": "sg-test1-secret-password-a",
+          "auth": "sgtest1-notbase64-a"
+        },
+        "www.sg-test1-server-b.com": {
+          "username": "sg-test1-secret-user-b",
+          "password": "sg-test1-secret-password-b",
+          "auth": "sgtest1-notbase64-b"
+        }
+      }
+    }
+---
+apiVersion: secretgen.carvel.dev/v1alpha1
+kind: SecretExport
+metadata:
+  name: secret-kappa
+  namespace: sg-test1
+spec:
+  toNamespaces:
+  - "*"
+  - sg-test3
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  annotations:
+    secretgen.carvel.dev/image-pull-secret: ""
+  name: secret
+  namespace: sg-test2
+type: kubernetes.io/dockerconfigjson
+data:
+  .dockerconfigjson: "e30K"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  annotations:
+    secretgen.carvel.dev/image-pull-secret: ""
+  name: secret
+  namespace: sg-test3
+type: kubernetes.io/dockerconfigjson
+data:
+  .dockerconfigjson: "e30K"
+---
+`
+	yaml1ExpectedContents := `{"auths":{"www.sg-test1-server-a.com":{"username":"sg-test1-secret-user-a","password":"sg-test1-secret-password-a","auth":"sgtest1-notbase64-a"},"www.sg-test1-server-b.com":{"username":"sg-test1-secret-user-b","password":"sg-test1-secret-password-b","auth":"sgtest1-notbase64-b"}}}`
+	emptyAuthsContents := `{"auths":{}}`
+
+	name := "test-placeholder-export-successful"
+	cleanUp := func() {
+		kapp.RunWithOpts([]string{"delete", "-a", name}, RunOpts{AllowError: true})
+	}
+
+	cleanUp()
+	defer cleanUp()
+
+	logger.Section("Initial Deploy", func() {
+		kapp.RunWithOpts([]string{"deploy", "-f", "-", "-a", name},
+			RunOpts{StdinReader: strings.NewReader(yaml1)})
+	})
+
+	// both ns have the exclusion annotation, but sg-test3 is also named explicitly.
+	nsToExpected := map[string]string{
+		"sg-test2": emptyAuthsContents,
+		"sg-test3": yaml1ExpectedContents,
+	}
+
+	logger.Section("Check placeholder secrets were populated appropriately", func() {
+		assertSecretsConvergeToExpected(t, nsToExpected, kubectl)
+	})
+
+	logger.Section("Removing annotation should populate secret", func() {
+		cmd := exec.Command("kubectl", "annotate", "namespace", "sg-test2", "secretgen.carvel.dev/excluded-from-wildcard-matching-")
+		var stderr, stdout bytes.Buffer
+		cmd.Stderr = &stderr
+		cmd.Stdout = &stdout
+		err := cmd.Run()
+		stdoutStr := stdout.String()
+		if err != nil {
+			fmt.Printf("Execution error: stdout: '%s' stderr: '%s' error: '%s'\n", stdoutStr, stderr.String(), err)
+		}
+		assert.NoError(t, err)
+
+		nsToExpected["sg-test2"] = yaml1ExpectedContents
+		assertSecretsConvergeToExpected(t, nsToExpected, kubectl)
+	})
+
 }
 
 func assertSecretsConvergeToExpected(t *testing.T, nsToExpected map[string]string, kubectl Kubectl) {
