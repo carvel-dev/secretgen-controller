@@ -89,7 +89,7 @@ func (r *SecretImportReconciler) AttachWatches(controller controller.Controller)
 			}
 
 			r.log.Info("Planning to reconcile matched secret requests",
-				"count", len(secretReqList.Items))
+				"all", len(secretReqList.Items), "matched", len(result))
 
 			return result
 		},
@@ -125,7 +125,7 @@ func (r *SecretImportReconciler) mapNamespaceToSecret(ns client.Object) []reconc
 	}
 
 	r.log.Info("Planning to reconcile matched secrets",
-		"all", len(secretList.Items), "matched", len(result))
+		"count", len(secretList.Items))
 
 	return result
 }
