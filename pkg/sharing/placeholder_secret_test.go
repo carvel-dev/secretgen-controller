@@ -90,7 +90,6 @@ func Test_SecretReconciler_respectsNamespaces(t *testing.T) {
 		reload(t, &placeholderSecret2, k8sClient)
 		assert.Equal(t, sourceSecret.Data[".dockerconfigjson"], placeholderSecret1.Data[".dockerconfigjson"])
 		assert.Equal(t, sourceSecret.Data[".dockerconfigjson"], placeholderSecret2.Data[".dockerconfigjson"])
-
 	})
 
 	t.Run("specific export goes only to specific namespace", func(t *testing.T) {
