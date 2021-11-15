@@ -98,7 +98,7 @@ func (r *SecretImportReconciler) AttachWatches(controller controller.Controller)
 		return err
 	}
 
-	// Watch namespaces partly so that we cache them because we migh be doing a lot of lookups
+	// Watch namespaces partly so that we cache them because we might be doing a lot of lookups
 	return controller.Watch(&source.Kind{Type: &corev1.Namespace{}}, &enqueueNamespaceToSecret{
 		ToRequests: r.mapNamespaceToSecret,
 		Log:        r.log,
