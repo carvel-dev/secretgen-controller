@@ -89,7 +89,7 @@ func (r *SecretImportReconciler) AttachWatches(controller controller.Controller)
 			}
 
 			r.log.Info("Planning to reconcile matched secret requests",
-				"all", len(secretReqList.Items), "matched", len(result))
+				"all", len(secretReqList.Items))
 
 			return result
 		},
