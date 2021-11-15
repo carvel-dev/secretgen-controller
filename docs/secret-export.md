@@ -102,7 +102,7 @@ Their main purpose is to provide an alternative to `SecretImport` to import comb
 
 ***Exclude From Wildcard Matching***
 You can mark a namespace as exempt from wildcard matching (i.e. `*` exports) so
-that placeholder secrets in that ns will only be populated by secretExports that
+that placeholder secrets in that namespace will only be populated by SecretExports that
 explicitly list that namespace in their `toNamespace(s)` field. To mark a
 namespace, give it the annotation `secretgen.carvel.dev/excluded-from-wildcard-matching` with any value (e.g. empty string).
 
