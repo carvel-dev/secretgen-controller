@@ -21,12 +21,16 @@ const (
 	WeightAnnKey = "secretgen.carvel.dev/weight"
 )
 
+// NamespaceWildcardExclusionCheck is a function that takes the name of a namespace
+// and returns whether that ns is excluded from wildcard matches
+type NamespaceWildcardExclusionCheck func(string) bool
+
 // SecretExportsProvider provides a way to record and
 // later query secrets based on a given criteria.
 type SecretExportsProvider interface {
 	Export(*sg2v1alpha1.SecretExport, *corev1.Secret)
 	Unexport(*sg2v1alpha1.SecretExport)
-	MatchedSecretsForImport(SecretMatcher) []*corev1.Secret
+	MatchedSecretsForImport(SecretMatcher, NamespaceWildcardExclusionCheck) []*corev1.Secret
 }
 
 // SecretExports is an in-memory cache of exported secrets.
@@ -93,14 +97,14 @@ type SecretMatcher struct {
 //       - secret with specific namespace
 //       - secret with wildcard namespace match
 //     (in all cases fallback to secret namespace/name sort)
-func (se *SecretExports) MatchedSecretsForImport(matcher SecretMatcher) []*corev1.Secret {
+func (se *SecretExports) MatchedSecretsForImport(matcher SecretMatcher, nsIsExcludedFromWildcard NamespaceWildcardExclusionCheck) []*corev1.Secret {
 	se.exportedSecretsLock.RLock()
 	defer se.exportedSecretsLock.RUnlock()
 
 	var matched []exportedSecret
 
 	for _, exportedSec := range se.exportedSecrets {
-		if exportedSec.Matches(matcher, se.log) {
+		if exportedSec.Matches(matcher, nsIsExcludedFromWildcard, se.log) {
 			matched = append(matched, exportedSec)
 		}
 	}
@@ -151,7 +155,7 @@ func (es exportedSecret) Secret() *corev1.Secret {
 	return es.secret.DeepCopy()
 }
 
-func (es exportedSecret) Matches(matcher SecretMatcher, log logr.Logger) bool {
+func (es exportedSecret) Matches(matcher SecretMatcher, nsIsExcludedFromWildcard NamespaceWildcardExclusionCheck, log logr.Logger) bool {
 	if matcher.Subject != "" {
 		// TODO we currently do not match by subject
 		log.Info("Warning: Matcher has empty subject and will never match any secret")
@@ -172,15 +176,18 @@ func (es exportedSecret) Matches(matcher SecretMatcher, log logr.Logger) bool {
 			return false
 		}
 	}
-	if !es.matchesNamespace(matcher.ToNamespace) {
+	if !es.matchesNamespace(matcher.ToNamespace, nsIsExcludedFromWildcard) {
 		return false
 	}
 	return true
 }
 
-func (es exportedSecret) matchesNamespace(nsToMatch string) bool {
+func (es exportedSecret) matchesNamespace(nsToMatch string, nsIsExcludedFromWildcard NamespaceWildcardExclusionCheck) bool {
 	for _, ns := range es.export.StaticToNamespaces() {
-		if ns == sg2v1alpha1.AllNamespaces || ns == nsToMatch {
+		if ns == nsToMatch {
+			return true
+		}
+		if ns == sg2v1alpha1.AllNamespaces && !nsIsExcludedFromWildcard(nsToMatch) {
 			return true
 		}
 	}

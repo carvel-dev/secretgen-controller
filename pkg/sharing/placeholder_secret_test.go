@@ -52,6 +52,48 @@ func Test_SecretReconciler_respectsNamespaces(t *testing.T) {
 		assert.Equal(t, sourceSecret.Data[".dockerconfigjson"], placeholderSecret2.Data[".dockerconfigjson"])
 	})
 
+	t.Run("star export skips annotated namespaces", func(t *testing.T) {
+		sourceSecret, placeholderSecret1, placeholderSecret2 := resourcesUnderTest()
+		excludedNs := corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        placeholderSecret2.Namespace,
+				Annotations: map[string]string{"secretgen.carvel.dev/excluded-from-wildcard-matching": ""},
+			},
+		}
+		includedNs := corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: placeholderSecret1.Namespace,
+			},
+		}
+		secretExport := secretExportFor(sourceSecret, "*")
+		secretExportReconciler, secretReconciler, k8sClient := placeholderReconcilers(&sourceSecret, &placeholderSecret1, &placeholderSecret2, &secretExport, &excludedNs, &includedNs)
+		reconcileObject(t, secretExportReconciler, &secretExport)
+		reconcileObject(t, secretReconciler, &placeholderSecret1)
+		reconcileObject(t, secretReconciler, &placeholderSecret2)
+		// NOTE the reconcile calls above don't change the structs that we have - even though we pass pointers there's a copy happening
+		// so our local structs won't reflect the reconciler run until after we reload
+		// placeholder secret2 should have its original contents for auths and a helpful status message
+		originalPlaceholder2Data := append([]byte{}, placeholderSecret2.Data[".dockerconfigjson"]...)
+		reload(t, &placeholderSecret1, k8sClient)
+		reload(t, &placeholderSecret2, k8sClient)
+		assert.Equal(t, sourceSecret.Data[".dockerconfigjson"], placeholderSecret1.Data[".dockerconfigjson"])
+		assert.Equal(t, originalPlaceholder2Data, placeholderSecret2.Data[".dockerconfigjson"])
+		assert.NotEqual(t, placeholderSecret1.Data[".dockerconfigjson"], placeholderSecret2.Data[".dockerconfigjson"])
+
+		// if the annotated ns is explicitly listed it should still get it though:
+		secretExport.Spec.ToNamespaces = append(secretExport.Spec.ToNamespaces, placeholderSecret2.Namespace)
+		// you have to re-make the k8sClient and the reconcilers for them to see the change in the object, there's no pointer magic.
+		secretExportReconciler, secretReconciler, k8sClient = placeholderReconcilers(&sourceSecret, &placeholderSecret1, &placeholderSecret2, &secretExport, &excludedNs, &includedNs)
+		reconcileObject(t, secretExportReconciler, &secretExport)
+		reconcileObject(t, secretReconciler, &placeholderSecret1)
+		reconcileObject(t, secretReconciler, &placeholderSecret2)
+
+		reload(t, &placeholderSecret1, k8sClient)
+		reload(t, &placeholderSecret2, k8sClient)
+		assert.Equal(t, sourceSecret.Data[".dockerconfigjson"], placeholderSecret1.Data[".dockerconfigjson"])
+		assert.Equal(t, sourceSecret.Data[".dockerconfigjson"], placeholderSecret2.Data[".dockerconfigjson"])
+	})
+
 	t.Run("specific export goes only to specific namespace", func(t *testing.T) {
 		sourceSecret, placeholderSecret1, placeholderSecret2 := resourcesUnderTest()
 

@@ -13,10 +13,12 @@ import (
 	"github.com/vmware-tanzu/carvel-secretgen-controller/pkg/reconciler"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	// metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/util/workqueue"
+
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
@@ -61,7 +63,7 @@ func (r *SecretImportReconciler) AttachWatches(controller controller.Controller)
 
 	// Watch SecretExport and enqueue for related SecretImport
 	// based on export namespace configuration
-	return controller.Watch(&source.Kind{Type: &sg2v1alpha1.SecretExport{}}, &enqueueSecretExportToSecret{
+	err = controller.Watch(&source.Kind{Type: &sg2v1alpha1.SecretExport{}}, &enqueueSecretExportToSecret{
 		SecretExports: r.secretExports,
 		Log:           r.log,
 
@@ -92,6 +94,40 @@ func (r *SecretImportReconciler) AttachWatches(controller controller.Controller)
 			return result
 		},
 	})
+	if err != nil {
+		return err
+	}
+
+	// Watch namespaces partly so that we cache them because we might be doing a lot of lookups
+	return controller.Watch(&source.Kind{Type: &corev1.Namespace{}}, &enqueueNamespaceToSecret{
+		ToRequests: r.mapNamespaceToSecret,
+		Log:        r.log,
+	})
+}
+
+func (r *SecretImportReconciler) mapNamespaceToSecret(ns client.Object) []reconcile.Request {
+	var secretList corev1.SecretList
+	err := r.client.List(context.Background(), &secretList, client.InNamespace(ns.GetName()))
+	if err != nil {
+		// TODO what should we really do here?
+		r.log.Error(err, "Failed fetching list of all secrets")
+		return nil
+	}
+
+	var result []reconcile.Request
+	for _, secret := range secretList.Items {
+		result = append(result, reconcile.Request{
+			NamespacedName: types.NamespacedName{
+				Name:      secret.Name,
+				Namespace: secret.Namespace,
+			},
+		})
+	}
+
+	r.log.Info("Planning to reconcile matched secrets",
+		"count", len(secretList.Items))
+
+	return result
 }
 
 // Reconcile is the entrypoint for incoming requests from k8s
@@ -151,7 +187,8 @@ func (r *SecretImportReconciler) reconcile(
 		ToNamespace:   secretImport.Namespace,
 	}
 
-	secrets := r.secretExports.MatchedSecretsForImport(matcher)
+	nscheck := makeNamespaceWildcardExclusionCheck(ctx, r.client, log)
+	secrets := r.secretExports.MatchedSecretsForImport(matcher, nscheck)
 
 	switch len(secrets) {
 	case 0:
@@ -236,4 +273,39 @@ func (r *SecretImportReconciler) updateStatus(
 		return fmt.Errorf("Updating secret request status: %s", err)
 	}
 	return nil
+}
+
+// enqueueNamespaceToSecret is a custom handler that is optimized for
+// tracking Namespace annotation change events. It tries to result in minimum number of
+// Secret reconcile requests.
+type enqueueNamespaceToSecret struct {
+	ToRequests handler.MapFunc
+	Log        logr.Logger
+}
+
+// Create doesn't do anything
+func (e *enqueueNamespaceToSecret) Create(evt event.CreateEvent, q workqueue.RateLimitingInterface) {}
+
+// Update checks whether the exclusion annotation has been added or removed and then queues the secrets in that namespace
+func (e *enqueueNamespaceToSecret) Update(evt event.UpdateEvent, q workqueue.RateLimitingInterface) {
+	typedNsOld, okOld := evt.ObjectOld.(*corev1.Namespace)
+	typedNsNew, okNew := evt.ObjectNew.(*corev1.Namespace)
+	if okOld && okNew && (nsHasExclusionAnnotation(*typedNsOld) == nsHasExclusionAnnotation(*typedNsNew)) {
+		return // Skip when exclusion annotation did not change
+	}
+
+	e.mapAndEnqueue(q, evt.ObjectNew)
+}
+
+// Delete doesn't do anything
+func (e *enqueueNamespaceToSecret) Delete(evt event.DeleteEvent, q workqueue.RateLimitingInterface) {}
+
+// Generic doesn't do anything
+func (e *enqueueNamespaceToSecret) Generic(evt event.GenericEvent, q workqueue.RateLimitingInterface) {
+}
+
+func (e *enqueueNamespaceToSecret) mapAndEnqueue(q workqueue.RateLimitingInterface, object client.Object) {
+	for _, req := range e.ToRequests(object) {
+		q.Add(req)
+	}
 }
