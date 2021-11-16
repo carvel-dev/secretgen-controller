@@ -100,32 +100,32 @@ func (r *SecretImportReconciler) AttachWatches(controller controller.Controller)
 
 	// Watch namespaces partly so that we cache them because we might be doing a lot of lookups
 	return controller.Watch(&source.Kind{Type: &corev1.Namespace{}}, &enqueueNamespaceToSecret{
-		ToRequests: r.mapNamespaceToSecret,
+		ToRequests: r.mapNamespaceToSecretImports,
 		Log:        r.log,
 	})
 }
 
-func (r *SecretImportReconciler) mapNamespaceToSecret(ns client.Object) []reconcile.Request {
-	var secretList corev1.SecretList
-	err := r.client.List(context.Background(), &secretList, client.InNamespace(ns.GetName()))
+func (r *SecretImportReconciler) mapNamespaceToSecretImports(ns client.Object) []reconcile.Request {
+	var secretImportList sg2v1alpha1.SecretImportList
+	err := r.client.List(context.Background(), &secretImportList, client.InNamespace(ns.GetName()))
 	if err != nil {
 		// TODO what should we really do here?
-		r.log.Error(err, "Failed fetching list of all secrets")
+		r.log.Error(err, "Failed fetching list of all SecretImports")
 		return nil
 	}
 
 	var result []reconcile.Request
-	for _, secret := range secretList.Items {
+	for _, secretImport := range secretImportList.Items {
 		result = append(result, reconcile.Request{
 			NamespacedName: types.NamespacedName{
-				Name:      secret.Name,
-				Namespace: secret.Namespace,
+				Name:      secretImport.Name,
+				Namespace: secretImport.Namespace,
 			},
 		})
 	}
 
-	r.log.Info("Planning to reconcile matched secrets",
-		"count", len(secretList.Items))
+	r.log.Info("Planning to reconcile matched SecretImports",
+		"count", len(secretImportList.Items))
 
 	return result
 }
