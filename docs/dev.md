@@ -13,18 +13,37 @@ export SECRETGEN_E2E_NAMESPACE=secretgen-test
 ```
 
 ## Release
+Ensure `git status` shows a "clean" / no untracked changes status.
+
 Tag the release - it's necessary to do this first because the release process
 uses the tag to record the version.
 `git tag "v1.2.3"`
 
-Log in to the k8slt dockerhub account (vmware employees should have the password
-via lastpass):
-`docker login -u "k8slt" docker.io`
+Create a new
+[PAT](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token)
+in the github UI, ensuring that it has "package:write"
+permissions. After you click "package:write" the other necessary permissions
+will auto-select. You can set a 7-day expiration, but you should delete the
+token after the release for maximum security.
+
+`export CR_PAT=<your-token-here>`
+and then run a docker login:
+`echo $CR_PAT | docker login ghcr.io -u <your-username-here>  --password-stdin`
+
+Ensure that you've linked your command-line to your kubernetes environment:
+`eval $(minikube docker-env)` (or similar if you're using kind, etc.)
 
 Run the release script:  `hack/build-release.sh`
 
-Copy the resulting yaml into the repo:
-cp tmp/release.yml releases/1.2.3.yml
+Push the tag `git push --tags origin HEAD` and then in the github UI make a new
+release from that tag.
+In the release, add a triple-tick section at the bottom with the checksum that
+was output by the release script and the filename (release.yml,  omit the
+`./tmp` prefix). Ensure there's two spaces between the checksum and the filename
+to make it interoperable with checksum tooling verification.
+
+In your OS UI, open the secretgen-controller repo tmp folder and drag the
+release.yml asset into the github UI release as an attached file.
 
 Test the release artifact to ensure it actually works
 `kapp deploy -a secretgen -f releases/1.2.3.yml`
@@ -35,10 +54,15 @@ then `./hack/test-e2e.sh`.
 After verifying, commit: `git add releases; git commit -m "release 1.2.3"`
 and push: `git push origin HEAD --tags`
 
+Go into the github UI and delete your PAT.
+
 #### Alpha Releases
 Similar to above but we have a separate `build-alpha-release.sh` script and
-`alpha-releases` folder. Version names should be like `v1.2.3-alpha.1`
+`alpha-releases` folder, and we don't make a github release.
+Version names should be like `v1.2.3-alpha.1`
 
+Copy the yaml from the deploy script into the repo:
+cp tmp/release.yml alpha-releases/1.2.3.yml
 
 ### TODO
 
