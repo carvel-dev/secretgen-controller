@@ -13,7 +13,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 // makeNamespaceWildcardExclusionCheck returns a function that uses reconciler-level tools (k8s client, logger, context) to
@@ -73,30 +72,4 @@ func (e *enqueueNamespaceToSecret) mapAndEnqueue(q workqueue.RateLimitingInterfa
 	for _, req := range e.ToRequests(object) {
 		q.Add(req)
 	}
-}
-
-// mapNamespaceToSecret implements the logic inside of the enqueueNamespaceToSecret.mapAndEnqueue function.
-// the reconcilers that us the other objects in this file have instance methods that delegate all the logic to this method
-func mapNamespaceToSecret(ns client.Object, kubernetesClient client.Client, log logr.Logger) []reconcile.Request {
-	var secretList corev1.SecretList
-	err := kubernetesClient.List(context.Background(), &secretList, client.InNamespace(ns.GetName()))
-	if err != nil {
-		// TODO what should we really do here?
-		log.Error(err, "Failed fetching list of all secrets")
-		return nil
-	}
-
-	var result []reconcile.Request
-	for _, secret := range secretList.Items {
-		result = append(result, reconcile.Request{
-			NamespacedName: types.NamespacedName{
-				Name:      secret.Name,
-				Namespace: secret.Namespace,
-			},
-		})
-	}
-	log.Info("Planning to reconcile matched secrets",
-		"count", len(secretList.Items))
-
-	return result
 }
