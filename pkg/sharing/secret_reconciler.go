@@ -69,28 +69,7 @@ func (r *SecretReconciler) AttachWatches(controller controller.Controller) error
 }
 
 func (r *SecretReconciler) mapNamespaceToSecret(ns client.Object) []reconcile.Request {
-	var secretList corev1.SecretList
-	err := r.client.List(context.Background(), &secretList, client.InNamespace(ns.GetName()))
-	if err != nil {
-		// TODO what should we really do here?
-		r.log.Error(err, "Failed fetching list of all secrets")
-		return nil
-	}
-
-	var result []reconcile.Request
-	for _, secret := range secretList.Items {
-		result = append(result, reconcile.Request{
-			NamespacedName: types.NamespacedName{
-				Name:      secret.Name,
-				Namespace: secret.Namespace,
-			},
-		})
-	}
-
-	r.log.Info("Planning to reconcile matched secrets",
-		"count", len(result))
-
-	return result
+	return mapNamespaceToSecret(ns, r.client, r.log)
 }
 
 func (r *SecretReconciler) mapSecretExportToSecret(_ client.Object) []reconcile.Request {
