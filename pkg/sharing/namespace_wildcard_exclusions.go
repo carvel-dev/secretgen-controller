@@ -39,19 +39,20 @@ func nsHasExclusionAnnotation(ns corev1.Namespace) bool {
 	return excluded
 }
 
-// enqueueNamespaceToSecret is a custom handler that is optimized for tracking
+// enqueueDueToNamespaceChange is a custom handler that is optimized for tracking
 // Namespace annotation change events. It tries to result in minimum number of
 // Secret reconcile requests. Used in both SecretImport and Secret Reconcilers.
-type enqueueNamespaceToSecret struct {
+type enqueueDueToNamespaceChange struct {
 	ToRequests handler.MapFunc
 	Log        logr.Logger
 }
 
 // Create doesn't do anything
-func (e *enqueueNamespaceToSecret) Create(evt event.CreateEvent, q workqueue.RateLimitingInterface) {}
+func (e *enqueueDueToNamespaceChange) Create(evt event.CreateEvent, q workqueue.RateLimitingInterface) {
+}
 
 // Update checks whether the exclusion annotation has been added or removed and then queues the secrets in that namespace
-func (e *enqueueNamespaceToSecret) Update(evt event.UpdateEvent, q workqueue.RateLimitingInterface) {
+func (e *enqueueDueToNamespaceChange) Update(evt event.UpdateEvent, q workqueue.RateLimitingInterface) {
 	typedNsOld, okOld := evt.ObjectOld.(*corev1.Namespace)
 	typedNsNew, okNew := evt.ObjectNew.(*corev1.Namespace)
 	if okOld && okNew && (nsHasExclusionAnnotation(*typedNsOld) == nsHasExclusionAnnotation(*typedNsNew)) {
@@ -62,13 +63,14 @@ func (e *enqueueNamespaceToSecret) Update(evt event.UpdateEvent, q workqueue.Rat
 }
 
 // Delete doesn't do anything
-func (e *enqueueNamespaceToSecret) Delete(evt event.DeleteEvent, q workqueue.RateLimitingInterface) {}
-
-// Generic doesn't do anything
-func (e *enqueueNamespaceToSecret) Generic(evt event.GenericEvent, q workqueue.RateLimitingInterface) {
+func (e *enqueueDueToNamespaceChange) Delete(evt event.DeleteEvent, q workqueue.RateLimitingInterface) {
 }
 
-func (e *enqueueNamespaceToSecret) mapAndEnqueue(q workqueue.RateLimitingInterface, object client.Object) {
+// Generic doesn't do anything
+func (e *enqueueDueToNamespaceChange) Generic(evt event.GenericEvent, q workqueue.RateLimitingInterface) {
+}
+
+func (e *enqueueDueToNamespaceChange) mapAndEnqueue(q workqueue.RateLimitingInterface, object client.Object) {
 	for _, req := range e.ToRequests(object) {
 		q.Add(req)
 	}

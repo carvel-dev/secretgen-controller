@@ -4,9 +4,7 @@
 package e2e
 
 import (
-	"bytes"
 	"fmt"
-	"os/exec"
 	"strings"
 	"testing"
 
@@ -384,16 +382,10 @@ data:
 	})
 
 	logger.Section("Removing annotation should populate secret", func() {
-		cmd := exec.Command("kubectl", "annotate", "namespace", "sg-test2", "secretgen.carvel.dev/excluded-from-wildcard-matching-")
-		var stderr, stdout bytes.Buffer
-		cmd.Stderr = &stderr
-		cmd.Stdout = &stdout
-		err := cmd.Run()
-		stdoutStr := stdout.String()
-		if err != nil {
-			fmt.Printf("Execution error: stdout: '%s' stderr: '%s' error: '%s'\n", stdoutStr, stderr.String(), err)
-		}
-		assert.NoError(t, err)
+		args := []string{"annotate", "namespace", "sg-test2", "secretgen.carvel.dev/excluded-from-wildcard-matching-"}
+		var out string
+		out, _ = kubectl.RunWithOpts(args, RunOpts{AllowError: false})
+		fmt.Println("Execution of kubectl", args, "  :", out)
 
 		nsToExpected["sg-test2"] = yaml1ExpectedContents
 		assertSecretsConvergeToExpected(t, nsToExpected, kubectl)

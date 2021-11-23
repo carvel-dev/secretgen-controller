@@ -61,14 +61,14 @@ func (r *SecretReconciler) AttachWatches(controller controller.Controller) error
 	}
 
 	// Watch namespaces partly so that we cache them because we migh be doing a lot of lookups
-	// note that for now we are using the same enqueueNamespaceToSecret as the secretImportReconciler
-	return controller.Watch(&source.Kind{Type: &corev1.Namespace{}}, &enqueueNamespaceToSecret{
+	// note that for now we are using the same enqueueDueToNamespaceChange as the secretImportReconciler
+	return controller.Watch(&source.Kind{Type: &corev1.Namespace{}}, &enqueueDueToNamespaceChange{
 		ToRequests: r.mapNamespaceToSecret,
 		Log:        r.log,
 	})
 }
 
-// mapNamespaceToSecret implements the logic inside of the enqueueNamespaceToSecret.mapAndEnqueue function.
+// mapNamespaceToSecret implements the logic inside of the enqueueDueToNamespaceChange.mapAndEnqueue function.
 func (r *SecretReconciler) mapNamespaceToSecret(ns client.Object) []reconcile.Request {
 	var secretList corev1.SecretList
 	err := r.client.List(context.Background(), &secretList, client.InNamespace(ns.GetName()))
