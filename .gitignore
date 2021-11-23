@@ -1,6 +1,6 @@
 .DS_Store
 /controller
-/linux_controller
+/controller-linux-amd64
 /tmp
 /Dockerfile.dev
 .idea
