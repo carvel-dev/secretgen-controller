@@ -8,9 +8,17 @@ Install ytt, kbld, kapp beforehand (https://k14s.io).
 # add `-v image_repo=docker.io/username/secretgen-controller` with your registry to ytt invocation inside
 ./hack/deploy.sh # to deploy
 
+./hack/dev-deploy.sh # to deploy quickly for iterating
+
 export SECRETGEN_E2E_NAMESPACE=secretgen-test
 ./hack/test-all.sh
 ```
+
+Note there's two deploy scripts above. You may wish to use the (slower)
+`deploy.sh` at the beginning and end of iterating on a feature, as it will run
+gofmt, check your mods, and do a clean / hermetic build. However once you're in
+the loop of iterating and re-deploying small changes, you will definitely prefer
+the `dev-deploy.sh` script as it is much faster.
 
 ## Release
 Ensure `git status` shows a "clean" / no untracked changes status.
