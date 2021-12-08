@@ -383,9 +383,7 @@ data:
 
 	logger.Section("Removing annotation should populate secret", func() {
 		args := []string{"annotate", "namespace", "sg-test2", "secretgen.carvel.dev/excluded-from-wildcard-matching-"}
-		var out string
-		out, _ = kubectl.RunWithOpts(args, RunOpts{AllowError: false})
-		fmt.Println("Execution of kubectl", args, "  :", out)
+		_ = kubectl.Run(args)
 
 		nsToExpected["sg-test2"] = yaml1ExpectedContents
 		assertSecretsConvergeToExpected(t, nsToExpected, kubectl)
