@@ -13,12 +13,10 @@ import (
 	"github.com/vmware-tanzu/carvel-secretgen-controller/pkg/reconciler"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/client-go/util/workqueue"
 
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
@@ -99,7 +97,8 @@ func (r *SecretImportReconciler) AttachWatches(controller controller.Controller)
 	}
 
 	// Watch namespaces partly so that we cache them because we might be doing a lot of lookups
-	return controller.Watch(&source.Kind{Type: &corev1.Namespace{}}, &enqueueNamespaceToSecret{
+	// note that for now we are using the same enqueueDueToNamespaceChange as the secretReconciler
+	return controller.Watch(&source.Kind{Type: &corev1.Namespace{}}, &enqueueDueToNamespaceChange{
 		ToRequests: r.mapNamespaceToSecretImports,
 		Log:        r.log,
 	})
@@ -273,39 +272,4 @@ func (r *SecretImportReconciler) updateStatus(
 		return fmt.Errorf("Updating secret request status: %s", err)
 	}
 	return nil
-}
-
-// enqueueNamespaceToSecret is a custom handler that is optimized for
-// tracking Namespace annotation change events. It tries to result in minimum number of
-// Secret reconcile requests.
-type enqueueNamespaceToSecret struct {
-	ToRequests handler.MapFunc
-	Log        logr.Logger
-}
-
-// Create doesn't do anything
-func (e *enqueueNamespaceToSecret) Create(evt event.CreateEvent, q workqueue.RateLimitingInterface) {}
-
-// Update checks whether the exclusion annotation has been added or removed and then queues the secrets in that namespace
-func (e *enqueueNamespaceToSecret) Update(evt event.UpdateEvent, q workqueue.RateLimitingInterface) {
-	typedNsOld, okOld := evt.ObjectOld.(*corev1.Namespace)
-	typedNsNew, okNew := evt.ObjectNew.(*corev1.Namespace)
-	if okOld && okNew && (nsHasExclusionAnnotation(*typedNsOld) == nsHasExclusionAnnotation(*typedNsNew)) {
-		return // Skip when exclusion annotation did not change
-	}
-
-	e.mapAndEnqueue(q, evt.ObjectNew)
-}
-
-// Delete doesn't do anything
-func (e *enqueueNamespaceToSecret) Delete(evt event.DeleteEvent, q workqueue.RateLimitingInterface) {}
-
-// Generic doesn't do anything
-func (e *enqueueNamespaceToSecret) Generic(evt event.GenericEvent, q workqueue.RateLimitingInterface) {
-}
-
-func (e *enqueueNamespaceToSecret) mapAndEnqueue(q workqueue.RateLimitingInterface, object client.Object) {
-	for _, req := range e.ToRequests(object) {
-		q.Add(req)
-	}
 }
