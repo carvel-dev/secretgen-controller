@@ -6,6 +6,7 @@ package sharing_test
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -128,6 +129,15 @@ func Test_SecretReconciler_updatesStatus(t *testing.T) {
 
 		reload(t, &placeholderSecret, k8sClient)
 		assert.Equal(t, sourceSecret.Data[".dockerconfigjson"], placeholderSecret.Data[".dockerconfigjson"])
+		assert.Equal(t, sourceSecret.Data[".dockerconfigjson"], placeholderSecret.Data[".dockerconfigjson"])
+		fmt.Println("placeholder Annotations: ", placeholderSecret.ObjectMeta.Annotations)
+		fmt.Println("source Annotations: ", sourceSecret.ObjectMeta.Annotations)
+		for k, v := range sourceSecret.ObjectMeta.Annotations {
+			placeholderV, check := placeholderSecret.ObjectMeta.Annotations[k]
+			assert.True(t, check, fmt.Sprintf("failed to find source key %s in placeholder annotations", k))
+			assert.Equal(t, v, placeholderV)
+		}
+
 		assert.NotNil(t, placeholderSecret.ObjectMeta.Annotations["secretgen.carvel.dev/status"])
 		var observedStatus map[string]interface{}
 		require.NoError(t, json.Unmarshal([]byte(placeholderSecret.ObjectMeta.Annotations["secretgen.carvel.dev/status"]), &observedStatus))

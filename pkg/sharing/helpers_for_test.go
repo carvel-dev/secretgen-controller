@@ -29,8 +29,9 @@ func init() {
 func buildSourceSecret() corev1.Secret {
 	return corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-secret",
-			Namespace: "test-source",
+			Name:        "test-secret",
+			Namespace:   "test-source",
+			Annotations: map[string]string{"test-source-annotation": "value"},
 		},
 		Data: map[string][]byte{
 			corev1.DockerConfigJsonKey: []byte(`{"auths":{"server":{"username":"correctUser","password":"correctPassword","auth":"correctAuth"}}}`),
