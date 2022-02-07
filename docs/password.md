@@ -34,6 +34,7 @@ metadata:
 spec:
   length: 124
   secretTemplate:
+    type: Opaque
     stringData:
       postgresql-password: $(value)
 ```

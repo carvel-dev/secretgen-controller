@@ -37,6 +37,7 @@ metadata:
   name: pg-password
 spec:
   secretTemplate:
+    type: Opaque
     stringData:
       postgresql-pass: $(value)
 ```
@@ -51,3 +52,5 @@ metadata:
 data:
   postgresql-pass: xxx...
 ```
+
+See [examples](../examples/passwords.yml) for more.
