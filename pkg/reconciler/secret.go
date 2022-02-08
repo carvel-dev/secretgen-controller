@@ -88,32 +88,8 @@ func (p *Secret) ApplyTemplate(template sgv1alpha1.SecretTemplate) error {
 	return nil
 }
 
-// ApplySecret fills in annotations, labels, type, and data on top of the Secret.
+// ApplySecret fills in type and data on top of the Secret.
 func (p *Secret) ApplySecret(otherSecret corev1.Secret) {
-	if len(otherSecret.Annotations) > 0 {
-		if p.secret.Annotations == nil {
-			p.secret.Annotations = map[string]string{}
-		}
-		for k, v := range otherSecret.Annotations {
-			// Do not override existing annotations
-			if _, found := p.secret.Annotations[k]; !found {
-				p.secret.Annotations[k] = v
-			}
-		}
-	}
-
-	if len(otherSecret.Labels) > 0 {
-		if p.secret.Labels == nil {
-			p.secret.Labels = map[string]string{}
-		}
-		for k, v := range otherSecret.Labels {
-			// Do not override existing labels
-			if _, found := p.secret.Labels[k]; !found {
-				p.secret.Labels[k] = v
-			}
-		}
-	}
-
 	if len(otherSecret.Type) > 0 {
 		p.secret.Type = otherSecret.Type
 	}
