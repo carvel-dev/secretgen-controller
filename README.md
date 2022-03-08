@@ -13,6 +13,7 @@ Features:
 
 - supports generating certificates, passwords, RSA keys and SSH keys
 - supports exporting and importing secrets across namespaces
+- exporting/importing registry secrets across namespaces
 
 More details in [docs](docs/README.md).
 
