@@ -1,18 +1,20 @@
 FROM photon:3.0
 
 ARG SGCTRL_VER=development
+ARG TARGETARCH
+ARG TARGETOS
 
 RUN tdnf install -y tar wget gzip
 
 # adapted from golang docker image
 ENV PATH /usr/local/go/bin:$PATH
 ENV GOLANG_VERSION 1.17.1
-ENV GO_REL_ARCH linux-amd64
-ENV GO_REL_SHA dab7d9c34361dc21ec237d584590d72500652e7c909bf082758fb63064fca0ef
 
 RUN set eux; \
-    wget -O go.tgz "https://golang.org/dl/go${GOLANG_VERSION}.${GO_REL_ARCH}.tar.gz" --progress=dot:giga; \
-    echo "${GO_REL_SHA} go.tgz" | sha256sum -c -; \
+    wget -O go.tgz "https://golang.org/dl/go${GOLANG_VERSION}.${TARGETOS}-${TARGETARCH}.tar.gz" --progress=dot:giga; \
+    if [ $TARGETARCH == "arm64" ] ; then export DOWNLOAD_SHA="53b29236fa03ed862670a5e5e2ab2439a2dc288fe61544aa392062104ac0128c" ; fi; \
+    if [ $TARGETARCH == "amd64" ] ; then export DOWNLOAD_SHA="dab7d9c34361dc21ec237d584590d72500652e7c909bf082758fb63064fca0ef" ; fi; \
+    echo "${DOWNLOAD_SHA} go.tgz" | sha256sum -c -; \
     tar -C /usr/local -xzf go.tgz; \
     rm go.tgz; \
     go version
