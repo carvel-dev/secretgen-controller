@@ -67,7 +67,7 @@ jobs:
           go-version: "1.17"
       - name: Build the secretgen-controller artifacts
         run: |
-          ./hack/install-deps.sh
+          curl -L https://carvel.dev/install.sh | bash
           ./hack/build.sh
 
           # docker image
