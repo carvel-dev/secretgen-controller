@@ -17,3 +17,11 @@ type SecretImportListerExpansion interface{}
 // SecretImportNamespaceListerExpansion allows custom methods to be added to
 // SecretImportNamespaceLister.
 type SecretImportNamespaceListerExpansion interface{}
+
+// SecretTemplateListerExpansion allows custom methods to be added to
+// SecretTemplateLister.
+type SecretTemplateListerExpansion interface{}
+
+// SecretTemplateNamespaceListerExpansion allows custom methods to be added to
+// SecretTemplateNamespaceLister.
+type SecretTemplateNamespaceListerExpansion interface{}

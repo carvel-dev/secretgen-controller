@@ -12,6 +12,8 @@ type Interface interface {
 	SecretExports() SecretExportInformer
 	// SecretImports returns a SecretImportInformer.
 	SecretImports() SecretImportInformer
+	// SecretTemplates returns a SecretTemplateInformer.
+	SecretTemplates() SecretTemplateInformer
 }
 
 type version struct {
@@ -33,4 +35,9 @@ func (v *version) SecretExports() SecretExportInformer {
 // SecretImports returns a SecretImportInformer.
 func (v *version) SecretImports() SecretImportInformer {
 	return &secretImportInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// SecretTemplates returns a SecretTemplateInformer.
+func (v *version) SecretTemplates() SecretTemplateInformer {
+	return &secretTemplateInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }

@@ -24,6 +24,8 @@ func init() {
 			&SecretExportList{},
 			&SecretImport{},
 			&SecretImportList{},
+			&SecretTemplate{},
+			&SecretTemplateList{},
 		)
 		scheme.AddKnownTypes(SchemeGroupVersion, &metav1.Status{})
 		metav1.AddToGroupVersion(scheme, SchemeGroupVersion)

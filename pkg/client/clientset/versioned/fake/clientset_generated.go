@@ -58,7 +58,10 @@ func (c *Clientset) Tracker() testing.ObjectTracker {
 	return c.tracker
 }
 
-var _ clientset.Interface = &Clientset{}
+var (
+	_ clientset.Interface = &Clientset{}
+	_ testing.FakeClient  = &Clientset{}
+)
 
 // SecretgenV1alpha1 retrieves the SecretgenV1alpha1Client
 func (c *Clientset) SecretgenV1alpha1() secretgenv1alpha1.SecretgenV1alpha1Interface {

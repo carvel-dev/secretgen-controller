@@ -41,6 +41,8 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Secretgen().V1alpha1().SecretExports().Informer()}, nil
 	case v1alpha1.SchemeGroupVersion.WithResource("secretimports"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Secretgen().V1alpha1().SecretImports().Informer()}, nil
+	case v1alpha1.SchemeGroupVersion.WithResource("secrettemplates"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Secretgen().V1alpha1().SecretTemplates().Informer()}, nil
 
 	}
 
