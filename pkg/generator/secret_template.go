@@ -126,6 +126,8 @@ func (r *SecretTemplateReconciler) reconcile(ctx context.Context, secretTemplate
 		return reconcile.Result{}, err
 	}
 
+	secretTemplate.Status.CreatedSecret.Name = secret.Name
+
 	return reconcile.Result{}, nil
 }
 
@@ -186,6 +188,10 @@ func resolveInputResource(ref sg2v1alpha1.InputResourceRef, namespace string, in
 
 //TODO how does this package from k8s align with our usecases?
 func jsonPath(expression string, values interface{}) (*bytes.Buffer, error) {
+
+	//TODO debugging, remove or log.
+	fmt.Printf("jsonpath before ex: %s, values:%v\n", expression, values)
+
 	//TODO understand if we want allowmissingkeys or not.
 	parser := jsonpath.New("").AllowMissingKeys(false)
 	err := parser.Parse(expression)
@@ -200,6 +206,9 @@ func jsonPath(expression string, values interface{}) (*bytes.Buffer, error) {
 		//todo json path execute error
 		return nil, err
 	}
+
+	//TODO debugging, remove or log.
+	fmt.Printf("jsonpath result ex: %s, values:%v res:%s\n", expression, values, buf.String())
 
 	return buf, nil
 }
