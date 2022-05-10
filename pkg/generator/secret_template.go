@@ -68,8 +68,8 @@ func (r *SecretTemplateReconciler) Reconcile(ctx context.Context, request reconc
 	}
 
 	status := &reconciler.Status{
-		secretTemplate.Status.GenericStatus,
-		func(st sgv1alpha1.GenericStatus) { secretTemplate.Status.GenericStatus = st },
+		S:          secretTemplate.Status.GenericStatus,
+		UpdateFunc: func(st sgv1alpha1.GenericStatus) { secretTemplate.Status.GenericStatus = st },
 	}
 
 	status.SetReconciling(secretTemplate.ObjectMeta)
@@ -87,7 +87,7 @@ func (r *SecretTemplateReconciler) reconcile(ctx context.Context, secretTemplate
 
 	//Template Secret Data
 	secretData := map[string][]byte{}
-	for key, expression := range secretTemplate.Spec.JsonPathTemplate.Data {
+	for key, expression := range secretTemplate.Spec.JSONPathTemplate.Data {
 		valueBuffer, err := jsonPath(expression, inputResources)
 		if err != nil {
 			//todo jsonpath error
@@ -97,7 +97,7 @@ func (r *SecretTemplateReconciler) reconcile(ctx context.Context, secretTemplate
 	}
 	//Template Secret StringData
 	secretStringData := map[string]string{}
-	for key, expression := range secretTemplate.Spec.JsonPathTemplate.StringData {
+	for key, expression := range secretTemplate.Spec.JSONPathTemplate.StringData {
 		valueBuffer, err := jsonPath(expression, inputResources)
 		if err != nil {
 			//todo jsonpath error
@@ -116,7 +116,6 @@ func (r *SecretTemplateReconciler) reconcile(ctx context.Context, secretTemplate
 
 	controllerutil.SetControllerReference(secretTemplate, secret, scheme.Scheme)
 
-	//TODO handle existing secret
 	if _, err := controllerutil.CreateOrUpdate(ctx, r.client, secret, func() error {
 		secret.ObjectMeta.Labels = secretTemplate.GetLabels()           //TODO do we want these implicitly?
 		secret.ObjectMeta.Annotations = secretTemplate.GetAnnotations() //TODO do we want these implicitly?
@@ -133,25 +132,25 @@ func (r *SecretTemplateReconciler) reconcile(ctx context.Context, secretTemplate
 func (r *SecretTemplateReconciler) updateStatus(ctx context.Context, secretTemplate *sg2v1alpha1.SecretTemplate) error {
 	existingSecretTemplate := sg2v1alpha1.SecretTemplate{}
 	if err := r.client.Get(ctx, types.NamespacedName{Namespace: secretTemplate.Namespace, Name: secretTemplate.Name}, &existingSecretTemplate); err != nil {
-		return fmt.Errorf("Fetching secretTemplate: %s", err)
+		return fmt.Errorf("fetching secretTemplate: %s", err)
 	}
 
 	existingSecretTemplate.Status = secretTemplate.Status
 
 	if err := r.client.Status().Update(ctx, &existingSecretTemplate); err != nil {
-		return fmt.Errorf("Updating secretTemplate status: %s", err)
+		return fmt.Errorf("updating secretTemplate status: %s", err)
 	}
 
 	return nil
 }
 
-func (r *SecretTemplateReconciler) resolveInputResources(ctx context.Context, secretTemplate *sg2v1alpha1.SecretTemplate) (map[string]unstructured.Unstructured, error) {
-	unstructuredInputResources := map[string]unstructured.Unstructured{}
+func (r *SecretTemplateReconciler) resolveInputResources(ctx context.Context, secretTemplate *sg2v1alpha1.SecretTemplate) (map[string]interface{}, error) {
+	resolvedInputResources := map[string]interface{}{}
 
 	for _, inputResource := range secretTemplate.Spec.InputResources {
 		//Resolve resource
 		inputResourceNamespace := secretTemplate.Namespace
-		unstructuredResource, err := resolveInputResource(inputResource.Ref, inputResourceNamespace, unstructuredInputResources)
+		unstructuredResource, err := resolveInputResource(inputResource.Ref, inputResourceNamespace, resolvedInputResources)
 		if err != nil {
 			return nil, err
 		}
@@ -161,28 +160,31 @@ func (r *SecretTemplateReconciler) resolveInputResources(ctx context.Context, se
 		//TODO: Setup dynamic watch
 
 		//Fetch
+		//TODO this should use a client from the Service Account - unless loading secrets(?)
 		if err := r.client.Get(ctx, key, &unstructuredResource); err != nil {
 			return nil, err
 		}
 
-		unstructuredInputResources[inputResource.Name] = unstructuredResource
+		resolvedInputResources[inputResource.Name] = unstructuredResource.UnstructuredContent()
 	}
-	return unstructuredInputResources, nil
+	return resolvedInputResources, nil
 }
 
-func resolveInputResource(ref sg2v1alpha1.InputResourceRef, namespace string, inputResources map[string]unstructured.Unstructured) (unstructured.Unstructured, error) {
+func resolveInputResource(ref sg2v1alpha1.InputResourceRef, namespace string, inputResources map[string]interface{}) (unstructured.Unstructured, error) {
 	//TODO: Resolve input resource from jsonpath templated inputResources
 
 	//TODO resolve the name if it contains a jsonpath.
 	//TODO check if jsonPath just returns string if no expression found.
+	// will probably have search for the extract the jsonpath elements to pass to this func
 	resolvedName, err := jsonPath(ref.Name, inputResources)
 	if err != nil {
 		return unstructured.Unstructured{}, err
 	}
 
-	return toUnstructured(ref.ApiVersion, ref.Kind, namespace, resolvedName.String())
+	return toUnstructured(ref.APIVersion, ref.Kind, namespace, resolvedName.String())
 }
 
+//TODO how does this package from k8s align with our usecases?
 func jsonPath(expression string, values interface{}) (*bytes.Buffer, error) {
 	//TODO understand if we want allowmissingkeys or not.
 	parser := jsonpath.New("").AllowMissingKeys(false)
@@ -217,7 +219,7 @@ func toUnstructured(apiVersion, kind, namespace, name string) (unstructured.Unst
 	obj := unstructured.Unstructured{}
 	obj.SetGroupVersionKind(gvk)
 	obj.SetName(name)
-	obj.SetName(namespace)
+	obj.SetNamespace(namespace)
 
 	return obj, nil
 }

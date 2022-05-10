@@ -42,9 +42,7 @@ type SecretTemplateSpec struct {
 	InputResources []InputResource `json:"inputResources"`
 
 	// +optional
-	JsonPathTemplate JsonPathTemplate `json:"template,omitempty"`
-	// +optional
-	YttTemplate YttTemplate `json:"ytt,omitempty"`
+	JSONPathTemplate JSONPathTemplate `json:"template,omitempty"`
 
 	// +optional
 	ServiceAccountName string `json:"serviceAccountName,omitempty"`
@@ -56,32 +54,25 @@ type InputResource struct {
 }
 
 type InputResourceRef struct {
-	ApiVersion string `json:"apiVersion"`
+	APIVersion string `json:"apiVersion"`
 	Kind       string `json:"kind"`
 	Name       string `json:"name"`
 }
 
-type JsonPathTemplate struct {
+type JSONPathTemplate struct {
 	// +optional
 	StringData map[string]string `json:"stringData,omitempty"`
 	// +optional
 	Data map[string]string `json:"data,omitempty"`
 }
 
-type YttTemplate struct {
-}
-
 type SecretTemplateStatus struct {
 	// +optional
-	Binding Binding `json:"binding,omitempty"`
+	CreatedSecret corev1.LocalObjectReference `json:"createdSecret,omitempty"`
 
 	sgv1alpha1.GenericStatus `json:",inline"`
 	// +optional
 	ObservedSecretResourceVersion string `json:"observedSecretResourceVersion,omitempty"`
-}
-
-type Binding struct {
-	Name corev1.LocalObjectReference `json:"name"`
 }
 
 func (e SecretTemplate) Validate() error {
