@@ -44,7 +44,7 @@ func NewSecretTemplateReconciler(client client.Client, log logr.Logger) *SecretT
 // AttachWatches adds starts watches this reconciler requires.
 func (r *SecretTemplateReconciler) AttachWatches(controller controller.Controller) error {
 	//Watch for changes to created Secrets
-	if err := controller.Watch(&source.Kind{Type: &corev1.Secret{}}, &handler.EnqueueRequestForOwner{}); err != nil {
+	if err := controller.Watch(&source.Kind{Type: &corev1.Secret{}}, &handler.EnqueueRequestForOwner{OwnerType: &sg2v1alpha1.SecretTemplate{}}); err != nil {
 		return err
 	}
 	return controller.Watch(&source.Kind{Type: &sg2v1alpha1.SecretTemplate{}}, &handler.EnqueueRequestForObject{})
@@ -85,12 +85,17 @@ func (r *SecretTemplateReconciler) reconcile(ctx context.Context, secretTemplate
 		return reconcile.Result{}, err
 	}
 
+	//TODO handle existing secret when failing to fetch input resources.
+	//When an input resource is deleted or a key is missing we should delete the secret.
+	//But should we delete the secret for potentially intermitent errors?
+
 	//Template Secret Data
 	secretData := map[string][]byte{}
 	for key, expression := range secretTemplate.Spec.JSONPathTemplate.Data {
 		valueBuffer, err := jsonPath(expression, inputResources)
 		if err != nil {
-			//todo jsonpath error
+			//TODO jsonpath error
+			//Delete any existing secret?
 			return reconcile.Result{}, err
 		}
 		secretData[key] = valueBuffer.Bytes()
@@ -100,7 +105,8 @@ func (r *SecretTemplateReconciler) reconcile(ctx context.Context, secretTemplate
 	for key, expression := range secretTemplate.Spec.JSONPathTemplate.StringData {
 		valueBuffer, err := jsonPath(expression, inputResources)
 		if err != nil {
-			//todo jsonpath error
+			//TODO jsonpath error
+			//Delete any existing secret?
 			return reconcile.Result{}, err
 		}
 		secretStringData[key] = valueBuffer.String()
@@ -150,16 +156,14 @@ func (r *SecretTemplateReconciler) resolveInputResources(ctx context.Context, se
 	resolvedInputResources := map[string]interface{}{}
 
 	for _, inputResource := range secretTemplate.Spec.InputResources {
-		//Resolve resource
-		inputResourceNamespace := secretTemplate.Namespace
-		unstructuredResource, err := resolveInputResource(inputResource.Ref, inputResourceNamespace, resolvedInputResources)
+		unstructuredResource, err := resolveInputResource(inputResource.Ref, secretTemplate.Namespace, resolvedInputResources)
 		if err != nil {
 			return nil, err
 		}
 
-		key := types.NamespacedName{Namespace: inputResourceNamespace, Name: unstructuredResource.GetName()}
+		key := types.NamespacedName{Namespace: secretTemplate.Namespace, Name: unstructuredResource.GetName()}
 
-		//TODO: Setup dynamic watch
+		//TODO: Setup dynamic watch - maybe a first pass periodically re-reconciles (like kapp controller)
 
 		//Fetch
 		//TODO this should use a client from the Service Account - unless loading secrets(?)
@@ -173,11 +177,7 @@ func (r *SecretTemplateReconciler) resolveInputResources(ctx context.Context, se
 }
 
 func resolveInputResource(ref sg2v1alpha1.InputResourceRef, namespace string, inputResources map[string]interface{}) (unstructured.Unstructured, error) {
-	//TODO: Resolve input resource from jsonpath templated inputResources
-
-	//TODO resolve the name if it contains a jsonpath.
-	//TODO check if jsonPath just returns string if no expression found.
-	// will probably have search for the extract the jsonpath elements to pass to this func
+	//TODO should we only search for jsonpath expressions in name? Probably.
 	resolvedName, err := jsonPath(ref.Name, inputResources)
 	if err != nil {
 		return unstructured.Unstructured{}, err
@@ -186,7 +186,10 @@ func resolveInputResource(ref sg2v1alpha1.InputResourceRef, namespace string, in
 	return toUnstructured(ref.APIVersion, ref.Kind, namespace, resolvedName.String())
 }
 
-//TODO how does this package from k8s align with our usecases?
+//TODO how does this package from k8s align with our usecases? Do other packages exist?
+// { .creds.data.inputKey1 } succeeds
+// .creds.data.inputKey1 does not work
+// We may have to extract jsonpath from our syntax e.g. `$( )` and then run execute this with { }.
 func jsonPath(expression string, values interface{}) (*bytes.Buffer, error) {
 
 	//TODO debugging, remove or log.

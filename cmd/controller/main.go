@@ -74,6 +74,9 @@ func main() {
 	sshKeyReconciler := generator.NewSSHKeyReconciler(sgClient, coreClient, log.WithName("sshkey"))
 	exitIfErr(entryLog, "registering", registerCtrl("sshkey", mgr, sshKeyReconciler))
 
+	secretTemplateReconciler := generator.NewSecretTemplateReconciler(mgr.GetClient(), log.WithName("template"))
+	exitIfErr(entryLog, "registering", registerCtrl("template", mgr, secretTemplateReconciler))
+
 	{
 		secretExports := sharing.NewSecretExportsWarmedUp(
 			sharing.NewSecretExports(log.WithName("secretexports")))
