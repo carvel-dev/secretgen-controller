@@ -5,7 +5,6 @@ package generator_test
 
 import (
 	"context"
-	"encoding/base64"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -46,13 +45,9 @@ func Test_SecretTemplate(t *testing.T) {
 		err := k8sClient.Get(context.Background(), namespacedNameFor(&secretTemplate), &createdSecret)
 		require.NoError(t, err)
 
-		key1, _ := base64.StdEncoding.DecodeString(string(createdSecret.Data["key1"]))
-		key2, _ := base64.StdEncoding.DecodeString(string(createdSecret.Data["key2"]))
-		key3 := createdSecret.StringData["key3"]
-
-		assert.Equal(t, []byte("value1"), key1)
-		assert.Equal(t, []byte("value2"), key2)
-		assert.Equal(t, "value3", key3)
+		assert.Equal(t, []byte("value1"), createdSecret.Data["key1"])
+		assert.Equal(t, []byte("value2"), createdSecret.Data["key2"])
+		assert.Equal(t, "value3", createdSecret.StringData["key3"])
 	})
 }
 
@@ -86,9 +81,7 @@ func Test_SecretTemplate_Dynamic_InputResources(t *testing.T) {
 		err := k8sClient.Get(context.Background(), namespacedNameFor(&secretTemplate), &createdSecret)
 		require.NoError(t, err)
 
-		key1, _ := base64.StdEncoding.DecodeString(string(createdSecret.Data["key1"]))
-
-		assert.Equal(t, []byte("value1"), key1)
+		assert.Equal(t, []byte("value1"), createdSecret.Data["key1"])
 	})
 }
 

@@ -6,6 +6,7 @@ package generator
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"fmt"
 
 	"github.com/go-logr/logr"
@@ -98,8 +99,16 @@ func (r *SecretTemplateReconciler) reconcile(ctx context.Context, secretTemplate
 			//Delete any existing secret?
 			return reconcile.Result{}, err
 		}
-		secretData[key] = valueBuffer.Bytes()
+
+		decoded, err := base64.StdEncoding.DecodeString(valueBuffer.String())
+		if err != nil {
+			//TODO: this happens when someone is putting a path in .data from a resource value that isn't base64 encoded.
+			return reconcile.Result{}, err
+		}
+
+		secretData[key] = decoded
 	}
+
 	//Template Secret StringData
 	secretStringData := map[string]string{}
 	for key, expression := range secretTemplate.Spec.JSONPathTemplate.StringData {
@@ -109,6 +118,7 @@ func (r *SecretTemplateReconciler) reconcile(ctx context.Context, secretTemplate
 			//Delete any existing secret?
 			return reconcile.Result{}, err
 		}
+
 		secretStringData[key] = valueBuffer.String()
 	}
 
