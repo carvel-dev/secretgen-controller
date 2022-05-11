@@ -31,8 +31,8 @@ func Test_SecretTemplate(t *testing.T) {
 		})
 
 		secretTemplate := secretTemplate("secretTemplate", map[string]client.Object{"creds": &secret}, map[string]string{
-			"key1": "{ .creds.data.inputKey1 }",
-			"key2": "{ .creds.data.inputKey2 }",
+			"key1": "$( .creds.data.inputKey1 )",
+			"key2": "$( .creds.data.inputKey2 )",
 		}, map[string]string{
 			"key3": "value3",
 		})
@@ -62,7 +62,7 @@ func Test_SecretTemplate_Dynamic_InputResources(t *testing.T) {
 		})
 
 		secondInput := second.DeepCopy()
-		secondInput.Name = "{.first.data.next}"
+		secondInput.Name = "$(.first.data.next)"
 
 		secretTemplate := secretTemplate(
 			"secretTemplate",
@@ -70,7 +70,7 @@ func Test_SecretTemplate_Dynamic_InputResources(t *testing.T) {
 				"first":  &first,
 				"second": &second,
 			}, map[string]string{
-				"key1": "{.second.data.inputKey1}",
+				"key1": "$(.second.data.inputKey1)",
 			}, map[string]string{})
 
 		secretTemplateReconciler, k8sClient := importReconcilers(&first, &second, &secretTemplate)
@@ -96,7 +96,7 @@ func Test_SecretTemplate_Embedded_Template(t *testing.T) {
 			map[string]client.Object{
 				"map": &configMap,
 			}, map[string]string{}, map[string]string{
-				"embedded": "prefix-{ .map.data.inputKey1 }-suffix",
+				"embedded": "prefix-$( .map.data.inputKey1 )-suffix",
 			})
 
 		secretTemplateReconciler, k8sClient := importReconcilers(&configMap, &secretTemplate)

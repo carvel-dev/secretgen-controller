@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"strings"
 
 	"github.com/go-logr/logr"
 	sgv1alpha1 "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/apis/secretgen/v1alpha1"
@@ -197,17 +198,15 @@ func resolveInputResource(ref sg2v1alpha1.InputResourceRef, namespace string, in
 }
 
 //TODO how does this package from k8s align with our usecases? Do other packages exist?
-// { .creds.data.inputKey1 } succeeds
-// .creds.data.inputKey1 does not work
-// We may have to extract jsonpath from our syntax e.g. `$( )` and then run execute this with { }.
 func jsonPath(expression string, values interface{}) (*bytes.Buffer, error) {
+	path := templateSyntaxPath(expression)
 
 	//TODO debugging, remove or log.
 	fmt.Printf("jsonpath before ex: %s, values:%v\n", expression, values)
 
 	//TODO understand if we want allowmissingkeys or not.
 	parser := jsonpath.New("").AllowMissingKeys(false)
-	err := parser.Parse(expression)
+	err := parser.Parse(path.toK8sJSONPath())
 	if err != nil {
 		//todo template error
 		return nil, err
@@ -224,6 +223,23 @@ func jsonPath(expression string, values interface{}) (*bytes.Buffer, error) {
 	fmt.Printf("jsonpath result ex: %s, values:%v res:%s\n", expression, values, buf.String())
 
 	return buf, nil
+}
+
+type templateSyntaxPath string
+
+// If the expression contains an opening $( and a closing ), toK8sJSONPath will replace them with a { and a } respectively.
+func (p templateSyntaxPath) toK8sJSONPath() string {
+	oldPath := string(p)
+	openIndex := strings.Index(oldPath, "$(")
+	closeIndex := strings.LastIndex(oldPath, ")")
+
+	if openIndex == -1 || closeIndex == -1 {
+		return oldPath
+	}
+
+	inputs := []string{oldPath[0:openIndex][:], "{", oldPath[openIndex+2 : closeIndex][:], "}", oldPath[closeIndex+1 : len(oldPath)][:]}
+
+	return strings.Join(inputs, "")
 }
 
 func toUnstructured(apiVersion, kind, namespace, name string) (unstructured.Unstructured, error) {
