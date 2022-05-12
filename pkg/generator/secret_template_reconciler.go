@@ -176,17 +176,11 @@ func (r *SecretTemplateReconciler) updateStatus(ctx context.Context, secretTempl
 func (r *SecretTemplateReconciler) clientForSecretTemplate(secretTemplate *sg2v1alpha1.SecretTemplate) (client.Client, error) {
 	c := r.client
 	if secretTemplate.Spec.ServiceAccountName != "" {
-		config, err := r.saLoader.RestConfig(secretTemplate.Spec.ServiceAccountName, secretTemplate.Namespace)
-		if err != nil {
-			//Todo wrap
-			return nil, err
-		}
-
-		newClient, err := client.New(config, client.Options{})
+		saClient, err := r.saLoader.Client(secretTemplate.Name, secretTemplate.Namespace)
 		if err != nil {
 			return nil, err
 		}
-		c = newClient
+		c = saClient
 	}
 	return c, nil
 }
