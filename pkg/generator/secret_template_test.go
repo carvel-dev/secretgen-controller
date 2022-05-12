@@ -188,15 +188,22 @@ func Test_SecretTemplate(t *testing.T) {
 			err := reconcileObject(t, secretTemplateReconciler, &tc.template)
 			require.NoError(t, err)
 
-			createdSecret := corev1.Secret{}
-			err = k8sClient.Get(context.Background(), namespacedNameFor(&tc.template), &createdSecret)
+			var secretTemplate sg2v1alpha1.SecretTemplate
+			err = k8sClient.Get(context.Background(), namespacedNameFor(&tc.template), &secretTemplate)
+			require.NoError(t, err)
+
+			var secret corev1.Secret
+			err = k8sClient.Get(context.Background(), types.NamespacedName{
+				Name:      secretTemplate.Status.Secret.Name,
+				Namespace: secretTemplate.GetNamespace(),
+			}, &secret)
 			require.NoError(t, err)
 
 			actual := map[string]string{}
-			for key, value := range createdSecret.StringData {
+			for key, value := range secret.StringData {
 				actual[key] = value
 			}
-			for key, value := range createdSecret.Data {
+			for key, value := range secret.Data {
 				actual[key] = string(value)
 			}
 
