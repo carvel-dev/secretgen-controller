@@ -7,12 +7,13 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
-	tokenKey = "token"
-	saTokenType   = "kubernetes.io/service-account-token"
+	tokenKey    = "token"
+	saTokenType = "kubernetes.io/service-account-token"
 )
 
 //TODO think about if this should be a struct of just a func
@@ -27,7 +28,7 @@ func NewServiceAccountLoader(client client.Client) *ServiceAccountLoader {
 
 func (s *ServiceAccountLoader) RestConfig(saName, saNamespace string) (*rest.Config, error) {
 	//Get existing config and override - should we do this another way?
-	cfg, err := rest.InClusterConfig()
+	cfg, err := ctrl.GetConfig()
 	if err != nil {
 		return nil, err
 	}
