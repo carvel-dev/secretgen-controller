@@ -23,133 +23,198 @@ import (
 	"github.com/vmware-tanzu/carvel-secretgen-controller/pkg/generator"
 )
 
-//TODO maybe this should be table tested.
 func Test_SecretTemplate(t *testing.T) {
-	t.Run("reconciling secret template with input from another secret", func(t *testing.T) {
-		secret := Secret("existingSecret", map[string]string{
-			"inputKey1": "value1",
-			"inputKey2": "value2",
-		})
-
-		secretTemplate := secretTemplate("secretTemplate", "", map[string]client.Object{"creds": &secret}, map[string]string{
-			"key1": "$( .creds.data.inputKey1 )",
-			"key2": "$( .creds.data.inputKey2 )",
-		}, map[string]string{
-			"key3": "value3",
-		})
-
-		secretTemplateReconciler, k8sClient := importReconcilers(&secret, &secretTemplate)
-
-		reconcileObject(t, secretTemplateReconciler, &secretTemplate)
-
-		createdSecret := corev1.Secret{}
-		err := k8sClient.Get(context.Background(), namespacedNameFor(&secretTemplate), &createdSecret)
-		require.NoError(t, err)
-
-		assert.Equal(t, []byte("value1"), createdSecret.Data["key1"])
-		assert.Equal(t, []byte("value2"), createdSecret.Data["key2"])
-		assert.Equal(t, "value3", createdSecret.StringData["key3"])
-	})
-}
-
-func Test_SecretTemplate_Dynamic_InputResources(t *testing.T) {
-	t.Run("reconciling secret template with input from another secret", func(t *testing.T) {
-		first := ConfigMap("first", map[string]string{
-			"next": "dynamic-secret-name",
-		})
-
-		second := Secret("dynamic-secret-name", map[string]string{
-			"inputKey1": "value1",
-		})
-
-		secondInput := second.DeepCopy()
-		secondInput.Name = "$(.first.data.next)"
-
-		secretTemplate := secretTemplate(
-			"secretTemplate",
-			"",
-			map[string]client.Object{
-				"first":  &first,
-				"second": &second,
-			}, map[string]string{
-				"key1": "$(.second.data.inputKey1)",
-			}, map[string]string{})
-
-		secretTemplateReconciler, k8sClient := importReconcilers(&first, &second, &secretTemplate)
-
-		reconcileObject(t, secretTemplateReconciler, &secretTemplate)
-
-		createdSecret := corev1.Secret{}
-		err := k8sClient.Get(context.Background(), namespacedNameFor(&secretTemplate), &createdSecret)
-		require.NoError(t, err)
-
-		assert.Equal(t, []byte("value1"), createdSecret.Data["key1"])
-	})
-}
-
-func Test_SecretTemplate_Embedded_Template(t *testing.T) {
-	t.Run("reconciling secret template with input from another secret", func(t *testing.T) {
-		configMap := ConfigMap("configmap1", map[string]string{
-			"inputKey1": "value1",
-		})
-
-		secretTemplate := secretTemplate(
-			"secretTemplate",
-			"",
-			map[string]client.Object{
-				"map": &configMap,
-			}, map[string]string{}, map[string]string{
-				"embedded": "prefix-$( .map.data.inputKey1 )-suffix",
-			})
-
-		secretTemplateReconciler, k8sClient := importReconcilers(&configMap, &secretTemplate)
-
-		reconcileObject(t, secretTemplateReconciler, &secretTemplate)
-
-		createdSecret := corev1.Secret{}
-		err := k8sClient.Get(context.Background(), namespacedNameFor(&secretTemplate), &createdSecret)
-		require.NoError(t, err)
-
-		assert.Equal(t, "prefix-value1-suffix", createdSecret.StringData["embedded"])
-	})
-}
-
-func secretTemplate(name string, serviceAccount string, inputs map[string]client.Object, dataExpressions map[string]string, stringDataExpressions map[string]string) sg2v1alpha1.SecretTemplate {
-	inputResources := []sg2v1alpha1.InputResource{}
-	for key, obj := range inputs {
-		inputResources = append(inputResources, sg2v1alpha1.InputResource{
-			Name: key,
-			Ref: sg2v1alpha1.InputResourceRef{
-				APIVersion: obj.GetObjectKind().GroupVersionKind().GroupVersion().String(),
-				Kind:       obj.GetObjectKind().GroupVersionKind().Kind,
-				Name:       obj.GetName(),
-			},
-		})
+	type test struct {
+		name            string
+		template        sg2v1alpha1.SecretTemplate
+		existingObjects []client.Object
+		expectedData    map[string]string
 	}
-	return sg2v1alpha1.SecretTemplate{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: "test",
-		},
-		Spec: sg2v1alpha1.SecretTemplateSpec{
-			ServiceAccountName: serviceAccount,
-			InputResources:     inputResources,
-			JSONPathTemplate: sg2v1alpha1.JSONPathTemplate{
-				Data:       dataExpressions,
-				StringData: stringDataExpressions,
+
+	tests := []test{
+		{
+			name: "reconciling secret template with input from another secret",
+			template: sg2v1alpha1.SecretTemplate{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "secretTemplate",
+					Namespace: "test",
+				},
+				Spec: sg2v1alpha1.SecretTemplateSpec{
+					InputResources: []sg2v1alpha1.InputResource{{
+						Name: "creds",
+						Ref: sg2v1alpha1.InputResourceRef{
+							APIVersion: "v1",
+							Kind:       "Secret",
+							Name:       "existingSecret",
+						},
+					}},
+					JSONPathTemplate: sg2v1alpha1.JSONPathTemplate{
+						Data: map[string]string{
+							"key1": "$( .creds.data.inputKey1 )",
+							"key2": "$( .creds.data.inputKey2 )",
+						},
+						StringData: map[string]string{
+							"key3": "value3",
+						},
+					},
+				},
+			},
+			existingObjects: []client.Object{
+				secret("existingSecret", map[string]string{
+					"inputKey1": "value1",
+					"inputKey2": "value2"}),
+			},
+			expectedData: map[string]string{
+				"key1": "value1",
+				"key2": "value2",
+				"key3": "value3",
 			},
 		},
+		{
+			name: "reconciling secret template with input from two inputs with dynamic inputname",
+			template: sg2v1alpha1.SecretTemplate{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "secretTemplate",
+					Namespace: "test",
+				},
+				Spec: sg2v1alpha1.SecretTemplateSpec{
+					InputResources: []sg2v1alpha1.InputResource{{
+						Name: "first",
+						Ref: sg2v1alpha1.InputResourceRef{
+							APIVersion: "v1",
+							Kind:       "ConfigMap",
+							Name:       "first",
+						},
+					},
+						{
+							Name: "creds",
+							Ref: sg2v1alpha1.InputResourceRef{
+								APIVersion: "v1",
+								Kind:       "Secret",
+								Name:       "$( .first.data.secretName )",
+							},
+						}},
+					JSONPathTemplate: sg2v1alpha1.JSONPathTemplate{
+						Data: map[string]string{
+							"key1": "$( .creds.data.inputKey1 )",
+						},
+					},
+				},
+			},
+			existingObjects: []client.Object{
+				configMap("first", map[string]string{
+					"secretName": "dynamic-secret-name",
+				}),
+				secret("dynamic-secret-name", map[string]string{
+					"inputKey1": "value1",
+				}),
+			},
+			expectedData: map[string]string{
+				"key1": "value1",
+			},
+		},
+		{
+			name: "reconciling secret template with embedded stringData template from configmap",
+			template: sg2v1alpha1.SecretTemplate{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "secretTemplate",
+					Namespace: "test",
+				},
+				Spec: sg2v1alpha1.SecretTemplateSpec{
+					InputResources: []sg2v1alpha1.InputResource{{
+						Name: "map",
+						Ref: sg2v1alpha1.InputResourceRef{
+							APIVersion: "v1",
+							Kind:       "ConfigMap",
+							Name:       "existingcfgmap",
+						},
+					}},
+					JSONPathTemplate: sg2v1alpha1.JSONPathTemplate{
+						StringData: map[string]string{
+							"key1": "prefix-$(.map.data.inputKey1)-suffix",
+						},
+					},
+				},
+			},
+			existingObjects: []client.Object{
+				configMap("existingcfgmap", map[string]string{
+					"inputKey1": "value1",
+				}),
+			},
+			expectedData: map[string]string{
+				"key1": "prefix-value1-suffix",
+			},
+		},
+		// Failing (maybe this should only be supported in ytt?)
+		//
+		// {
+		// 	name: "reconciling secret template with embedded stringData template from secret",
+		// 	template: sg2v1alpha1.SecretTemplate{
+		// 		ObjectMeta: metav1.ObjectMeta{
+		// 			Name:      "secretTemplate",
+		// 			Namespace: "test",
+		// 		},
+		// 		Spec: sg2v1alpha1.SecretTemplateSpec{
+		// 			InputResources: []sg2v1alpha1.InputResource{{
+		// 				Name: "creds",
+		// 				Ref: sg2v1alpha1.InputResourceRef{
+		// 					APIVersion: "v1",
+		// 					Kind:       "Secret",
+		// 					Name:       "existingsecret",
+		// 				},
+		// 			}},
+		// 			JSONPathTemplate: sg2v1alpha1.JSONPathTemplate{
+		// 				StringData: map[string]string{
+		// 					"key1": "prefix-$(.creds.data.inputKey1)-suffix",
+		// 				},
+		// 			},
+		// 		},
+		// 	},
+		// 	objects: []client.Object{
+		// 		ConfigMap("existingsecret", map[string]string{
+		// 			"inputKey1": "value1",
+		// 		}),
+		// 	},
+		// 	expectedData: map[string]string{
+		// 		"key1": "prefix-value1-suffix",
+		// 	},
+		// },
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			allObjects := append(tc.existingObjects, &tc.template)
+			secretTemplateReconciler, k8sClient := importReconcilers(allObjects...)
+
+			reconcileObject(t, secretTemplateReconciler, &tc.template)
+
+			createdSecret := corev1.Secret{}
+			err := k8sClient.Get(context.Background(), namespacedNameFor(&tc.template), &createdSecret)
+			require.NoError(t, err)
+
+			actual := map[string]string{}
+			for key, value := range createdSecret.StringData {
+				actual[key] = value
+			}
+			for key, value := range createdSecret.Data {
+				actual[key] = string(value)
+			}
+
+			for key, value := range tc.expectedData {
+				assert.Equal(t, value, actual[key])
+			}
+		})
 	}
 }
 
-func Secret(name string, stringData map[string]string) corev1.Secret {
+func secret(name string, stringData map[string]string) *corev1.Secret {
 	data := map[string][]byte{}
 
 	for key, val := range stringData {
 		data[key] = []byte(val)
 	}
 
-	return corev1.Secret{
+	return &corev1.Secret{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
 			Kind:       "Secret",
@@ -162,8 +227,8 @@ func Secret(name string, stringData map[string]string) corev1.Secret {
 	}
 }
 
-func ConfigMap(name string, data map[string]string) corev1.ConfigMap {
-	return corev1.ConfigMap{
+func configMap(name string, data map[string]string) *corev1.ConfigMap {
+	return &corev1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
 			Kind:       "ConfigMap",
@@ -209,7 +274,7 @@ func namespacedNameFor(object client.Object) types.NamespacedName {
 	}
 }
 
-func Test_SecretTemplate_Templating(t *testing.T) {
+func Test_SecretTemplate_Templating_Syntax(t *testing.T) {
 	type test struct {
 		expression string
 		expected   string
@@ -217,10 +282,18 @@ func Test_SecretTemplate_Templating(t *testing.T) {
 
 	tests := []test{
 		{expression: "static-value", expected: "static-value"},
-		{expression: "$(.data.value)", expected: "{.data.value}"},
-		{expression: "prefix-$(.data.value)-suffix", expected: "prefix-{.data.value}-suffix"},
+		{expression: "$(.value)", expected: "{.value}"},
+		{expression: "prefix-$(.value)-suffix", expected: "prefix-{.value}-suffix"},
+		{expression: "$(.spec.ports[?(@.protocol=='TCP')])", expected: "{.spec.ports[?(@.protocol=='TCP')]}"},
+
+		{expression: "$foo", expected: "$foo"},
+		{expression: "foo$(", expected: "foo$("},
+		{expression: "foo)", expected: "foo)"},
+		{expression: "$($(foo))", expected: "{$(foo)}"},
+
 		//failing
 		// {expression: "$(.data.value)-middle-$(.data.value2)", expected: "{.data.value}-middle-{.data.value2}"},
+		// {expression: "$(.data.foo)-)", expected: "{.data.foo)-)"},
 	}
 
 	for _, tc := range tests {

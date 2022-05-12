@@ -171,6 +171,8 @@ func (r *SecretTemplateReconciler) updateStatus(ctx context.Context, secretTempl
 	return nil
 }
 
+// Returns a client that was created using Service Account specified in the SecretTemplate spec.
+// If no service account was specified then it returns the same Client as used by the SecretTemplateReconciler.
 func (r *SecretTemplateReconciler) clientForSecretTemplate(secretTemplate *sg2v1alpha1.SecretTemplate) (client.Client, error) {
 	c := r.client
 	if secretTemplate.Spec.ServiceAccountName != "" {
