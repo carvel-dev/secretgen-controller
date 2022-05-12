@@ -8,7 +8,6 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"strings"
 
 	"github.com/go-logr/logr"
 	sgv1alpha1 "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/apis/secretgen/v1alpha1"
@@ -219,7 +218,7 @@ func resolveInputResource(ref sg2v1alpha1.InputResourceRef, namespace string, in
 
 //TODO how does this package from k8s align with our usecases? Do other packages exist?
 func jsonPath(expression string, values interface{}) (*bytes.Buffer, error) {
-	path := TemplateSyntaxPath(expression)
+	path := JSONPath(expression)
 
 	//TODO temp for debugging remove (contains sensitive info)
 	fmt.Printf("jsonpath before ex: %s, values:%v\n", expression, values)
@@ -246,93 +245,6 @@ func jsonPath(expression string, values interface{}) (*bytes.Buffer, error) {
 }
 
 // TODO this is public for unit testing
-
-type stack []string
-
-func (s stack) push(x string) stack {
-	return append(s, x)
-}
-
-func (s stack) pop() stack {
-	return s[:len(s)-1]
-}
-
-func (s stack) peek() string {
-	if len(s) == 0 {
-		return ""
-	}
-
-	return s[len(s)-1]
-}
-
-type TemplateSyntaxPath string
-
-const (
-	leftDelimiter  = "$("
-	rightDelimiter = ")"
-)
-
-// Count the number of delimiter pairs in the path.
-func (p TemplateSyntaxPath) CountDelimiterPairs() int {
-	count := 0
-
-	var delimiters stack
-	oldPath := string(p)
-
-	for i := range oldPath {
-		if i < len(oldPath)-2 && oldPath[i:i+2] == leftDelimiter {
-			if delimiters.peek() != leftDelimiter {
-				delimiters = delimiters.push(leftDelimiter)
-			}
-		}
-		if string(oldPath[i]) == rightDelimiter {
-			if delimiters.peek() == leftDelimiter {
-				delimiters = delimiters.pop()
-				count += 1
-			}
-		}
-	}
-
-	return count
-}
-
-// If the expression contains an opening $( and a closing ), toK8sJSONPath will replace them with a { and a } respectively.
-func (p TemplateSyntaxPath) ToK8sJSONPath() string {
-	newPath := string(p)
-	i := 0
-	for pair := 0; pair < p.CountDelimiterPairs(); pair++ {
-		for string(newPath[i:i+2]) != leftDelimiter {
-			i += 1
-		}
-
-		if newPath[i:i+2] == leftDelimiter {
-			newPath = replace(newPath, i, leftDelimiter, "{")
-
-			// Skip inner filters and inner $() expressions.
-			for string(newPath[i]) != rightDelimiter {
-				nextTwo := string(newPath[i : i+2])
-				if nextTwo == "?(" || nextTwo == leftDelimiter {
-					for string(newPath[i]) != rightDelimiter {
-						i += 1
-					}
-				}
-
-				i += 1
-			}
-
-			newPath = replace(newPath, i, rightDelimiter, "}")
-		}
-	}
-
-	return newPath
-}
-
-func replace(s string, i int, old, new string) string {
-	if i+len(old) > len(s) {
-		return fmt.Sprintf("%s}", s[0:i])
-	}
-	return strings.Join([]string{s[0:i], s[i+len(old):]}, new)
-}
 
 func toUnstructured(apiVersion, kind, namespace, name string) (unstructured.Unstructured, error) {
 	gv, err := schema.ParseGroupVersion(apiVersion)

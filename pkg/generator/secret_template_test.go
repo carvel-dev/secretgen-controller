@@ -5,7 +5,6 @@ package generator_test
 
 import (
 	"context"
-	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -271,67 +270,5 @@ func namespacedNameFor(object client.Object) types.NamespacedName {
 	return types.NamespacedName{
 		Name:      object.GetName(),
 		Namespace: object.GetNamespace(),
-	}
-}
-
-func Test_SecretTemplate_Templating_Syntax(t *testing.T) {
-	type test struct {
-		expression string
-		expected   string
-	}
-
-	tests := []test{
-		{expression: "static-value", expected: "static-value"},
-		{expression: "$(.value)", expected: "{.value}"},
-		{expression: "prefix-$(.value)-suffix", expected: "prefix-{.value}-suffix"},
-		{expression: "$(.spec.ports[?(@.protocol=='TCP')])", expected: "{.spec.ports[?(@.protocol=='TCP')]}"},
-
-		{expression: "$foo", expected: "$foo"},
-		{expression: "foo$(", expected: "foo$("}, //error?
-		{expression: "foo)", expected: "foo)"},   // ?
-		{expression: "$($(foo))", expected: "{$(foo)}"},
-
-		//failing
-		{expression: "$(.data.value)-middle-$(.data.value2)", expected: "{.data.value}-middle-{.data.value2}"},
-		{expression: "$(.data.foo)-)", expected: "{.data.foo}-)"},
-	}
-
-	for _, tc := range tests {
-		expression := generator.TemplateSyntaxPath(tc.expression)
-		result := expression.ToK8sJSONPath()
-		if !reflect.DeepEqual(result, tc.expected) {
-			t.Fatalf("expected: %v, got: %v", tc.expected, result)
-		}
-	}
-}
-
-func Test_SecretTemplate_CountDelimiterPairs(t *testing.T) {
-	type test struct {
-		expression string
-		count      int
-	}
-
-	tests := []test{
-		{expression: "static-value", count: 0},
-		{expression: "$(.value)", count: 1},
-		{expression: "prefix-$(.value)-suffix", count: 1},
-		{expression: "$(.spec.ports[?(@.protocol=='TCP')])", count: 1},
-
-		{expression: "$foo", count: 0},
-		{expression: "foo$(", count: 0}, //error?
-		{expression: "foo)", count: 0},  // ?
-		{expression: "$($(foo))", count: 1},
-
-		//failing
-		{expression: "$(.data.value)-middle-$(.data.value2)", count: 2},
-		{expression: "$(.data.foo)-)", count: 1},
-	}
-
-	for _, tc := range tests {
-		expression := generator.TemplateSyntaxPath(tc.expression)
-		result := expression.CountDelimiterPairs()
-		if !reflect.DeepEqual(result, tc.count) {
-			t.Fatalf("expression: %s, expected: %d, got: %d", tc.expression, tc.count, result)
-		}
 	}
 }
