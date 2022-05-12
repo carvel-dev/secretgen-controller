@@ -81,8 +81,15 @@ func (r *SecretTemplateReconciler) Reconcile(ctx context.Context, request reconc
 }
 
 func (r *SecretTemplateReconciler) reconcile(ctx context.Context, secretTemplate *sg2v1alpha1.SecretTemplate) (reconcile.Result, error) {
+
+	//Get client to fetch inputResources
+	inputResourceclient, err := r.clientForSecretTemplate(secretTemplate)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
 	//Resolve input resources
-	inputResources, err := r.resolveInputResources(ctx, secretTemplate)
+	inputResources, err := resolveInputResources(ctx, secretTemplate, inputResourceclient)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -163,7 +170,27 @@ func (r *SecretTemplateReconciler) updateStatus(ctx context.Context, secretTempl
 	return nil
 }
 
-func (r *SecretTemplateReconciler) resolveInputResources(ctx context.Context, secretTemplate *sg2v1alpha1.SecretTemplate) (map[string]interface{}, error) {
+func (r *SecretTemplateReconciler) clientForSecretTemplate(secretTemplate *sg2v1alpha1.SecretTemplate) (client.Client, error) {
+	c := r.client
+	if secretTemplate.Spec.ServiceAccountName != "" {
+		loader := NewServiceAccountLoader(secretTemplate.Spec.ServiceAccountName, secretTemplate.Namespace, r.client)
+
+		config, err := loader.RestConfig()
+		if err != nil {
+			//Todo wrap
+			return nil, err
+		}
+
+		newClient, err := client.New(config, client.Options{})
+		if err != nil {
+			return nil, err
+		}
+		c = newClient
+	}
+	return c, nil
+}
+
+func resolveInputResources(ctx context.Context, secretTemplate *sg2v1alpha1.SecretTemplate, client client.Client) (map[string]interface{}, error) {
 	resolvedInputResources := map[string]interface{}{}
 
 	for _, inputResource := range secretTemplate.Spec.InputResources {
@@ -175,10 +202,7 @@ func (r *SecretTemplateReconciler) resolveInputResources(ctx context.Context, se
 		key := types.NamespacedName{Namespace: secretTemplate.Namespace, Name: unstructuredResource.GetName()}
 
 		//TODO: Setup dynamic watch - maybe a first pass periodically re-reconciles (like kapp controller)
-
-		//Fetch
-		//TODO this should use a client from the Service Account - unless loading secrets(?)
-		if err := r.client.Get(ctx, key, &unstructuredResource); err != nil {
+		if err := client.Get(ctx, key, &unstructuredResource); err != nil {
 			return nil, err
 		}
 
