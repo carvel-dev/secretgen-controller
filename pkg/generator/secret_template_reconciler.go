@@ -81,37 +81,44 @@ func (r *SecretTemplateReconciler) Reconcile(ctx context.Context, request reconc
 }
 
 func (r *SecretTemplateReconciler) reconcile(ctx context.Context, secretTemplate *sg2v1alpha1.SecretTemplate) (reconcile.Result, error) {
-
 	//Get client to fetch inputResources
 	inputResourceclient, err := r.clientForSecretTemplate(secretTemplate)
 	if err != nil {
+		deleteErr := deleteChildSecret(ctx, r.client, secretTemplate)
+		if deleteErr != nil {
+			return reconcile.Result{}, deleteErr
+		}
+
 		return reconcile.Result{}, err
 	}
 
 	//Resolve input resources
 	inputResources, err := resolveInputResources(ctx, secretTemplate, inputResourceclient)
 	if err != nil {
+		deleteErr := deleteChildSecret(ctx, r.client, secretTemplate)
+		if deleteErr != nil {
+			return reconcile.Result{}, deleteErr
+		}
+
 		return reconcile.Result{}, err
 	}
-
-	//TODO handle existing secret when failing to fetch input resources.
-	//When an input resource is deleted or a key is missing we should delete the secret.
-	//But should we delete the secret for potentially intermitent errors?
 
 	//Template Secret Data
 	secretData := map[string][]byte{}
 	for key, expression := range secretTemplate.Spec.JSONPathTemplate.Data {
 		valueBuffer, err := jsonPath(expression, inputResources)
 		if err != nil {
-			//TODO jsonpath error
-			//Delete any existing secret?
+			deleteErr := deleteChildSecret(ctx, r.client, secretTemplate)
+			if deleteErr != nil {
+				return reconcile.Result{}, deleteErr
+			}
+
 			return reconcile.Result{}, err
 		}
 
 		decoded, err := base64.StdEncoding.DecodeString(valueBuffer.String())
 		if err != nil {
-			//TODO: this happens when someone is putting a path in .data from a resource value that isn't base64 encoded.
-			return reconcile.Result{}, err
+			panic("should not get here")
 		}
 
 		secretData[key] = decoded
@@ -122,8 +129,11 @@ func (r *SecretTemplateReconciler) reconcile(ctx context.Context, secretTemplate
 	for key, expression := range secretTemplate.Spec.JSONPathTemplate.StringData {
 		valueBuffer, err := jsonPath(expression, inputResources)
 		if err != nil {
-			//TODO jsonpath error
-			//Delete any existing secret?
+			deleteErr := deleteChildSecret(ctx, r.client, secretTemplate)
+			if deleteErr != nil {
+				return reconcile.Result{}, deleteErr
+			}
+
 			return reconcile.Result{}, err
 		}
 
@@ -264,4 +274,22 @@ func toUnstructured(apiVersion, kind, namespace, name string) (unstructured.Unst
 	obj.SetNamespace(namespace)
 
 	return obj, nil
+}
+
+func deleteChildSecret(ctx context.Context, c client.Client, secretTemplate *sg2v1alpha1.SecretTemplate) error {
+	secret := corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      secretTemplate.GetName(),
+			Namespace: secretTemplate.GetNamespace(),
+		},
+	}
+	if err := c.Delete(ctx, &secret); err != nil {
+		if errors.IsNotFound(err) {
+			return nil
+		}
+
+		return fmt.Errorf("deleting secret: %s", err)
+	}
+
+	return nil
 }

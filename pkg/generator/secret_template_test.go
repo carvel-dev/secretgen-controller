@@ -185,10 +185,11 @@ func Test_SecretTemplate(t *testing.T) {
 			allObjects := append(tc.existingObjects, &tc.template)
 			secretTemplateReconciler, k8sClient := importReconcilers(allObjects...)
 
-			reconcileObject(t, secretTemplateReconciler, &tc.template)
+			err := reconcileObject(t, secretTemplateReconciler, &tc.template)
+			require.NoError(t, err)
 
 			createdSecret := corev1.Secret{}
-			err := k8sClient.Get(context.Background(), namespacedNameFor(&tc.template), &createdSecret)
+			err = k8sClient.Get(context.Background(), namespacedNameFor(&tc.template), &createdSecret)
 			require.NoError(t, err)
 
 			actual := map[string]string{}
@@ -202,6 +203,128 @@ func Test_SecretTemplate(t *testing.T) {
 			for key, value := range tc.expectedData {
 				assert.Equal(t, value, actual[key])
 			}
+		})
+	}
+}
+
+func Test_SecretTemplate_Errors(t *testing.T) {
+	type test struct {
+		name            string
+		template        sg2v1alpha1.SecretTemplate
+		existingObjects []client.Object
+	}
+
+	tests := []test{
+		{
+			name: "reconciling secret template referencing non-existent resource",
+			template: sg2v1alpha1.SecretTemplate{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "secretTemplate",
+					Namespace: "test",
+				},
+				Spec: sg2v1alpha1.SecretTemplateSpec{
+					InputResources: []sg2v1alpha1.InputResource{{
+						Name: "creds",
+						Ref: sg2v1alpha1.InputResourceRef{
+							APIVersion: "v1",
+							Kind:       "Secret",
+							Name:       "existingSecret",
+						},
+					}},
+					JSONPathTemplate: sg2v1alpha1.JSONPathTemplate{
+						Data: map[string]string{
+							"key1": "$( .creds.data.inputKey1 )",
+							"key2": "$( .creds.data.inputKey2 )",
+						},
+						StringData: map[string]string{
+							"key3": "value3",
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "reconciling secret template with jsonpath that doesn't evaluate in data",
+			template: sg2v1alpha1.SecretTemplate{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "secretTemplate",
+					Namespace: "test",
+				},
+				Spec: sg2v1alpha1.SecretTemplateSpec{
+					InputResources: []sg2v1alpha1.InputResource{{
+						Name: "creds",
+						Ref: sg2v1alpha1.InputResourceRef{
+							APIVersion: "v1",
+							Kind:       "Secret",
+							Name:       "existingSecret",
+						},
+					}},
+					JSONPathTemplate: sg2v1alpha1.JSONPathTemplate{
+						Data: map[string]string{
+							"key1": "$( .creds.data.doesntExist1 )",
+						},
+						StringData: map[string]string{
+							"key3": "value3",
+						},
+					},
+				},
+			},
+			existingObjects: []client.Object{
+				secret("existingSecret", map[string]string{
+					"inputKey1": "value1",
+				}),
+				secret("secretTemplate", map[string]string{
+					"key1": "value1",
+					"key2": "value2",
+					"key3": "value3",
+				}),
+			},
+		},
+		{
+			name: "reconciling secret template with jsonpath that doesn't evaluate in stringdata",
+			template: sg2v1alpha1.SecretTemplate{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "secretTemplate",
+					Namespace: "test",
+				},
+				Spec: sg2v1alpha1.SecretTemplateSpec{
+					InputResources: []sg2v1alpha1.InputResource{{
+						Name: "map",
+						Ref: sg2v1alpha1.InputResourceRef{
+							APIVersion: "v1",
+							Kind:       "ConfigMap",
+							Name:       "existingcfgmap",
+						},
+					}},
+					JSONPathTemplate: sg2v1alpha1.JSONPathTemplate{
+						StringData: map[string]string{
+							"key1": "prefix-$(.map.data.doesntExist)-suffix",
+						},
+					},
+				},
+			},
+			existingObjects: []client.Object{
+				configMap("existingcfgmap", map[string]string{
+					"inputKey1": "value1",
+				}),
+				secret("secretTemplate", map[string]string{
+					"key1": "prefix-value1-suffix",
+				}),
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			allObjects := append(tc.existingObjects, &tc.template)
+			secretTemplateReconciler, k8sClient := importReconcilers(allObjects...)
+
+			err := reconcileObject(t, secretTemplateReconciler, &tc.template)
+			require.Error(t, err)
+
+			createdSecret := corev1.Secret{}
+			err = k8sClient.Get(context.Background(), namespacedNameFor(&tc.template), &createdSecret)
+			require.Error(t, err)
 		})
 	}
 }
@@ -249,17 +372,19 @@ func importReconcilers(objects ...client.Object) (secretTemplateReconciler *gene
 
 	saLoader := generator.NewServiceAccountLoader(k8sClient)
 	secretTemplateReconciler = generator.NewSecretTemplateReconciler(k8sClient, saLoader, testLogr)
-	return
+
+	return secretTemplateReconciler, k8sClient
 }
 
 type reconcilerFunc interface {
 	Reconcile(context.Context, reconcile.Request) (reconcile.Result, error)
 }
 
-func reconcileObject(t *testing.T, recon reconcilerFunc, object client.Object) {
+func reconcileObject(t *testing.T, recon reconcilerFunc, object client.Object) error {
 	status, err := recon.Reconcile(context.Background(), reconcileRequestFor(object))
-	require.NoError(t, err)
 	require.False(t, status.Requeue)
+
+	return err
 }
 
 func reconcileRequestFor(object client.Object) reconcile.Request {
