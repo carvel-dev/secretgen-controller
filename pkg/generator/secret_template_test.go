@@ -113,48 +113,6 @@ func Test_SecretTemplate_Embedded_Template(t *testing.T) {
 	})
 }
 
-func Test_SecretTemplate_Load_With_ServiceAccount(t *testing.T) {
-	t.Run("reconciling secret template with input from another secret", func(t *testing.T) {
-		configMap := ConfigMap("configmap1", map[string]string{
-			"inputKey1": "value1",
-		})
-
-		sa := corev1.ServiceAccount{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "sa1",
-				Namespace: "test",
-			},
-			Secrets: []corev1.ObjectReference{
-				{Name: "saSecret"},
-			},
-		}
-
-		saSecret := Secret("saSecret", map[string]string{
-			"token":  "MTIzdG9rZW4K",
-			"ca.crt": "cert",
-		})
-
-		secretTemplate := secretTemplate(
-			"secretTemplate",
-			"serviceAccount1",
-			map[string]client.Object{
-				"map": &configMap,
-			}, map[string]string{}, map[string]string{
-				"embedded": "prefix-$( .map.data.inputKey1 )-suffix",
-			})
-
-		secretTemplateReconciler, k8sClient := importReconcilers(&sa, &saSecret, &configMap, &secretTemplate)
-
-		reconcileObject(t, secretTemplateReconciler, &secretTemplate)
-
-		createdSecret := corev1.Secret{}
-		err := k8sClient.Get(context.Background(), namespacedNameFor(&secretTemplate), &createdSecret)
-		require.NoError(t, err)
-
-		assert.Equal(t, "prefix-value1-suffix", createdSecret.StringData["embedded"])
-	})
-}
-
 func secretTemplate(name string, serviceAccount string, inputs map[string]client.Object, dataExpressions map[string]string, stringDataExpressions map[string]string) sg2v1alpha1.SecretTemplate {
 	inputResources := []sg2v1alpha1.InputResource{}
 	for key, obj := range inputs {
@@ -223,7 +181,9 @@ func importReconcilers(objects ...client.Object) (secretTemplateReconciler *gene
 	corev1.AddToScheme(scheme.Scheme)
 	testLogr := zap.New(zap.UseDevMode(true))
 	k8sClient = fakeClient.NewClientBuilder().WithObjects(objects...).WithScheme(scheme.Scheme).Build()
-	secretTemplateReconciler = generator.NewSecretTemplateReconciler(k8sClient, testLogr)
+
+	saLoader := generator.NewServiceAccountLoader(k8sClient)
+	secretTemplateReconciler = generator.NewSecretTemplateReconciler(k8sClient, saLoader, testLogr)
 	return
 }
 

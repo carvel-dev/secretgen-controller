@@ -18,49 +18,47 @@ const (
 //TODO add unit tests
 type ServiceAccountLoader struct {
 	client.Client
-	saNamespace string
-	saName      string
 }
 
-func NewServiceAccountLoader(saName, saNamespace string, client client.Client) *ServiceAccountLoader {
-	return &ServiceAccountLoader{client, saNamespace, saName}
+func NewServiceAccountLoader(client client.Client) *ServiceAccountLoader {
+	return &ServiceAccountLoader{client}
 }
 
-func (s *ServiceAccountLoader) RestConfig() (*rest.Config, error) {
+func (s *ServiceAccountLoader) RestConfig(saName, saNamespace string) (*rest.Config, error) {
 	//Get existing config and override - should we do this another way?
 	cfg, err := rest.InClusterConfig()
 	if err != nil {
 		return nil, err
 	}
 
-	token, err := s.serviceAccountToken()
+	token, err := s.serviceAccountToken(saName, saNamespace)
 	if err != nil {
 		return nil, err
 	}
 
-	cfg.BearerTokenFile = ""
+	cfg.BearerTokenFile = "" //Ensure this is not set.
 	cfg.BearerToken = string(token)
 
 	return cfg, nil
 }
 
-func (s *ServiceAccountLoader) serviceAccountToken() ([]byte, error) {
+func (s *ServiceAccountLoader) serviceAccountToken(name, namespace string) ([]byte, error) {
 	sa := corev1.ServiceAccount{}
-	if err := s.Get(context.Background(), types.NamespacedName{Namespace: s.saNamespace, Name: s.saName}, &sa); err != nil {
+	if err := s.Get(context.Background(), types.NamespacedName{Namespace: namespace, Name: name}, &sa); err != nil {
 		//todo wrap err
 		return nil, err
 	}
 
 	if len(sa.Secrets) == 0 {
-		return nil, fmt.Errorf("no secrets found for service account %s", s.saName)
+		return nil, fmt.Errorf("no secrets found for service account %s", name)
 	}
 
 	//TODO what to do if there are mutiple secrets?
 	secretName := sa.Secrets[0].Name
 
 	secret := corev1.Secret{}
-	if err := s.Get(context.Background(), types.NamespacedName{Namespace: s.saNamespace, Name: secretName}, &secret); err != nil {
-		return nil, fmt.Errorf("Failed to fetch secret %s: %s", secretName, err)
+	if err := s.Get(context.Background(), types.NamespacedName{Namespace: namespace, Name: secretName}, &secret); err != nil {
+		return nil, fmt.Errorf("failed to fetch secret %s: %s", secretName, err)
 	}
 
 	tokenData, tokenFound := secret.Data[tokenKey]

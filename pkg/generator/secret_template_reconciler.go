@@ -33,14 +33,15 @@ import (
 )
 
 type SecretTemplateReconciler struct {
-	client client.Client
-	log    logr.Logger
+	client   client.Client
+	saLoader *ServiceAccountLoader
+	log      logr.Logger
 }
 
 var _ reconcile.Reconciler = &SecretTemplateReconciler{}
 
-func NewSecretTemplateReconciler(client client.Client, log logr.Logger) *SecretTemplateReconciler {
-	return &SecretTemplateReconciler{client, log}
+func NewSecretTemplateReconciler(client client.Client, loader *ServiceAccountLoader, log logr.Logger) *SecretTemplateReconciler {
+	return &SecretTemplateReconciler{client, loader, log}
 }
 
 // AttachWatches adds starts watches this reconciler requires.
@@ -173,9 +174,7 @@ func (r *SecretTemplateReconciler) updateStatus(ctx context.Context, secretTempl
 func (r *SecretTemplateReconciler) clientForSecretTemplate(secretTemplate *sg2v1alpha1.SecretTemplate) (client.Client, error) {
 	c := r.client
 	if secretTemplate.Spec.ServiceAccountName != "" {
-		loader := NewServiceAccountLoader(secretTemplate.Spec.ServiceAccountName, secretTemplate.Namespace, r.client)
-
-		config, err := loader.RestConfig()
+		config, err := r.saLoader.RestConfig(secretTemplate.Spec.ServiceAccountName, secretTemplate.Namespace)
 		if err != nil {
 			//Todo wrap
 			return nil, err
