@@ -222,14 +222,14 @@ func resolveInputResource(ref sg2v1alpha1.InputResourceRef, namespace string, in
 
 //TODO how does this package from k8s align with our usecases? Do other packages exist?
 func jsonPath(expression string, values interface{}) (*bytes.Buffer, error) {
-	path := templateSyntaxPath(expression)
+	path := TemplateSyntaxPath(expression)
 
 	//TODO debugging, remove or log.
 	fmt.Printf("jsonpath before ex: %s, values:%v\n", expression, values)
 
 	//TODO understand if we want allowmissingkeys or not.
 	parser := jsonpath.New("").AllowMissingKeys(false)
-	err := parser.Parse(path.toK8sJSONPath())
+	err := parser.Parse(path.ToK8sJSONPath())
 	if err != nil {
 		//todo template error
 		return nil, err
@@ -248,10 +248,11 @@ func jsonPath(expression string, values interface{}) (*bytes.Buffer, error) {
 	return buf, nil
 }
 
-type templateSyntaxPath string
+// TODO this is public for unit testing
+type TemplateSyntaxPath string
 
 // If the expression contains an opening $( and a closing ), toK8sJSONPath will replace them with a { and a } respectively.
-func (p templateSyntaxPath) toK8sJSONPath() string {
+func (p TemplateSyntaxPath) ToK8sJSONPath() string {
 	oldPath := string(p)
 	openIndex := strings.Index(oldPath, "$(")
 	closeIndex := strings.LastIndex(oldPath, ")")

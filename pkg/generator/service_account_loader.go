@@ -45,8 +45,7 @@ func (s *ServiceAccountLoader) RestConfig(saName, saNamespace string) (*rest.Con
 func (s *ServiceAccountLoader) serviceAccountToken(name, namespace string) ([]byte, error) {
 	sa := corev1.ServiceAccount{}
 	if err := s.Get(context.Background(), types.NamespacedName{Namespace: namespace, Name: name}, &sa); err != nil {
-		//todo wrap err
-		return nil, err
+		return nil, fmt.Errorf("unable to fetch service account %s:%s : %s", namespace, name, err)
 	}
 
 	if len(sa.Secrets) == 0 {

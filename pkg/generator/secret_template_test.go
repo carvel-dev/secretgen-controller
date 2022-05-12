@@ -5,6 +5,7 @@ package generator_test
 
 import (
 	"context"
+	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -205,5 +206,28 @@ func namespacedNameFor(object client.Object) types.NamespacedName {
 	return types.NamespacedName{
 		Name:      object.GetName(),
 		Namespace: object.GetNamespace(),
+	}
+}
+
+func Test_SecretTemplate_Templating(t *testing.T) {
+	type test struct {
+		expression string
+		expected   string
+	}
+
+	tests := []test{
+		{expression: "static-value", expected: "static-value"},
+		{expression: "$(.data.value)", expected: "{.data.value}"},
+		{expression: "prefix-$(.data.value)-suffix", expected: "prefix-{.data.value}-suffix"},
+		//failing
+		// {expression: "$(.data.value)-middle-$(.data.value2)", expected: "{.data.value}-middle-{.data.value2}"},
+	}
+
+	for _, tc := range tests {
+		expression := generator.TemplateSyntaxPath(tc.expression)
+		result := expression.ToK8sJSONPath()
+		if !reflect.DeepEqual(result, tc.expected) {
+			t.Fatalf("expected: %v, got: %v", tc.expected, result)
+		}
 	}
 }
