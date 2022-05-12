@@ -68,7 +68,7 @@ type JSONPathTemplate struct {
 
 type SecretTemplateStatus struct {
 	// +optional
-	CreatedSecret corev1.LocalObjectReference `json:"createdSecret,omitempty"`
+	Secret corev1.LocalObjectReference `json:"secret,omitempty"`
 
 	sgv1alpha1.GenericStatus `json:",inline"`
 	// +optional

@@ -9,10 +9,11 @@ import (
 	"testing"
 
 	"github.com/ghodss/yaml"
+	"github.com/vmware-tanzu/carvel-secretgen-controller/pkg/apis/secretgen2/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 )
 
-func TestSecretTemplate_Secret_Aggregation(t *testing.T) {
+func TestSecretTemplate_Single_Secret(t *testing.T) {
 	env := BuildEnv(t)
 	logger := Logger{}
 	kapp := Kapp{t, env.Namespace, logger}
@@ -100,6 +101,25 @@ spec:
 		}
 		if !reflect.DeepEqual(secret.Data, expectedData) {
 			t.Fatalf("Expected secret data to match, but was: %#v vs %s", secret.Data, out)
+		}
+	})
+
+	logger.Section("Check SecretTemplate .status.secret.name was updated", func() {
+		args := []string{"get", "secrettemplate", "combined-secret", "-oyaml", "-n", "sg-template-test1"}
+
+		out, err := kubectl.RunWithOpts(args, RunOpts{AllowError: true, NoNamespace: true})
+		if err != nil {
+			t.Fatalf("Failed to get secrettemplate: %s", err)
+		}
+
+		var template v1alpha1.SecretTemplate
+		err = yaml.Unmarshal([]byte(out), &template)
+		if err != nil {
+			t.Fatalf("Failed to unmarshal: %s", err)
+		}
+
+		if !reflect.DeepEqual(template.Status.Secret.Name, "combined-secret") {
+			t.Fatalf("Expected secrettemplate .status.secret.name to match, but was: %#v vs %s", "combined-secret", out)
 		}
 	})
 }

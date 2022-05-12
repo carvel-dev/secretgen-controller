@@ -12,6 +12,7 @@ import (
 
 const (
 	tokenKey = "token"
+	saTokenType   = "kubernetes.io/service-account-token"
 )
 
 //TODO think about if this should be a struct of just a func
@@ -69,6 +70,9 @@ func (s *ServiceAccountLoader) serviceAccountToken(name, namespace string) ([]by
 		return nil, fmt.Errorf("failed to fetch secret %s: %s", secretName, err)
 	}
 
+	if secret.Type != saTokenType {
+		return nil, fmt.Errorf("secret %s is not of type %s", secretName, saTokenType)
+	}
 	tokenData, tokenFound := secret.Data[tokenKey]
 
 	if !tokenFound {

@@ -151,7 +151,8 @@ func (r *SecretTemplateReconciler) reconcile(ctx context.Context, secretTemplate
 		return reconcile.Result{}, err
 	}
 
-	secretTemplate.Status.CreatedSecret.Name = secret.Name
+	//TODO this currently isn't being updated on the resource
+	secretTemplate.Status.Secret.Name = secret.Name
 
 	return reconcile.Result{}, nil
 }
@@ -176,7 +177,7 @@ func (r *SecretTemplateReconciler) updateStatus(ctx context.Context, secretTempl
 func (r *SecretTemplateReconciler) clientForSecretTemplate(secretTemplate *sg2v1alpha1.SecretTemplate) (client.Client, error) {
 	c := r.client
 	if secretTemplate.Spec.ServiceAccountName != "" {
-		saClient, err := r.saLoader.Client(secretTemplate.Name, secretTemplate.Namespace)
+		saClient, err := r.saLoader.Client(secretTemplate.Spec.ServiceAccountName, secretTemplate.Namespace)
 		if err != nil {
 			return nil, err
 		}
@@ -220,7 +221,7 @@ func resolveInputResource(ref sg2v1alpha1.InputResourceRef, namespace string, in
 func jsonPath(expression string, values interface{}) (*bytes.Buffer, error) {
 	path := TemplateSyntaxPath(expression)
 
-	//TODO debugging, remove or log.
+	//TODO temp for debugging remove (contains sensitive info)
 	fmt.Printf("jsonpath before ex: %s, values:%v\n", expression, values)
 
 	//TODO understand if we want allowmissingkeys or not.
@@ -238,7 +239,7 @@ func jsonPath(expression string, values interface{}) (*bytes.Buffer, error) {
 		return nil, err
 	}
 
-	//TODO debugging, remove or log.
+	//TODO temp for debugging remove (contains sensitive info)
 	fmt.Printf("jsonpath result ex: %s, values:%v res:%s\n", expression, values, buf.String())
 
 	return buf, nil

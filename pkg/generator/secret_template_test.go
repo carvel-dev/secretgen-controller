@@ -165,7 +165,7 @@ func Test_SecretTemplate(t *testing.T) {
 		// 			}},
 		// 			JSONPathTemplate: sg2v1alpha1.JSONPathTemplate{
 		// 				StringData: map[string]string{
-		// 					"key1": "prefix-$(.creds.data.inputKey1)-suffix",
+		// 					"key1": "prefix-$(.creds.inputKey1)-suffix",
 		// 				},
 		// 			},
 		// 		},
@@ -287,13 +287,13 @@ func Test_SecretTemplate_Templating_Syntax(t *testing.T) {
 		{expression: "$(.spec.ports[?(@.protocol=='TCP')])", expected: "{.spec.ports[?(@.protocol=='TCP')]}"},
 
 		{expression: "$foo", expected: "$foo"},
-		{expression: "foo$(", expected: "foo$("},
-		{expression: "foo)", expected: "foo)"},
+		{expression: "foo$(", expected: "foo$("}, //error?
+		{expression: "foo)", expected: "foo)"},   // ?
 		{expression: "$($(foo))", expected: "{$(foo)}"},
 
 		//failing
 		// {expression: "$(.data.value)-middle-$(.data.value2)", expected: "{.data.value}-middle-{.data.value2}"},
-		// {expression: "$(.data.foo)-)", expected: "{.data.foo)-)"},
+		// {expression: "$(.data.foo)-)", expected: "{.data.foo}-)"},
 	}
 
 	for _, tc := range tests {
