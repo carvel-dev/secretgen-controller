@@ -82,7 +82,7 @@ func (r *SecretTemplateReconciler) Reconcile(ctx context.Context, request reconc
 
 func (r *SecretTemplateReconciler) reconcile(ctx context.Context, secretTemplate *sg2v1alpha1.SecretTemplate) (reconcile.Result, error) {
 	//Get client to fetch inputResources
-	inputResourceclient, err := r.clientForSecretTemplate(secretTemplate)
+	inputResourceclient, err := r.clientForSecretTemplate(ctx, secretTemplate)
 	if err != nil {
 		deleteErr := deleteChildSecret(ctx, r.client, secretTemplate)
 		if deleteErr != nil {
@@ -183,10 +183,10 @@ func (r *SecretTemplateReconciler) updateStatus(ctx context.Context, secretTempl
 
 // Returns a client that was created using Service Account specified in the SecretTemplate spec.
 // If no service account was specified then it returns the same Client as used by the SecretTemplateReconciler.
-func (r *SecretTemplateReconciler) clientForSecretTemplate(secretTemplate *sg2v1alpha1.SecretTemplate) (client.Client, error) {
+func (r *SecretTemplateReconciler) clientForSecretTemplate(ctx context.Context, secretTemplate *sg2v1alpha1.SecretTemplate) (client.Client, error) {
 	c := r.client
 	if secretTemplate.Spec.ServiceAccountName != "" {
-		saClient, err := r.saLoader.Client(secretTemplate.Spec.ServiceAccountName, secretTemplate.Namespace)
+		saClient, err := r.saLoader.Client(ctx, secretTemplate.Spec.ServiceAccountName, secretTemplate.Namespace)
 		if err != nil {
 			return nil, err
 		}

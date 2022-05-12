@@ -26,14 +26,23 @@ func NewServiceAccountLoader(client client.Client) *ServiceAccountLoader {
 	return &ServiceAccountLoader{client}
 }
 
-func (s *ServiceAccountLoader) RestConfig(saName, saNamespace string) (*rest.Config, error) {
+func (s *ServiceAccountLoader) Client(ctx context.Context, saName, saNamespace string) (client.Client, error) {
+	config, err := s.restConfig(ctx, saName, saNamespace)
+	if err != nil {
+		return nil, err
+	}
+
+	return client.New(config, client.Options{})
+}
+
+func (s *ServiceAccountLoader) restConfig(ctx context.Context, saName, saNamespace string) (*rest.Config, error) {
 	//Get existing config and override - should we do this another way?
 	cfg, err := ctrl.GetConfig()
 	if err != nil {
 		return nil, err
 	}
 
-	token, err := s.serviceAccountToken(saName, saNamespace)
+	token, err := s.serviceAccountToken(ctx, saName, saNamespace)
 	if err != nil {
 		return nil, err
 	}
@@ -44,18 +53,9 @@ func (s *ServiceAccountLoader) RestConfig(saName, saNamespace string) (*rest.Con
 	return cfg, nil
 }
 
-func (s *ServiceAccountLoader) Client(saName, saNamespace string) (client.Client, error) {
-	config, err := s.RestConfig(saName, saNamespace)
-	if err != nil {
-		return nil, err
-	}
-
-	return client.New(config, client.Options{})
-}
-
-func (s *ServiceAccountLoader) serviceAccountToken(name, namespace string) ([]byte, error) {
+func (s *ServiceAccountLoader) serviceAccountToken(ctx context.Context, name, namespace string) ([]byte, error) {
 	sa := corev1.ServiceAccount{}
-	if err := s.client.Get(context.Background(), types.NamespacedName{Namespace: namespace, Name: name}, &sa); err != nil {
+	if err := s.client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: name}, &sa); err != nil {
 		return nil, fmt.Errorf("unable to fetch service account %s:%s : %s", namespace, name, err)
 	}
 
@@ -67,7 +67,7 @@ func (s *ServiceAccountLoader) serviceAccountToken(name, namespace string) ([]by
 	secretName := sa.Secrets[0].Name
 
 	secret := corev1.Secret{}
-	if err := s.client.Get(context.Background(), types.NamespacedName{Namespace: namespace, Name: secretName}, &secret); err != nil {
+	if err := s.client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: secretName}, &secret); err != nil {
 		return nil, fmt.Errorf("failed to fetch secret %s: %s", secretName, err)
 	}
 
