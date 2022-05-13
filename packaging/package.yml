@@ -1,0 +1,55 @@
+#@ load("@ytt:data", "data")
+#@ load("@ytt:assert", "assert")
+
+#@ data.values.name or assert.fail("missing 'name' value")
+#@ data.values.image or assert.fail("missing 'image' value")
+#@ data.values.version or assert.fail("missing 'version' value")
+
+---
+apiVersion: data.packaging.carvel.dev/v1alpha1
+kind: Package
+metadata:
+  name: #@ data.values.name
+spec:
+  refName: #@ data.values.name
+  version: #@ data.values.version
+  releaseNotes: #@ "https://github.com/vmware-tanzu/carvel-secretgen-controller/releases/tag/" + data.values.version
+  valuesSchema:
+    openAPIv3:
+      title: #@ data.values.name + data.values.version + ' values schema'
+      type: object
+      additionalProperties: false
+      description: OpenAPIv3 Schema for secretgen-controller
+      properties:
+        secretgenController:
+          type: object
+          additionalProperties: false
+          description: Configuration for secretgen-controller
+          properties:
+            namespace:
+              type: string
+              default: secretgen-controller
+              description: The namespace in which to deploy secretgen-controller
+            createNamespace:
+              type: boolean
+              default: true
+              description: Whether to create namespace specified for secretgen-controller
+  licenses:
+  - Apache 2.0
+  template:
+    spec:
+      fetch:
+        - imgpkgBundle:
+            image: #@ data.values.image
+      template:
+        - ytt:
+            ignoreUnknownComments: true
+            paths:
+              - 'config'
+        - kbld:
+            paths:
+              - '.imgpkg/images.yml'
+              - '-'
+      deploy:
+        - kapp: {}    
+  
