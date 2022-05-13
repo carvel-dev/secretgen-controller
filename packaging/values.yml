@@ -1,0 +1,5 @@
+#@data/values-schema
+---
+name: secretgen-controller.carvel.dev
+version:
+image:
