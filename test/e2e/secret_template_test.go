@@ -9,7 +9,8 @@ import (
 	"testing"
 
 	"github.com/ghodss/yaml"
-	"github.com/vmware-tanzu/carvel-secretgen-controller/pkg/apis/secretgen2/v1alpha1"
+	sgv1alpha1 "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/apis/secretgen/v1alpha1"
+	sg2v1alpha1 "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/apis/secretgen2/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -104,22 +105,40 @@ spec:
 		}
 	})
 
-	logger.Section("Check SecretTemplate .status.secret.name was updated", func() {
-		args := []string{"get", "secrettemplate", "combined-secret", "-oyaml", "-n", "sg-template-test1"}
+	logger.Section("Check status", func() {
+		out := getSecretTemplate(t, kubectl, "sg-template-test1", "combined-secret")
 
-		out, err := kubectl.RunWithOpts(args, RunOpts{AllowError: true, NoNamespace: true})
-		if err != nil {
-			t.Fatalf("Failed to get secrettemplate: %s", err)
-		}
+		var secretTemplate sg2v1alpha1.SecretTemplate
 
-		var template v1alpha1.SecretTemplate
-		err = yaml.Unmarshal([]byte(out), &template)
+		err := yaml.Unmarshal([]byte(out), &secretTemplate)
 		if err != nil {
 			t.Fatalf("Failed to unmarshal: %s", err)
 		}
 
-		if !reflect.DeepEqual(template.Status.Secret.Name, "combined-secret") {
-			t.Fatalf("Expected secrettemplate .status.secret.name to match, but was: %#v vs %s", "combined-secret", out)
+		expectedStatus := []sgv1alpha1.Condition{
+			{
+				Type:   "InputResourcesFound",
+				Status: corev1.ConditionTrue,
+			},
+			{
+				Type:   "TemplatingSucceeded",
+				Status: corev1.ConditionTrue,
+			},
+			{
+				Type:   "SecretCreated",
+				Status: corev1.ConditionTrue,
+			},
+			{
+				Type:   "Ready",
+				Status: corev1.ConditionTrue,
+			},
+		}
+		if !reflect.DeepEqual(secretTemplate.Status.Conditions, expectedStatus) {
+			t.Fatalf("Expected conditions to match, but was: %#v vs %s", secretTemplate.Status.Conditions, out)
+		}
+
+		if !reflect.DeepEqual(secretTemplate.Status.Secret.Name, "combined-secret") {
+			t.Fatalf("Expected .status.secret.name reference to match, but was: %#v vs %s", secretTemplate.Status.Secret.Name, out)
 		}
 	})
 }
@@ -251,4 +270,59 @@ spec:
 			t.Fatalf("Expected secret data to match, but was: %#v vs %s", secret.Data, out)
 		}
 	})
+
+	logger.Section("Check status", func() {
+		out := getSecretTemplate(t, kubectl, "sg-template-test1", "combined-secret-sa")
+
+		var secretTemplate sg2v1alpha1.SecretTemplate
+
+		err := yaml.Unmarshal([]byte(out), &secretTemplate)
+		if err != nil {
+			t.Fatalf("Failed to unmarshal: %s", err)
+		}
+
+		expectedStatus := []sgv1alpha1.Condition{
+			{
+				Type:   "InputResourcesFound",
+				Status: corev1.ConditionTrue,
+			},
+			{
+				Type:   "TemplatingSucceeded",
+				Status: corev1.ConditionTrue,
+			},
+			{
+				Type:   "SecretCreated",
+				Status: corev1.ConditionTrue,
+			},
+			{
+				Type:   "Ready",
+				Status: corev1.ConditionTrue,
+			},
+		}
+		if !reflect.DeepEqual(secretTemplate.Status.Conditions, expectedStatus) {
+			t.Fatalf("Expected conditions to match, but was: %#v vs %s", secretTemplate.Status.Conditions, out)
+		}
+
+		if !reflect.DeepEqual(secretTemplate.Status.Secret.Name, "combined-secret-sa") {
+			t.Fatalf("Expected .status.secret.name reference to match, but was: %#v vs %s", secretTemplate.Status.Secret.Name, out)
+		}
+	})
+}
+
+func getSecretTemplate(t *testing.T, kubectl Kubectl, nsName, name string) string {
+	args := []string{"get", "secrettemplate", name, "-o", "yaml"}
+	noNs := false
+
+	if len(nsName) > 0 {
+		args = append(args, []string{"-n", nsName}...)
+		noNs = true
+	}
+
+	out, err := kubectl.RunWithOpts(args, RunOpts{AllowError: true, NoNamespace: noNs})
+	if err == nil {
+		return out
+	}
+
+	t.Fatalf("Expected to find secrettemplate '%s' but did not: %s", name, err)
+	panic("Unreachable")
 }

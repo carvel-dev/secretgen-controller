@@ -13,7 +13,6 @@ import (
 	sgv1alpha1 "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/apis/secretgen/v1alpha1"
 	sg2v1alpha1 "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/apis/secretgen2/v1alpha1"
 	"github.com/vmware-tanzu/carvel-secretgen-controller/pkg/client2/clientset/versioned/scheme"
-	"github.com/vmware-tanzu/carvel-secretgen-controller/pkg/reconciler"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -69,18 +68,15 @@ func (r *SecretTemplateReconciler) Reconcile(ctx context.Context, request reconc
 		return reconcile.Result{}, nil
 	}
 
-	status := &reconciler.Status{
-		S:          secretTemplate.Status.GenericStatus,
-		UpdateFunc: func(st sgv1alpha1.GenericStatus) { secretTemplate.Status.GenericStatus = st },
-	}
-
-	status.SetReconciling(secretTemplate.ObjectMeta)
 	defer r.updateStatus(ctx, &secretTemplate)
+	res, err := r.reconcile(ctx, &secretTemplate)
 
-	return status.WithReconcileCompleted(r.reconcile(ctx, &secretTemplate))
+	return res, secretTemplate.Status.WithReady(err)
 }
 
 func (r *SecretTemplateReconciler) reconcile(ctx context.Context, secretTemplate *sg2v1alpha1.SecretTemplate) (reconcile.Result, error) {
+	secretTemplate.Status.InitializeConditions()
+
 	//Get client to fetch inputResources
 	inputResourceclient, err := r.clientForSecretTemplate(ctx, secretTemplate)
 	if err != nil {
@@ -95,6 +91,11 @@ func (r *SecretTemplateReconciler) reconcile(ctx context.Context, secretTemplate
 	//Resolve input resources
 	inputResources, err := resolveInputResources(ctx, secretTemplate, inputResourceclient)
 	if err != nil {
+		secretTemplate.Status.UpdateCondition(sgv1alpha1.Condition{
+			Type:   "InputResourcesFound",
+			Status: corev1.ConditionFalse,
+		})
+
 		deleteErr := deleteChildSecret(ctx, r.client, secretTemplate)
 		if deleteErr != nil {
 			return reconcile.Result{}, deleteErr
@@ -103,11 +104,21 @@ func (r *SecretTemplateReconciler) reconcile(ctx context.Context, secretTemplate
 		return reconcile.Result{}, err
 	}
 
+	secretTemplate.Status.UpdateCondition(sgv1alpha1.Condition{
+		Type:   "InputResourcesFound",
+		Status: corev1.ConditionTrue,
+	})
+
 	//Template Secret Data
 	secretData := map[string][]byte{}
 	for key, expression := range secretTemplate.Spec.JSONPathTemplate.Data {
 		valueBuffer, err := jsonPath(expression, inputResources)
 		if err != nil {
+			secretTemplate.Status.UpdateCondition(sgv1alpha1.Condition{
+				Type:   "TemplatingSucceeded",
+				Status: corev1.ConditionFalse,
+			})
+
 			deleteErr := deleteChildSecret(ctx, r.client, secretTemplate)
 			if deleteErr != nil {
 				return reconcile.Result{}, deleteErr
@@ -129,6 +140,11 @@ func (r *SecretTemplateReconciler) reconcile(ctx context.Context, secretTemplate
 	for key, expression := range secretTemplate.Spec.JSONPathTemplate.StringData {
 		valueBuffer, err := jsonPath(expression, inputResources)
 		if err != nil {
+			secretTemplate.Status.UpdateCondition(sgv1alpha1.Condition{
+				Type:   "TemplatingSucceeded",
+				Status: corev1.ConditionFalse,
+			})
+
 			deleteErr := deleteChildSecret(ctx, r.client, secretTemplate)
 			if deleteErr != nil {
 				return reconcile.Result{}, deleteErr
@@ -139,6 +155,11 @@ func (r *SecretTemplateReconciler) reconcile(ctx context.Context, secretTemplate
 
 		secretStringData[key] = valueBuffer.String()
 	}
+
+	secretTemplate.Status.UpdateCondition(sgv1alpha1.Condition{
+		Type:   "TemplatingSucceeded",
+		Status: corev1.ConditionTrue,
+	})
 
 	//Create Secret
 	secret := &corev1.Secret{
@@ -157,10 +178,20 @@ func (r *SecretTemplateReconciler) reconcile(ctx context.Context, secretTemplate
 		secret.Data = secretData
 		return nil
 	}); err != nil {
+		secretTemplate.Status.UpdateCondition(sgv1alpha1.Condition{
+			Type:   "SecretCreated",
+			Status: corev1.ConditionFalse,
+		})
+
 		return reconcile.Result{}, err
 	}
 
 	secretTemplate.Status.Secret.Name = secret.Name
+
+	secretTemplate.Status.UpdateCondition(sgv1alpha1.Condition{
+		Type:   "SecretCreated",
+		Status: corev1.ConditionTrue,
+	})
 
 	return reconcile.Result{}, nil
 }

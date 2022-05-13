@@ -75,6 +75,51 @@ type SecretTemplateStatus struct {
 	ObservedSecretResourceVersion string `json:"observedSecretResourceVersion,omitempty"`
 }
 
+func (s *SecretTemplateStatus) WithReady(err error) error {
+	if err != nil {
+		s.UpdateCondition(sgv1alpha1.Condition{
+			Type:   "Ready",
+			Status: corev1.ConditionFalse,
+		})
+	} else {
+		s.UpdateCondition(sgv1alpha1.Condition{
+			Type:   "Ready",
+			Status: corev1.ConditionTrue,
+		})
+	}
+	return err
+}
+
+func (s *SecretTemplateStatus) UpdateCondition(newCondition sgv1alpha1.Condition) {
+	for i, c := range s.Conditions {
+		if c.Type == newCondition.Type {
+			s.Conditions = append(s.Conditions[:i], s.Conditions[i+1:]...)
+		}
+	}
+	s.Conditions = append(s.Conditions, newCondition)
+}
+
+func (s *SecretTemplateStatus) InitializeConditions() {
+	s.Conditions = []sgv1alpha1.Condition{
+		{
+			Type:   "InputResourcesFound",
+			Status: corev1.ConditionUnknown,
+		},
+		{
+			Type:   "TemplatingSucceeded",
+			Status: corev1.ConditionUnknown,
+		},
+		{
+			Type:   "SecretCreated",
+			Status: corev1.ConditionUnknown,
+		},
+		{
+			Type:   "Ready",
+			Status: corev1.ConditionUnknown,
+		},
+	}
+}
+
 func (e SecretTemplate) Validate() error {
 	var errs []error
 

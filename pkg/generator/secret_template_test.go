@@ -9,6 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	sgv1alpha1 "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/apis/secretgen/v1alpha1"
 	sg2v1alpha1 "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/apis/secretgen2/v1alpha1"
 	"github.com/vmware-tanzu/carvel-secretgen-controller/pkg/client2/clientset/versioned/scheme"
 	corev1 "k8s.io/api/core/v1"
@@ -192,6 +193,25 @@ func Test_SecretTemplate(t *testing.T) {
 			err = k8sClient.Get(context.Background(), namespacedNameFor(&tc.template), &secretTemplate)
 			require.NoError(t, err)
 
+			assert.Equal(t, []sgv1alpha1.Condition{
+				{
+					Type:   "InputResourcesFound",
+					Status: corev1.ConditionTrue,
+				},
+				{
+					Type:   "TemplatingSucceeded",
+					Status: corev1.ConditionTrue,
+				},
+				{
+					Type:   "SecretCreated",
+					Status: corev1.ConditionTrue,
+				},
+				{
+					Type:   "Ready",
+					Status: corev1.ConditionTrue,
+				},
+			}, secretTemplate.Status.Conditions)
+
 			var secret corev1.Secret
 			err = k8sClient.Get(context.Background(), types.NamespacedName{
 				Name:      secretTemplate.Status.Secret.Name,
@@ -216,9 +236,10 @@ func Test_SecretTemplate(t *testing.T) {
 
 func Test_SecretTemplate_Errors(t *testing.T) {
 	type test struct {
-		name            string
-		template        sg2v1alpha1.SecretTemplate
-		existingObjects []client.Object
+		name               string
+		template           sg2v1alpha1.SecretTemplate
+		existingObjects    []client.Object
+		expectedConditions []sgv1alpha1.Condition
 	}
 
 	tests := []test{
@@ -247,6 +268,24 @@ func Test_SecretTemplate_Errors(t *testing.T) {
 							"key3": "value3",
 						},
 					},
+				},
+			},
+			expectedConditions: []sgv1alpha1.Condition{
+				{
+					Type:   "InputResourcesFound",
+					Status: corev1.ConditionFalse,
+				},
+				{
+					Type:   "TemplatingSucceeded",
+					Status: corev1.ConditionUnknown,
+				},
+				{
+					Type:   "SecretCreated",
+					Status: corev1.ConditionUnknown,
+				},
+				{
+					Type:   "Ready",
+					Status: corev1.ConditionFalse,
 				},
 			},
 		},
@@ -286,6 +325,24 @@ func Test_SecretTemplate_Errors(t *testing.T) {
 					"key3": "value3",
 				}),
 			},
+			expectedConditions: []sgv1alpha1.Condition{
+				{
+					Type:   "InputResourcesFound",
+					Status: corev1.ConditionTrue,
+				},
+				{
+					Type:   "TemplatingSucceeded",
+					Status: corev1.ConditionFalse,
+				},
+				{
+					Type:   "SecretCreated",
+					Status: corev1.ConditionUnknown,
+				},
+				{
+					Type:   "Ready",
+					Status: corev1.ConditionFalse,
+				},
+			},
 		},
 		{
 			name: "reconciling secret template with jsonpath that doesn't evaluate in stringdata",
@@ -318,6 +375,24 @@ func Test_SecretTemplate_Errors(t *testing.T) {
 					"key1": "prefix-value1-suffix",
 				}),
 			},
+			expectedConditions: []sgv1alpha1.Condition{
+				{
+					Type:   "InputResourcesFound",
+					Status: corev1.ConditionTrue,
+				},
+				{
+					Type:   "TemplatingSucceeded",
+					Status: corev1.ConditionFalse,
+				},
+				{
+					Type:   "SecretCreated",
+					Status: corev1.ConditionUnknown,
+				},
+				{
+					Type:   "Ready",
+					Status: corev1.ConditionFalse,
+				},
+			},
 		},
 	}
 
@@ -329,8 +404,17 @@ func Test_SecretTemplate_Errors(t *testing.T) {
 			err := reconcileObject(t, secretTemplateReconciler, &tc.template)
 			require.Error(t, err)
 
-			createdSecret := corev1.Secret{}
-			err = k8sClient.Get(context.Background(), namespacedNameFor(&tc.template), &createdSecret)
+			var secretTemplate sg2v1alpha1.SecretTemplate
+			err = k8sClient.Get(context.Background(), namespacedNameFor(&tc.template), &secretTemplate)
+			require.NoError(t, err)
+
+			assert.ElementsMatch(t, tc.expectedConditions, secretTemplate.Status.Conditions)
+
+			var secret corev1.Secret
+			err = k8sClient.Get(context.Background(), types.NamespacedName{
+				Name:      secretTemplate.Status.Secret.Name,
+				Namespace: secretTemplate.GetNamespace(),
+			}, &secret)
 			require.Error(t, err)
 		})
 	}
