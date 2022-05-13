@@ -260,9 +260,6 @@ func resolveInputResource(ref sg2v1alpha1.InputResourceRef, namespace string, in
 func jsonPath(expression string, values interface{}) (*bytes.Buffer, error) {
 	path := JSONPath(expression)
 
-	//TODO temp for debugging remove (contains sensitive info)
-	fmt.Printf("jsonpath before ex: %s, values:%v\n", expression, values)
-
 	//TODO understand if we want allowmissingkeys or not.
 	parser := jsonpath.New("").AllowMissingKeys(false)
 	err := parser.Parse(path.ToK8sJSONPath())
@@ -277,9 +274,6 @@ func jsonPath(expression string, values interface{}) (*bytes.Buffer, error) {
 		//todo json path execute error
 		return nil, err
 	}
-
-	//TODO temp for debugging remove (contains sensitive info)
-	fmt.Printf("jsonpath result ex: %s, values:%v res:%s\n", expression, values, buf.String())
 
 	return buf, nil
 }
