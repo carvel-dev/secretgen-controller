@@ -160,7 +160,6 @@ func (r *SecretTemplateReconciler) reconcile(ctx context.Context, secretTemplate
 		return reconcile.Result{}, err
 	}
 
-	//TODO this currently isn't being updated on the resource
 	secretTemplate.Status.Secret.Name = secret.Name
 
 	return reconcile.Result{}, nil
@@ -253,8 +252,6 @@ func jsonPath(expression string, values interface{}) (*bytes.Buffer, error) {
 
 	return buf, nil
 }
-
-// TODO this is public for unit testing
 
 func toUnstructured(apiVersion, kind, namespace, name string) (unstructured.Unstructured, error) {
 	gv, err := schema.ParseGroupVersion(apiVersion)
