@@ -129,7 +129,7 @@ func (r *SecretTemplateReconciler) reconcile(ctx context.Context, secretTemplate
 
 		decoded, err := base64.StdEncoding.DecodeString(valueBuffer.String())
 		if err != nil {
-			panic("should not get here")
+			panic("should not get here as we are decoding base64 from a Secret")
 		}
 
 		secretData[key] = decoded
@@ -162,21 +162,20 @@ func (r *SecretTemplateReconciler) reconcile(ctx context.Context, secretTemplate
 	})
 
 	//Create Secret
-	secret := &corev1.Secret{
+	secret := corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      secretTemplate.GetName(),
 			Namespace: secretTemplate.GetNamespace(),
 		},
 	}
 
-	controllerutil.SetControllerReference(secretTemplate, secret, scheme.Scheme)
-
-	if _, err := controllerutil.CreateOrUpdate(ctx, r.client, secret, func() error {
+	if _, err := controllerutil.CreateOrUpdate(ctx, r.client, &secret, func() error {
 		secret.ObjectMeta.Labels = secretTemplate.GetLabels()           //TODO do we want these implicitly?
 		secret.ObjectMeta.Annotations = secretTemplate.GetAnnotations() //TODO do we want these implicitly?
 		secret.StringData = secretStringData
 		secret.Data = secretData
-		return nil
+
+		return controllerutil.SetControllerReference(secretTemplate, &secret, scheme.Scheme)
 	}); err != nil {
 		secretTemplate.Status.UpdateCondition(sgv1alpha1.Condition{
 			Type:   "SecretCreated",
@@ -260,18 +259,15 @@ func resolveInputResource(ref sg2v1alpha1.InputResourceRef, namespace string, in
 func jsonPath(expression string, values interface{}) (*bytes.Buffer, error) {
 	path := JSONPath(expression)
 
-	//TODO understand if we want allowmissingkeys or not.
 	parser := jsonpath.New("").AllowMissingKeys(false)
 	err := parser.Parse(path.ToK8sJSONPath())
 	if err != nil {
-		//todo template error
 		return nil, err
 	}
 
 	buf := new(bytes.Buffer)
 	err = parser.Execute(buf, values)
 	if err != nil {
-		//todo json path execute error
 		return nil, err
 	}
 
