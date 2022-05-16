@@ -123,7 +123,7 @@ func (r *SecretTemplateReconciler) reconcile(ctx context.Context, secretTemplate
 	for key, expression := range secretTemplate.Spec.JSONPathTemplate.Data {
 		valueBuffer, err := jsonPath(expression, inputResources)
 		if err != nil {
-			dataErr := fmt.Errorf("unable to template data: '%w'", err)
+			dataErr := fmt.Errorf("templating data: %w", err)
 			secretTemplate.Status.UpdateCondition(sgv1alpha1.Condition{
 				Type:    sg2v1alpha1.TemplatingSucceeded,
 				Status:  corev1.ConditionFalse,
@@ -152,7 +152,7 @@ func (r *SecretTemplateReconciler) reconcile(ctx context.Context, secretTemplate
 	for key, expression := range secretTemplate.Spec.JSONPathTemplate.StringData {
 		valueBuffer, err := jsonPath(expression, inputResources)
 		if err != nil {
-			stringDataErr := fmt.Errorf("unable to template stringData: '%w'", err)
+			stringDataErr := fmt.Errorf("templating stringData: %w", err)
 			secretTemplate.Status.UpdateCondition(sgv1alpha1.Condition{
 				Type:    sg2v1alpha1.TemplatingSucceeded,
 				Status:  corev1.ConditionFalse,
@@ -224,13 +224,13 @@ func (r *SecretTemplateReconciler) reconcile(ctx context.Context, secretTemplate
 func (r *SecretTemplateReconciler) updateStatus(ctx context.Context, secretTemplate *sg2v1alpha1.SecretTemplate) error {
 	existingSecretTemplate := sg2v1alpha1.SecretTemplate{}
 	if err := r.client.Get(ctx, types.NamespacedName{Namespace: secretTemplate.Namespace, Name: secretTemplate.Name}, &existingSecretTemplate); err != nil {
-		return fmt.Errorf("fetching secretTemplate: %s", err)
+		return fmt.Errorf("fetching secretTemplate: %w", err)
 	}
 
 	existingSecretTemplate.Status = secretTemplate.Status
 
 	if err := r.client.Status().Update(ctx, &existingSecretTemplate); err != nil {
-		return fmt.Errorf("updating secretTemplate status: %s", err)
+		return fmt.Errorf("updating secretTemplate status: %w", err)
 	}
 
 	return nil
@@ -332,7 +332,7 @@ func deleteChildSecret(ctx context.Context, c client.Client, secretTemplate *sg2
 			return nil
 		}
 
-		return fmt.Errorf("deleting secret: %s", err)
+		return fmt.Errorf("deleting secret: %w", err)
 	}
 
 	return nil
