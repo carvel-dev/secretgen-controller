@@ -194,22 +194,10 @@ func Test_SecretTemplate(t *testing.T) {
 			require.NoError(t, err)
 
 			assert.Equal(t, []sgv1alpha1.Condition{
-				{
-					Type:   generator.InputResourcesFound,
-					Status: corev1.ConditionTrue,
-				},
-				{
-					Type:   generator.TemplatingSucceeded,
-					Status: corev1.ConditionTrue,
-				},
-				{
-					Type:   generator.SecretCreated,
-					Status: corev1.ConditionTrue,
-				},
-				{
-					Type:   "Ready",
-					Status: corev1.ConditionTrue,
-				},
+				{Type: sg2v1alpha1.InputResourcesFound, Status: corev1.ConditionTrue},
+				{Type: sg2v1alpha1.TemplatingSucceeded, Status: corev1.ConditionTrue},
+				{Type: sg2v1alpha1.SecretCreated, Status: corev1.ConditionTrue},
+				{Type: sg2v1alpha1.Ready, Status: corev1.ConditionTrue},
 			}, secretTemplate.Status.Conditions)
 
 			var secret corev1.Secret
@@ -272,23 +260,14 @@ func Test_SecretTemplate_Errors(t *testing.T) {
 			},
 			expectedConditions: []sgv1alpha1.Condition{
 				{
-					Type:    generator.InputResourcesFound,
+					Type:    sg2v1alpha1.InputResourcesFound,
 					Status:  corev1.ConditionFalse,
 					Reason:  "UnableToResolveInputResources",
 					Message: "secrets \"existingSecret\" not found",
 				},
-				{
-					Type:   generator.TemplatingSucceeded,
-					Status: corev1.ConditionUnknown,
-				},
-				{
-					Type:   generator.SecretCreated,
-					Status: corev1.ConditionUnknown,
-				},
-				{
-					Type:   "Ready",
-					Status: corev1.ConditionFalse,
-				},
+				{Type: sg2v1alpha1.TemplatingSucceeded, Status: corev1.ConditionUnknown},
+				{Type: sg2v1alpha1.SecretCreated, Status: corev1.ConditionUnknown},
+				{Type: sg2v1alpha1.Ready, Status: corev1.ConditionFalse},
 			},
 		},
 		{
@@ -328,24 +307,15 @@ func Test_SecretTemplate_Errors(t *testing.T) {
 				}),
 			},
 			expectedConditions: []sgv1alpha1.Condition{
+				{Type: sg2v1alpha1.InputResourcesFound, Status: corev1.ConditionTrue},
 				{
-					Type:   generator.InputResourcesFound,
-					Status: corev1.ConditionTrue,
-				},
-				{
-					Type:    generator.TemplatingSucceeded,
+					Type:    sg2v1alpha1.TemplatingSucceeded,
 					Status:  corev1.ConditionFalse,
 					Reason:  "UnableToTemplateSecretData",
 					Message: "unable to template data: 'doesntExist1 is not found'",
 				},
-				{
-					Type:   generator.SecretCreated,
-					Status: corev1.ConditionUnknown,
-				},
-				{
-					Type:   "Ready",
-					Status: corev1.ConditionFalse,
-				},
+				{Type: sg2v1alpha1.SecretCreated, Status: corev1.ConditionUnknown},
+				{Type: sg2v1alpha1.Ready, Status: corev1.ConditionFalse},
 			},
 		},
 		{
@@ -380,24 +350,15 @@ func Test_SecretTemplate_Errors(t *testing.T) {
 				}),
 			},
 			expectedConditions: []sgv1alpha1.Condition{
+				{Type: sg2v1alpha1.InputResourcesFound, Status: corev1.ConditionTrue},
 				{
-					Type:   generator.InputResourcesFound,
-					Status: corev1.ConditionTrue,
-				},
-				{
-					Type:    generator.TemplatingSucceeded,
+					Type:    sg2v1alpha1.TemplatingSucceeded,
 					Status:  corev1.ConditionFalse,
 					Reason:  "UnableToTemplateSecretStringData",
 					Message: "unable to template stringData: 'doesntExist is not found'",
 				},
-				{
-					Type:   generator.SecretCreated,
-					Status: corev1.ConditionUnknown,
-				},
-				{
-					Type:   "Ready",
-					Status: corev1.ConditionFalse,
-				},
+				{Type: sg2v1alpha1.SecretCreated, Status: corev1.ConditionUnknown},
+				{Type: sg2v1alpha1.Ready, Status: corev1.ConditionFalse},
 			},
 		},
 	}

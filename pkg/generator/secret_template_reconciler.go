@@ -35,11 +35,6 @@ const (
 	// Matches default sync in kapp-controller
 	// See: https://github.com/vmware-tanzu/carvel-kapp-controller/blob/develop/pkg/app/reconcile_timer.go
 	syncPeriod = 30 * time.Second
-
-	// Status Condition Types
-	InputResourcesFound = "InputResourcesFound"
-	TemplatingSucceeded = "TemplatingSucceeded"
-	SecretCreated       = "SecretCreated"
 )
 
 type SecretTemplateReconciler struct {
@@ -104,7 +99,7 @@ func (r *SecretTemplateReconciler) reconcile(ctx context.Context, secretTemplate
 	inputResources, err := resolveInputResources(ctx, secretTemplate, inputResourceclient)
 	if err != nil {
 		secretTemplate.Status.UpdateCondition(sgv1alpha1.Condition{
-			Type:    InputResourcesFound,
+			Type:    sg2v1alpha1.InputResourcesFound,
 			Status:  corev1.ConditionFalse,
 			Reason:  "UnableToResolveInputResources",
 			Message: err.Error(),
@@ -119,7 +114,7 @@ func (r *SecretTemplateReconciler) reconcile(ctx context.Context, secretTemplate
 	}
 
 	secretTemplate.Status.UpdateCondition(sgv1alpha1.Condition{
-		Type:   InputResourcesFound,
+		Type:   sg2v1alpha1.InputResourcesFound,
 		Status: corev1.ConditionTrue,
 	})
 
@@ -130,7 +125,7 @@ func (r *SecretTemplateReconciler) reconcile(ctx context.Context, secretTemplate
 		if err != nil {
 			dataErr := fmt.Errorf("unable to template data: '%w'", err)
 			secretTemplate.Status.UpdateCondition(sgv1alpha1.Condition{
-				Type:    TemplatingSucceeded,
+				Type:    sg2v1alpha1.TemplatingSucceeded,
 				Status:  corev1.ConditionFalse,
 				Reason:  "UnableToTemplateSecretData",
 				Message: dataErr.Error(),
@@ -159,7 +154,7 @@ func (r *SecretTemplateReconciler) reconcile(ctx context.Context, secretTemplate
 		if err != nil {
 			stringDataErr := fmt.Errorf("unable to template stringData: '%w'", err)
 			secretTemplate.Status.UpdateCondition(sgv1alpha1.Condition{
-				Type:    TemplatingSucceeded,
+				Type:    sg2v1alpha1.TemplatingSucceeded,
 				Status:  corev1.ConditionFalse,
 				Reason:  "UnableToTemplateSecretStringData",
 				Message: stringDataErr.Error(),
@@ -177,7 +172,7 @@ func (r *SecretTemplateReconciler) reconcile(ctx context.Context, secretTemplate
 	}
 
 	secretTemplate.Status.UpdateCondition(sgv1alpha1.Condition{
-		Type:   TemplatingSucceeded,
+		Type:   sg2v1alpha1.TemplatingSucceeded,
 		Status: corev1.ConditionTrue,
 	})
 
@@ -205,7 +200,7 @@ func (r *SecretTemplateReconciler) reconcile(ctx context.Context, secretTemplate
 			reason = "UnableToCreateSecret"
 		}
 		secretTemplate.Status.UpdateCondition(sgv1alpha1.Condition{
-			Type:    SecretCreated,
+			Type:    sg2v1alpha1.SecretCreated,
 			Status:  corev1.ConditionFalse,
 			Reason:  reason,
 			Message: err.Error(),
@@ -217,7 +212,7 @@ func (r *SecretTemplateReconciler) reconcile(ctx context.Context, secretTemplate
 	secretTemplate.Status.Secret.Name = secret.Name
 
 	secretTemplate.Status.UpdateCondition(sgv1alpha1.Condition{
-		Type:   SecretCreated,
+		Type:   sg2v1alpha1.SecretCreated,
 		Status: corev1.ConditionTrue,
 	})
 
