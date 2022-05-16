@@ -6,6 +6,7 @@ package generator_test
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -186,8 +187,9 @@ func Test_SecretTemplate(t *testing.T) {
 			allObjects := append(tc.existingObjects, &tc.template)
 			secretTemplateReconciler, k8sClient := newReconciler(allObjects...)
 
-			err := reconcileObject(t, secretTemplateReconciler, &tc.template)
+			res, err := reconcileObject(t, secretTemplateReconciler, &tc.template)
 			require.NoError(t, err)
+			assert.Equal(t, res.RequeueAfter, 30*time.Second)
 
 			var secretTemplate sg2v1alpha1.SecretTemplate
 			err = k8sClient.Get(context.Background(), namespacedNameFor(&tc.template), &secretTemplate)
@@ -368,7 +370,7 @@ func Test_SecretTemplate_Errors(t *testing.T) {
 			allObjects := append(tc.existingObjects, &tc.template)
 			secretTemplateReconciler, k8sClient := newReconciler(allObjects...)
 
-			err := reconcileObject(t, secretTemplateReconciler, &tc.template)
+			_, err := reconcileObject(t, secretTemplateReconciler, &tc.template)
 			require.Error(t, err)
 
 			var secretTemplate sg2v1alpha1.SecretTemplate
@@ -433,11 +435,11 @@ func newReconciler(objects ...client.Object) (secretTemplateReconciler *generato
 	return secretTemplateReconciler, k8sClient
 }
 
-func reconcileObject(t *testing.T, recon *generator.SecretTemplateReconciler, object client.Object) error {
-	status, err := recon.Reconcile(context.Background(), reconcile.Request{NamespacedName: namespacedNameFor(object)})
-	require.False(t, status.Requeue)
+func reconcileObject(t *testing.T, recon *generator.SecretTemplateReconciler, object client.Object) (reconcile.Result, error) {
+	res, err := recon.Reconcile(context.Background(), reconcile.Request{NamespacedName: namespacedNameFor(object)})
+	require.False(t, res.Requeue)
 
-	return err
+	return res, err
 }
 
 func namespacedNameFor(object client.Object) types.NamespacedName {
