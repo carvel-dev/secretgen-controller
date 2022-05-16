@@ -8,8 +8,40 @@ import (
 
 	"testing"
 
+	"github.com/stretchr/testify/require"
 	"github.com/vmware-tanzu/carvel-secretgen-controller/pkg/generator"
 )
+
+func Test_SecretTemplate_EvaluateWith(t *testing.T) {
+	type test struct {
+		expression string
+		values     map[string]interface{}
+		expected   string
+	}
+
+	// TODO: We probably shouldn't test too much here as it's a really just a k8s library.
+	// TODO: Should we ensure that EvaluateWith only returns one string/node
+	tests := []test{
+		{expression: "static-value", values: map[string]interface{}{
+			"key": "value",
+		}, expected: "static-value"},
+		{expression: "$(.key)", values: map[string]interface{}{
+			"key": "value",
+		}, expected: "value"},
+		{expression: "$(.key)chain", values: map[string]interface{}{
+			"key": "value",
+		}, expected: "valuechain"},
+	}
+
+	for _, tc := range tests {
+		expression := generator.JSONPath(tc.expression)
+		result, err := expression.EvaluateWith(tc.values)
+		require.NoError(t, err)
+		if !reflect.DeepEqual(result.String(), tc.expected) {
+			t.Fatalf("expected: %v, got: %v", tc.expected, result)
+		}
+	}
+}
 
 func Test_SecretTemplate_Templating_Syntax(t *testing.T) {
 	type test struct {

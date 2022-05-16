@@ -4,7 +4,6 @@
 package generator
 
 import (
-	"bytes"
 	"context"
 	"encoding/base64"
 	"fmt"
@@ -27,8 +26,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
-
-	"k8s.io/client-go/util/jsonpath"
 )
 
 const (
@@ -121,7 +118,7 @@ func (r *SecretTemplateReconciler) reconcile(ctx context.Context, secretTemplate
 	//Template Secret Data
 	secretData := map[string][]byte{}
 	for key, expression := range secretTemplate.Spec.JSONPathTemplate.Data {
-		valueBuffer, err := jsonPath(expression, inputResources)
+		valueBuffer, err := JSONPath(expression).EvaluateWith(inputResources)
 		if err != nil {
 			dataErr := fmt.Errorf("templating data: %w", err)
 			secretTemplate.Status.UpdateCondition(sgv1alpha1.Condition{
@@ -150,7 +147,7 @@ func (r *SecretTemplateReconciler) reconcile(ctx context.Context, secretTemplate
 	//Template Secret StringData
 	secretStringData := map[string]string{}
 	for key, expression := range secretTemplate.Spec.JSONPathTemplate.StringData {
-		valueBuffer, err := jsonPath(expression, inputResources)
+		valueBuffer, err := JSONPath(expression).EvaluateWith(inputResources)
 		if err != nil {
 			stringDataErr := fmt.Errorf("templating stringData: %w", err)
 			secretTemplate.Status.UpdateCondition(sgv1alpha1.Condition{
@@ -273,7 +270,7 @@ func resolveInputResources(ctx context.Context, secretTemplate *sg2v1alpha1.Secr
 
 func resolveInputResource(ref sg2v1alpha1.InputResourceRef, namespace string, inputResources map[string]interface{}) (unstructured.Unstructured, error) {
 	//TODO should we only search for jsonpath expressions in name? Probably.
-	resolvedName, err := jsonPath(ref.Name, inputResources)
+	resolvedName, err := JSONPath(ref.Name).EvaluateWith(inputResources)
 	if err != nil {
 		return unstructured.Unstructured{}, err
 	}
@@ -282,23 +279,6 @@ func resolveInputResource(ref sg2v1alpha1.InputResourceRef, namespace string, in
 }
 
 //TODO how does this package from k8s align with our usecases? Do other packages exist?
-func jsonPath(expression string, values interface{}) (*bytes.Buffer, error) {
-	path := JSONPath(expression)
-
-	parser := jsonpath.New("").AllowMissingKeys(false)
-	err := parser.Parse(path.ToK8sJSONPath())
-	if err != nil {
-		return nil, err
-	}
-
-	buf := new(bytes.Buffer)
-	err = parser.Execute(buf, values)
-	if err != nil {
-		return nil, err
-	}
-
-	return buf, nil
-}
 
 func toUnstructured(apiVersion, kind, namespace, name string) (unstructured.Unstructured, error) {
 	gv, err := schema.ParseGroupVersion(apiVersion)

@@ -4,8 +4,11 @@
 package generator
 
 import (
+	"bytes"
 	"fmt"
 	"strings"
+
+	"k8s.io/client-go/util/jsonpath"
 )
 
 const (
@@ -14,6 +17,23 @@ const (
 )
 
 type JSONPath string
+
+// EvaluateWith an expression with respect to values and return the result.
+func (p JSONPath) EvaluateWith(values interface{}) (*bytes.Buffer, error) {
+	parser := jsonpath.New("").AllowMissingKeys(false)
+	err := parser.Parse(p.ToK8sJSONPath())
+	if err != nil {
+		return nil, err
+	}
+
+	buf := new(bytes.Buffer)
+	err = parser.Execute(buf, values)
+	if err != nil {
+		return nil, err
+	}
+
+	return buf, nil
+}
 
 // Count the number of delimiter pairs in the path.
 func (p JSONPath) CountDelimiterPairs() int {
@@ -42,7 +62,7 @@ func (p JSONPath) CountDelimiterPairs() int {
 	return count
 }
 
-// If the expression contains an opening $( and a closing ), toK8sJSONPath will replace them with a { and a } respectively.
+// If the expression contains an opening $( and a closing ), toK8sJSONPathExpression will replace them with a { and a } respectively.
 func (p JSONPath) ToK8sJSONPath() string {
 	newPath := string(p)
 	i := 0
