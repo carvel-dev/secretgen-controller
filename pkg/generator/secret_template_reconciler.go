@@ -31,9 +31,16 @@ import (
 	"k8s.io/client-go/util/jsonpath"
 )
 
-// Matches default sync in kapp-controller
-// See: https://github.com/vmware-tanzu/carvel-kapp-controller/blob/develop/pkg/app/reconcile_timer.go
-const syncPeriod = 30 * time.Second
+const (
+	// Matches default sync in kapp-controller
+	// See: https://github.com/vmware-tanzu/carvel-kapp-controller/blob/develop/pkg/app/reconcile_timer.go
+	syncPeriod = 30 * time.Second
+
+	// Status Condition Types
+	InputResourcesFound = "InputResourcesFound"
+	TemplatingSucceeded = "TemplatingSucceeded"
+	SecretCreated       = "SecretCreated"
+)
 
 type SecretTemplateReconciler struct {
 	client   client.Client
@@ -97,8 +104,10 @@ func (r *SecretTemplateReconciler) reconcile(ctx context.Context, secretTemplate
 	inputResources, err := resolveInputResources(ctx, secretTemplate, inputResourceclient)
 	if err != nil {
 		secretTemplate.Status.UpdateCondition(sgv1alpha1.Condition{
-			Type:   "InputResourcesFound",
-			Status: corev1.ConditionFalse,
+			Type:    InputResourcesFound,
+			Status:  corev1.ConditionFalse,
+			Reason:  "UnableToResolveInputResources",
+			Message: err.Error(),
 		})
 
 		deleteErr := deleteChildSecret(ctx, r.client, secretTemplate)
@@ -110,7 +119,7 @@ func (r *SecretTemplateReconciler) reconcile(ctx context.Context, secretTemplate
 	}
 
 	secretTemplate.Status.UpdateCondition(sgv1alpha1.Condition{
-		Type:   "InputResourcesFound",
+		Type:   InputResourcesFound,
 		Status: corev1.ConditionTrue,
 	})
 
@@ -119,9 +128,12 @@ func (r *SecretTemplateReconciler) reconcile(ctx context.Context, secretTemplate
 	for key, expression := range secretTemplate.Spec.JSONPathTemplate.Data {
 		valueBuffer, err := jsonPath(expression, inputResources)
 		if err != nil {
+			dataErr := fmt.Errorf("unable to template data: '%w'", err)
 			secretTemplate.Status.UpdateCondition(sgv1alpha1.Condition{
-				Type:   "TemplatingSucceeded",
-				Status: corev1.ConditionFalse,
+				Type:    TemplatingSucceeded,
+				Status:  corev1.ConditionFalse,
+				Reason:  "UnableToTemplateSecretData",
+				Message: dataErr.Error(),
 			})
 
 			deleteErr := deleteChildSecret(ctx, r.client, secretTemplate)
@@ -129,7 +141,7 @@ func (r *SecretTemplateReconciler) reconcile(ctx context.Context, secretTemplate
 				return reconcile.Result{}, deleteErr
 			}
 
-			return reconcile.Result{}, err
+			return reconcile.Result{}, dataErr
 		}
 
 		decoded, err := base64.StdEncoding.DecodeString(valueBuffer.String())
@@ -145,9 +157,12 @@ func (r *SecretTemplateReconciler) reconcile(ctx context.Context, secretTemplate
 	for key, expression := range secretTemplate.Spec.JSONPathTemplate.StringData {
 		valueBuffer, err := jsonPath(expression, inputResources)
 		if err != nil {
+			stringDataErr := fmt.Errorf("unable to template stringData: '%w'", err)
 			secretTemplate.Status.UpdateCondition(sgv1alpha1.Condition{
-				Type:   "TemplatingSucceeded",
-				Status: corev1.ConditionFalse,
+				Type:    TemplatingSucceeded,
+				Status:  corev1.ConditionFalse,
+				Reason:  "UnableToTemplateSecretStringData",
+				Message: stringDataErr.Error(),
 			})
 
 			deleteErr := deleteChildSecret(ctx, r.client, secretTemplate)
@@ -155,14 +170,14 @@ func (r *SecretTemplateReconciler) reconcile(ctx context.Context, secretTemplate
 				return reconcile.Result{}, deleteErr
 			}
 
-			return reconcile.Result{}, err
+			return reconcile.Result{}, stringDataErr
 		}
 
 		secretStringData[key] = valueBuffer.String()
 	}
 
 	secretTemplate.Status.UpdateCondition(sgv1alpha1.Condition{
-		Type:   "TemplatingSucceeded",
+		Type:   TemplatingSucceeded,
 		Status: corev1.ConditionTrue,
 	})
 
@@ -174,7 +189,7 @@ func (r *SecretTemplateReconciler) reconcile(ctx context.Context, secretTemplate
 		},
 	}
 
-	if _, err := controllerutil.CreateOrUpdate(ctx, r.client, &secret, func() error {
+	if op, err := controllerutil.CreateOrUpdate(ctx, r.client, &secret, func() error {
 		secret.ObjectMeta.Labels = secretTemplate.GetLabels()           //TODO do we want these implicitly?
 		secret.ObjectMeta.Annotations = secretTemplate.GetAnnotations() //TODO do we want these implicitly?
 		secret.StringData = secretStringData
@@ -182,9 +197,18 @@ func (r *SecretTemplateReconciler) reconcile(ctx context.Context, secretTemplate
 
 		return controllerutil.SetControllerReference(secretTemplate, &secret, scheme.Scheme)
 	}); err != nil {
+		var reason string
+		switch op {
+		case controllerutil.OperationResultUpdated:
+			reason = "UnableToUpdateSecret"
+		case controllerutil.OperationResultCreated:
+			reason = "UnableToCreateSecret"
+		}
 		secretTemplate.Status.UpdateCondition(sgv1alpha1.Condition{
-			Type:   "SecretCreated",
-			Status: corev1.ConditionFalse,
+			Type:    SecretCreated,
+			Status:  corev1.ConditionFalse,
+			Reason:  reason,
+			Message: err.Error(),
 		})
 
 		return reconcile.Result{}, err
@@ -193,7 +217,7 @@ func (r *SecretTemplateReconciler) reconcile(ctx context.Context, secretTemplate
 	secretTemplate.Status.Secret.Name = secret.Name
 
 	secretTemplate.Status.UpdateCondition(sgv1alpha1.Condition{
-		Type:   "SecretCreated",
+		Type:   SecretCreated,
 		Status: corev1.ConditionTrue,
 	})
 

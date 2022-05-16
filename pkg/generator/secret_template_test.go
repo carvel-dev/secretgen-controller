@@ -195,15 +195,15 @@ func Test_SecretTemplate(t *testing.T) {
 
 			assert.Equal(t, []sgv1alpha1.Condition{
 				{
-					Type:   "InputResourcesFound",
+					Type:   generator.InputResourcesFound,
 					Status: corev1.ConditionTrue,
 				},
 				{
-					Type:   "TemplatingSucceeded",
+					Type:   generator.TemplatingSucceeded,
 					Status: corev1.ConditionTrue,
 				},
 				{
-					Type:   "SecretCreated",
+					Type:   generator.SecretCreated,
 					Status: corev1.ConditionTrue,
 				},
 				{
@@ -272,15 +272,17 @@ func Test_SecretTemplate_Errors(t *testing.T) {
 			},
 			expectedConditions: []sgv1alpha1.Condition{
 				{
-					Type:   "InputResourcesFound",
-					Status: corev1.ConditionFalse,
+					Type:    generator.InputResourcesFound,
+					Status:  corev1.ConditionFalse,
+					Reason:  "UnableToResolveInputResources",
+					Message: "secrets \"existingSecret\" not found",
 				},
 				{
-					Type:   "TemplatingSucceeded",
+					Type:   generator.TemplatingSucceeded,
 					Status: corev1.ConditionUnknown,
 				},
 				{
-					Type:   "SecretCreated",
+					Type:   generator.SecretCreated,
 					Status: corev1.ConditionUnknown,
 				},
 				{
@@ -327,15 +329,17 @@ func Test_SecretTemplate_Errors(t *testing.T) {
 			},
 			expectedConditions: []sgv1alpha1.Condition{
 				{
-					Type:   "InputResourcesFound",
+					Type:   generator.InputResourcesFound,
 					Status: corev1.ConditionTrue,
 				},
 				{
-					Type:   "TemplatingSucceeded",
-					Status: corev1.ConditionFalse,
+					Type:    generator.TemplatingSucceeded,
+					Status:  corev1.ConditionFalse,
+					Reason:  "UnableToTemplateSecretData",
+					Message: "unable to template data: 'doesntExist1 is not found'",
 				},
 				{
-					Type:   "SecretCreated",
+					Type:   generator.SecretCreated,
 					Status: corev1.ConditionUnknown,
 				},
 				{
@@ -377,15 +381,17 @@ func Test_SecretTemplate_Errors(t *testing.T) {
 			},
 			expectedConditions: []sgv1alpha1.Condition{
 				{
-					Type:   "InputResourcesFound",
+					Type:   generator.InputResourcesFound,
 					Status: corev1.ConditionTrue,
 				},
 				{
-					Type:   "TemplatingSucceeded",
-					Status: corev1.ConditionFalse,
+					Type:    generator.TemplatingSucceeded,
+					Status:  corev1.ConditionFalse,
+					Reason:  "UnableToTemplateSecretStringData",
+					Message: "unable to template stringData: 'doesntExist is not found'",
 				},
 				{
-					Type:   "SecretCreated",
+					Type:   generator.SecretCreated,
 					Status: corev1.ConditionUnknown,
 				},
 				{
