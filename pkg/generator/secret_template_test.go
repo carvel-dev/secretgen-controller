@@ -184,7 +184,7 @@ func Test_SecretTemplate(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			allObjects := append(tc.existingObjects, &tc.template)
-			secretTemplateReconciler, k8sClient := importReconcilers(allObjects...)
+			secretTemplateReconciler, k8sClient := newReconciler(allObjects...)
 
 			err := reconcileObject(t, secretTemplateReconciler, &tc.template)
 			require.NoError(t, err)
@@ -366,7 +366,7 @@ func Test_SecretTemplate_Errors(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			allObjects := append(tc.existingObjects, &tc.template)
-			secretTemplateReconciler, k8sClient := importReconcilers(allObjects...)
+			secretTemplateReconciler, k8sClient := newReconciler(allObjects...)
 
 			err := reconcileObject(t, secretTemplateReconciler, &tc.template)
 			require.Error(t, err)
@@ -421,8 +421,7 @@ func configMap(name string, data map[string]string) *corev1.ConfigMap {
 	}
 }
 
-//TODO this is all copied and pasted from helpers in pkg/shared
-func importReconcilers(objects ...client.Object) (secretTemplateReconciler *generator.SecretTemplateReconciler, k8sClient client.Client) {
+func newReconciler(objects ...client.Object) (secretTemplateReconciler *generator.SecretTemplateReconciler, k8sClient client.Client) {
 	sg2v1alpha1.AddToScheme(scheme.Scheme)
 	corev1.AddToScheme(scheme.Scheme)
 	testLogr := zap.New(zap.UseDevMode(true))
@@ -434,19 +433,11 @@ func importReconcilers(objects ...client.Object) (secretTemplateReconciler *gene
 	return secretTemplateReconciler, k8sClient
 }
 
-type reconcilerFunc interface {
-	Reconcile(context.Context, reconcile.Request) (reconcile.Result, error)
-}
-
-func reconcileObject(t *testing.T, recon reconcilerFunc, object client.Object) error {
-	status, err := recon.Reconcile(context.Background(), reconcileRequestFor(object))
+func reconcileObject(t *testing.T, recon *generator.SecretTemplateReconciler, object client.Object) error {
+	status, err := recon.Reconcile(context.Background(), reconcile.Request{NamespacedName: namespacedNameFor(object)})
 	require.False(t, status.Requeue)
 
 	return err
-}
-
-func reconcileRequestFor(object client.Object) reconcile.Request {
-	return reconcile.Request{NamespacedName: namespacedNameFor(object)}
 }
 
 func namespacedNameFor(object client.Object) types.NamespacedName {
