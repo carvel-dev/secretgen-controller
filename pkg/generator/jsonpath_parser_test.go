@@ -5,6 +5,7 @@ package generator_test
 
 import (
 	"reflect"
+
 	"testing"
 
 	"github.com/vmware-tanzu/carvel-secretgen-controller/pkg/generator"
@@ -21,14 +22,15 @@ func Test_SecretTemplate_Templating_Syntax(t *testing.T) {
 		{expression: "$(.value)", expected: "{.value}"},
 		{expression: "prefix-$(.value)-suffix", expected: "prefix-{.value}-suffix"},
 		{expression: "$(.spec.ports[?(@.protocol=='TCP')])", expected: "{.spec.ports[?(@.protocol=='TCP')]}"},
-
 		{expression: "$foo", expected: "$foo"},
-		{expression: "foo$(", expected: "foo$("}, //error?
-		{expression: "foo)", expected: "foo)"},   // ?
+		{expression: "foo$(", expected: "foo$("},
+		{expression: "foo)", expected: "foo)"},
 		{expression: "$($(foo))", expected: "{$(foo)}"},
-
-		//failing
 		{expression: "$(.data.value)-middle-$(.data.value2)", expected: "{.data.value}-middle-{.data.value2}"},
+		{
+			expression: "$(.pod.spec.containers[?(@.name=='first-filter')].env[?(@.name=='second-filter')].valueFrom.secretKeyRef.name)",
+			expected:   "{.pod.spec.containers[?(@.name=='first-filter')].env[?(@.name=='second-filter')].valueFrom.secretKeyRef.name}",
+		},
 		{expression: "$(.data.foo)-)", expected: "{.data.foo}-)"},
 	}
 
