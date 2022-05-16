@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"time"
 
 	"github.com/go-logr/logr"
 	sgv1alpha1 "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/apis/secretgen/v1alpha1"
@@ -29,6 +30,10 @@ import (
 
 	"k8s.io/client-go/util/jsonpath"
 )
+
+// Matches default sync in kapp-controller
+// See: https://github.com/vmware-tanzu/carvel-kapp-controller/blob/develop/pkg/app/reconcile_timer.go
+const syncPeriod = 30 * time.Second
 
 type SecretTemplateReconciler struct {
 	client   client.Client
@@ -192,7 +197,9 @@ func (r *SecretTemplateReconciler) reconcile(ctx context.Context, secretTemplate
 		Status: corev1.ConditionTrue,
 	})
 
-	return reconcile.Result{}, nil
+	return reconcile.Result{
+		RequeueAfter: syncPeriod,
+	}, nil
 }
 
 func (r *SecretTemplateReconciler) updateStatus(ctx context.Context, secretTemplate *sg2v1alpha1.SecretTemplate) error {
