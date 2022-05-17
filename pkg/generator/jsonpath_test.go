@@ -19,7 +19,7 @@ func Test_SecretTemplate_EvaluateWith(t *testing.T) {
 		expected   string
 	}
 
-	// TODO: We probably shouldn't test too much here as it's a really just a k8s library.
+	// We probably shouldn't test too much here as it's a really just a k8s library.
 	// TODO: Should we ensure that EvaluateWith only returns one string/node
 	tests := []test{
 		{expression: "static-value", values: map[string]interface{}{
@@ -57,13 +57,16 @@ func Test_SecretTemplate_Templating_Syntax(t *testing.T) {
 		{expression: "$foo", expected: "$foo"},
 		{expression: "foo$(", expected: "foo$("},
 		{expression: "foo)", expected: "foo)"},
-		{expression: "$($(foo))", expected: "{$(foo)}"},
+		{expression: "$($(foo))", expected: "{{foo}}"},
 		{expression: "$(.data.value)-middle-$(.data.value2)", expected: "{.data.value}-middle-{.data.value2}"},
 		{
 			expression: "$(.pod.spec.containers[?(@.name=='first-filter')].env[?(@.name=='second-filter')].valueFrom.secretKeyRef.name)",
 			expected:   "{.pod.spec.containers[?(@.name=='first-filter')].env[?(@.name=='second-filter')].valueFrom.secretKeyRef.name}",
 		},
 		{expression: "$(.data.foo)-)", expected: "{.data.foo}-)"},
+		{expression: "$(.data.foo?())()-)", expected: "{.data.foo?()}()-)"},
+		{expression: "{.data.foo}", expected: "{.data.foo}"},
+		{expression: "$(.items[(@.length-1)])", expected: "{.items[(@.length-1)]}"},
 	}
 
 	for _, tc := range tests {
@@ -71,37 +74,6 @@ func Test_SecretTemplate_Templating_Syntax(t *testing.T) {
 		result := expression.ToK8sJSONPath()
 		if !reflect.DeepEqual(result, tc.expected) {
 			t.Fatalf("expected: %v, got: %v", tc.expected, result)
-		}
-	}
-}
-
-func Test_SecretTemplate_CountDelimiterPairs(t *testing.T) {
-	type test struct {
-		expression string
-		count      int
-	}
-
-	tests := []test{
-		{expression: "static-value", count: 0},
-		{expression: "$(.value)", count: 1},
-		{expression: "prefix-$(.value)-suffix", count: 1},
-		{expression: "$(.spec.ports[?(@.protocol=='TCP')])", count: 1},
-
-		{expression: "$foo", count: 0},
-		{expression: "foo$(", count: 0}, //error?
-		{expression: "foo)", count: 0},  // ?
-		{expression: "$($(foo))", count: 1},
-
-		{expression: "$(.data.value)-middle-$(.data.value2)", count: 2},
-		{expression: "$(.data.foo)-)", count: 1},
-		{expression: "$(.data.foo)-)", count: 1},
-	}
-
-	for _, tc := range tests {
-		expression := generator.JSONPath(tc.expression)
-		result := expression.CountDelimiterPairs()
-		if !reflect.DeepEqual(result, tc.count) {
-			t.Fatalf("expression: %s, expected: %d, got: %d", tc.expression, tc.count, result)
 		}
 	}
 }
