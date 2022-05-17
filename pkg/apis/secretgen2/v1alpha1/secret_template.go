@@ -47,29 +47,50 @@ type SecretTemplateList struct {
 }
 
 type SecretTemplateSpec struct {
+	//A list of input resources that are used to construct a new secret. Input Resources can refer to ANY Kubernetes API.
+	//If loading more than Secrets types ensure that `.spec.ServiceAccountName` is set to an appropriate value.
+	//Input resources are read in the order they are defined. An Input resource's name can be evaluated dynamically from data in a previously evaluated input resource.
 	InputResources []InputResource `json:"inputResources"`
 
+	//A JSONPath based template that can be used to create Secrets.
 	// +optional
 	JSONPathTemplate JSONPathTemplate `json:"template,omitempty"`
 
+	//The Service Account used to read inputResources. If not specified, then the Service Account of
+	//secretgen controller is used.
 	// +optional
 	ServiceAccountName string `json:"serviceAccountName,omitempty"`
 }
 
 type InputResource struct {
-	Name string           `json:"name"`
-	Ref  InputResourceRef `json:"ref"`
+	//The name of InputResource. This is used as the identifying name in templating to refer to this Input Resource.
+	Name string `json:"name"`
+	//The reference to the Input Resource
+	Ref InputResourceRef `json:"ref"`
 }
 
 type InputResourceRef struct {
 	APIVersion string `json:"apiVersion"`
 	Kind       string `json:"kind"`
-	Name       string `json:"name"`
+
+	//The name of the input resource. This field can itself contain JSONPATH syntax to load the name dynamically
+	//from other input resources. For example this field could be set to a static value of "my-secret" or a dynamic valid of "$(.anotherinputresource.spec.name)".
+	Name string `json:"name"`
 }
 
 type JSONPathTemplate struct {
+	//StringData key and value. Where key is the Secret Key and the value is a JSONPATH syntax surrounded by $( ).
+	//All InputResources are available via their identifying name.
+	//For example:
+	/// key1: $(.input1.spec.value1)
+	/// key2: $(.input2.status.value2)
 	// +optional
 	StringData map[string]string `json:"stringData,omitempty"`
+	//Data key and value. Where key is the Secret Key and the value is a jsonpath surrounded by $( ). The fetched data MUST be base64 encoded.
+	//All InputResources are available via their identifying name.
+	//For example:
+	// key1: $(.secretinput1.data.value1)
+	// key2: $(.secretinput2.data.value2)
 	// +optional
 	Data map[string]string `json:"data,omitempty"`
 }
