@@ -73,6 +73,10 @@ func (r *SecretTemplateReconciler) Reconcile(ctx context.Context, request reconc
 	}
 
 	defer r.updateStatus(ctx, &secretTemplate)
+
+	secretTemplate.Status.InitializeConditions()
+	secretTemplate.Status.ObservedGeneration = secretTemplate.Generation
+
 	res, err := r.reconcile(ctx, &secretTemplate)
 
 	if err != nil {
@@ -85,7 +89,6 @@ func (r *SecretTemplateReconciler) Reconcile(ctx context.Context, request reconc
 }
 
 func (r *SecretTemplateReconciler) reconcile(ctx context.Context, secretTemplate *sg2v1alpha1.SecretTemplate) (reconcile.Result, error) {
-	secretTemplate.Status.InitializeConditions()
 
 	//Get client to fetch inputResources
 	inputResourceclient, err := r.clientForSecretTemplate(ctx, secretTemplate)
