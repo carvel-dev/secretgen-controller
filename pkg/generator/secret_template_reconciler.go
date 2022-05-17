@@ -127,7 +127,7 @@ func (r *SecretTemplateReconciler) reconcile(ctx context.Context, secretTemplate
 
 		decoded, err := base64.StdEncoding.DecodeString(valueBuffer.String())
 		if err != nil {
-			panic("should not get here as we are decoding base64 from a Secret")
+			return reconcile.Result{}, fmt.Errorf("failed decoding base64 from a Secret: %w", err)
 		}
 
 		secretData[key] = decoded
