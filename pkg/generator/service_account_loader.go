@@ -7,8 +7,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	ctrl "sigs.k8s.io/controller-runtime/pkg/client/config"
 )
 
 const (
@@ -16,10 +16,8 @@ const (
 	saTokenType = "kubernetes.io/service-account-token"
 )
 
-//TODO think about if this should be a struct of just a func
-//TODO add unit tests
 type ServiceAccountLoader struct {
-	client client.Client // Used to load service accounts their secrets.
+	client client.Client // Used to load service accounts and their secrets.
 }
 
 func NewServiceAccountLoader(client client.Client) *ServiceAccountLoader {

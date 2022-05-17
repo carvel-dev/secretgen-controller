@@ -182,8 +182,8 @@ func (r *SecretTemplateReconciler) reconcile(ctx context.Context, secretTemplate
 	}
 
 	if op, err := controllerutil.CreateOrUpdate(ctx, r.client, &secret, func() error {
-		secret.ObjectMeta.Labels = secretTemplate.GetLabels()           //TODO do we want these implicitly?
-		secret.ObjectMeta.Annotations = secretTemplate.GetAnnotations() //TODO do we want these implicitly?
+		secret.ObjectMeta.Labels = secretTemplate.GetLabels()
+		secret.ObjectMeta.Annotations = secretTemplate.GetAnnotations()
 		secret.StringData = secretStringData
 		secret.Data = secretData
 
@@ -258,7 +258,7 @@ func resolveInputResources(ctx context.Context, secretTemplate *sg2v1alpha1.Secr
 
 		key := types.NamespacedName{Namespace: secretTemplate.Namespace, Name: unstructuredResource.GetName()}
 
-		//TODO: Setup dynamic watch - maybe a first pass periodically re-reconciles (like kapp controller)
+		//TODO: Setup dynamic watch - first pass periodically re-reconciles
 		if err := client.Get(ctx, key, &unstructuredResource); err != nil {
 			return nil, err
 		}
@@ -269,7 +269,7 @@ func resolveInputResources(ctx context.Context, secretTemplate *sg2v1alpha1.Secr
 }
 
 func resolveInputResource(ref sg2v1alpha1.InputResourceRef, namespace string, inputResources map[string]interface{}) (unstructured.Unstructured, error) {
-	//TODO should we only search for jsonpath expressions in name? Probably.
+	// Only support jsonpath for Input Resource Reference Names.
 	resolvedName, err := JSONPath(ref.Name).EvaluateWith(inputResources)
 	if err != nil {
 		return unstructured.Unstructured{}, err
@@ -277,8 +277,6 @@ func resolveInputResource(ref sg2v1alpha1.InputResourceRef, namespace string, in
 
 	return toUnstructured(ref.APIVersion, ref.Kind, namespace, resolvedName.String())
 }
-
-//TODO how does this package from k8s align with our usecases? Do other packages exist?
 
 func toUnstructured(apiVersion, kind, namespace, name string) (unstructured.Unstructured, error) {
 	gv, err := schema.ParseGroupVersion(apiVersion)

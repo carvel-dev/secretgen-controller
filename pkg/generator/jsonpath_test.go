@@ -92,8 +92,8 @@ func Test_SecretTemplate_CountDelimiterPairs(t *testing.T) {
 		{expression: "foo)", count: 0},  // ?
 		{expression: "$($(foo))", count: 1},
 
-		//failing
 		{expression: "$(.data.value)-middle-$(.data.value2)", count: 2},
+		{expression: "$(.data.foo)-)", count: 1},
 		{expression: "$(.data.foo)-)", count: 1},
 	}
 
