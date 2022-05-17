@@ -79,6 +79,7 @@ func (r *SecretTemplateReconciler) Reconcile(ctx context.Context, request reconc
 
 	res, err := r.reconcile(ctx, &secretTemplate)
 
+	//TODO is this overly defensive?
 	if err != nil {
 		if deleteErr := r.deleteChildSecret(ctx, &secretTemplate); deleteErr != nil {
 			return reconcile.Result{}, secretTemplate.Status.WithReady(deleteErr)
@@ -93,7 +94,7 @@ func (r *SecretTemplateReconciler) reconcile(ctx context.Context, secretTemplate
 	//Get client to fetch inputResources
 	inputResourceclient, err := r.clientForSecretTemplate(ctx, secretTemplate)
 	if err != nil {
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("unable to load client for reading Input Resources: %w", err)
 	}
 
 	//Resolve input resources
@@ -222,7 +223,6 @@ func (r *SecretTemplateReconciler) updateStatus(ctx context.Context, secretTempl
 
 func (r *SecretTemplateReconciler) deleteChildSecret(ctx context.Context, secretTemplate *sg2v1alpha1.SecretTemplate) error {
 	secret := corev1.Secret{}
-
 	if err := r.client.Get(ctx, types.NamespacedName{Namespace: secretTemplate.GetName(), Name: secretTemplate.GetNamespace()}, &secret); err != nil {
 		if errors.IsNotFound(err) {
 			return nil
@@ -256,14 +256,14 @@ func resolveInputResources(ctx context.Context, secretTemplate *sg2v1alpha1.Secr
 	for _, inputResource := range secretTemplate.Spec.InputResources {
 		unstructuredResource, err := resolveInputResource(inputResource.Ref, secretTemplate.Namespace, resolvedInputResources)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("unable to resolve input resource %s: %w", inputResource.Name, err)
 		}
 
 		key := types.NamespacedName{Namespace: secretTemplate.Namespace, Name: unstructuredResource.GetName()}
 
 		//TODO: Setup dynamic watch - first pass periodically re-reconciles
 		if err := client.Get(ctx, key, &unstructuredResource); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("cannot fetch input resource %s: %w", unstructuredResource.GetName(), err)
 		}
 
 		resolvedInputResources[inputResource.Name] = unstructuredResource.UnstructuredContent()
