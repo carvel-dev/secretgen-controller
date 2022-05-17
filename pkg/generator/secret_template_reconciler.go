@@ -75,6 +75,12 @@ func (r *SecretTemplateReconciler) Reconcile(ctx context.Context, request reconc
 	defer r.updateStatus(ctx, &secretTemplate)
 	res, err := r.reconcile(ctx, &secretTemplate)
 
+	if err != nil {
+		if deleteErr := r.deleteChildSecret(ctx, &secretTemplate); deleteErr != nil {
+			return reconcile.Result{}, secretTemplate.Status.WithReady(deleteErr)
+		}
+	}
+
 	return res, secretTemplate.Status.WithReady(err)
 }
 
@@ -84,11 +90,6 @@ func (r *SecretTemplateReconciler) reconcile(ctx context.Context, secretTemplate
 	//Get client to fetch inputResources
 	inputResourceclient, err := r.clientForSecretTemplate(ctx, secretTemplate)
 	if err != nil {
-		deleteErr := deleteChildSecret(ctx, r.client, secretTemplate)
-		if deleteErr != nil {
-			return reconcile.Result{}, deleteErr
-		}
-
 		return reconcile.Result{}, err
 	}
 
@@ -101,12 +102,6 @@ func (r *SecretTemplateReconciler) reconcile(ctx context.Context, secretTemplate
 			Reason:  "UnableToResolveInputResources",
 			Message: err.Error(),
 		})
-
-		deleteErr := deleteChildSecret(ctx, r.client, secretTemplate)
-		if deleteErr != nil {
-			return reconcile.Result{}, deleteErr
-		}
-
 		return reconcile.Result{}, err
 	}
 
@@ -127,12 +122,6 @@ func (r *SecretTemplateReconciler) reconcile(ctx context.Context, secretTemplate
 				Reason:  "UnableToTemplateSecretData",
 				Message: dataErr.Error(),
 			})
-
-			deleteErr := deleteChildSecret(ctx, r.client, secretTemplate)
-			if deleteErr != nil {
-				return reconcile.Result{}, deleteErr
-			}
-
 			return reconcile.Result{}, dataErr
 		}
 
@@ -156,11 +145,6 @@ func (r *SecretTemplateReconciler) reconcile(ctx context.Context, secretTemplate
 				Reason:  "UnableToTemplateSecretStringData",
 				Message: stringDataErr.Error(),
 			})
-
-			deleteErr := deleteChildSecret(ctx, r.client, secretTemplate)
-			if deleteErr != nil {
-				return reconcile.Result{}, deleteErr
-			}
 
 			return reconcile.Result{}, stringDataErr
 		}
@@ -233,6 +217,22 @@ func (r *SecretTemplateReconciler) updateStatus(ctx context.Context, secretTempl
 	return nil
 }
 
+func (r *SecretTemplateReconciler) deleteChildSecret(ctx context.Context, secretTemplate *sg2v1alpha1.SecretTemplate) error {
+	secret := corev1.Secret{}
+
+	if err := r.client.Get(ctx, types.NamespacedName{Namespace: secretTemplate.GetName(), Name: secretTemplate.GetNamespace()}, &secret); err != nil {
+		if errors.IsNotFound(err) {
+			return nil
+		}
+	}
+
+	if err := r.client.Delete(ctx, &secret); err != nil {
+		return fmt.Errorf("deleting secret: %w", err)
+	}
+
+	return nil
+}
+
 // Returns a client that was created using Service Account specified in the SecretTemplate spec.
 // If no service account was specified then it returns the same Client as used by the SecretTemplateReconciler.
 func (r *SecretTemplateReconciler) clientForSecretTemplate(ctx context.Context, secretTemplate *sg2v1alpha1.SecretTemplate) (client.Client, error) {
@@ -296,22 +296,4 @@ func toUnstructured(apiVersion, kind, namespace, name string) (unstructured.Unst
 	obj.SetNamespace(namespace)
 
 	return obj, nil
-}
-
-func deleteChildSecret(ctx context.Context, c client.Client, secretTemplate *sg2v1alpha1.SecretTemplate) error {
-	secret := corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      secretTemplate.GetName(),
-			Namespace: secretTemplate.GetNamespace(),
-		},
-	}
-	if err := c.Delete(ctx, &secret); err != nil {
-		if errors.IsNotFound(err) {
-			return nil
-		}
-
-		return fmt.Errorf("deleting secret: %w", err)
-	}
-
-	return nil
 }
