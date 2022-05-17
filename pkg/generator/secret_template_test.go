@@ -196,10 +196,7 @@ func Test_SecretTemplate(t *testing.T) {
 			require.NoError(t, err)
 
 			assert.Equal(t, []sgv1alpha1.Condition{
-				{Type: sg2v1alpha1.InputResourcesFound, Status: corev1.ConditionTrue},
-				{Type: sg2v1alpha1.TemplatingSucceeded, Status: corev1.ConditionTrue},
-				{Type: sg2v1alpha1.SecretCreated, Status: corev1.ConditionTrue},
-				{Type: sg2v1alpha1.Ready, Status: corev1.ConditionTrue},
+				{Type: sgv1alpha1.ReconcileSucceeded, Status: corev1.ConditionTrue},
 			}, secretTemplate.Status.Conditions)
 
 			var secret corev1.Secret
@@ -226,10 +223,10 @@ func Test_SecretTemplate(t *testing.T) {
 
 func Test_SecretTemplate_Errors(t *testing.T) {
 	type test struct {
-		name               string
-		template           sg2v1alpha1.SecretTemplate
-		existingObjects    []client.Object
-		expectedConditions []sgv1alpha1.Condition
+		name            string
+		template        sg2v1alpha1.SecretTemplate
+		existingObjects []client.Object
+		expectedError   string
 	}
 
 	tests := []test{
@@ -260,17 +257,7 @@ func Test_SecretTemplate_Errors(t *testing.T) {
 					},
 				},
 			},
-			expectedConditions: []sgv1alpha1.Condition{
-				{
-					Type:    sg2v1alpha1.InputResourcesFound,
-					Status:  corev1.ConditionFalse,
-					Reason:  "UnableToResolveInputResources",
-					Message: "secrets \"existingSecret\" not found",
-				},
-				{Type: sg2v1alpha1.TemplatingSucceeded, Status: corev1.ConditionUnknown},
-				{Type: sg2v1alpha1.SecretCreated, Status: corev1.ConditionUnknown},
-				{Type: sg2v1alpha1.Ready, Status: corev1.ConditionFalse},
-			},
+			expectedError: "cannot fetch input resource existingSecret: secrets \"existingSecret\" not found",
 		},
 		{
 			name: "reconciling secret template with jsonpath that doesn't evaluate in data",
@@ -308,17 +295,7 @@ func Test_SecretTemplate_Errors(t *testing.T) {
 					"key3": "value3",
 				}),
 			},
-			expectedConditions: []sgv1alpha1.Condition{
-				{Type: sg2v1alpha1.InputResourcesFound, Status: corev1.ConditionTrue},
-				{
-					Type:    sg2v1alpha1.TemplatingSucceeded,
-					Status:  corev1.ConditionFalse,
-					Reason:  "UnableToTemplateSecretData",
-					Message: "templating data: doesntExist1 is not found",
-				},
-				{Type: sg2v1alpha1.SecretCreated, Status: corev1.ConditionUnknown},
-				{Type: sg2v1alpha1.Ready, Status: corev1.ConditionFalse},
-			},
+			expectedError: "templating data: doesntExist1 is not found",
 		},
 		{
 			name: "reconciling secret template with jsonpath that doesn't evaluate in stringdata",
@@ -351,17 +328,7 @@ func Test_SecretTemplate_Errors(t *testing.T) {
 					"key1": "prefix-value1-suffix",
 				}),
 			},
-			expectedConditions: []sgv1alpha1.Condition{
-				{Type: sg2v1alpha1.InputResourcesFound, Status: corev1.ConditionTrue},
-				{
-					Type:    sg2v1alpha1.TemplatingSucceeded,
-					Status:  corev1.ConditionFalse,
-					Reason:  "UnableToTemplateSecretStringData",
-					Message: "templating stringData: doesntExist is not found",
-				},
-				{Type: sg2v1alpha1.SecretCreated, Status: corev1.ConditionUnknown},
-				{Type: sg2v1alpha1.Ready, Status: corev1.ConditionFalse},
-			},
+			expectedError: "templating stringData: doesntExist is not found",
 		},
 	}
 
@@ -377,7 +344,9 @@ func Test_SecretTemplate_Errors(t *testing.T) {
 			err = k8sClient.Get(context.Background(), namespacedNameFor(&tc.template), &secretTemplate)
 			require.NoError(t, err)
 
-			assert.ElementsMatch(t, tc.expectedConditions, secretTemplate.Status.Conditions)
+			assert.Equal(t, []sgv1alpha1.Condition{
+				{Type: sgv1alpha1.ReconcileFailed, Status: corev1.ConditionTrue, Message: tc.expectedError},
+			}, secretTemplate.Status.Conditions)
 
 			var secret corev1.Secret
 			err = k8sClient.Get(context.Background(), types.NamespacedName{

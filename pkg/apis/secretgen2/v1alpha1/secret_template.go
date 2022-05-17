@@ -9,14 +9,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const (
-	// Status Condition Types
-	InputResourcesFound = "InputResourcesFound"
-	TemplatingSucceeded = "TemplatingSucceeded"
-	SecretCreated       = "SecretCreated"
-	Ready               = "Ready"
-)
-
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +kubebuilder:subresource:status
@@ -102,39 +94,6 @@ type SecretTemplateStatus struct {
 	sgv1alpha1.GenericStatus `json:",inline"`
 	// +optional
 	ObservedSecretResourceVersion string `json:"observedSecretResourceVersion,omitempty"`
-}
-
-func (s *SecretTemplateStatus) WithReady(err error) error {
-	if err != nil {
-		s.UpdateCondition(sgv1alpha1.Condition{
-			Type:   "Ready",
-			Status: corev1.ConditionFalse,
-		})
-	} else {
-		s.UpdateCondition(sgv1alpha1.Condition{
-			Type:   "Ready",
-			Status: corev1.ConditionTrue,
-		})
-	}
-	return err
-}
-
-func (s *SecretTemplateStatus) UpdateCondition(newCondition sgv1alpha1.Condition) {
-	for i, c := range s.Conditions {
-		if c.Type == newCondition.Type {
-			s.Conditions = append(s.Conditions[:i], s.Conditions[i+1:]...)
-		}
-	}
-	s.Conditions = append(s.Conditions, newCondition)
-}
-
-func (s *SecretTemplateStatus) InitializeConditions() {
-	s.Conditions = []sgv1alpha1.Condition{
-		{Type: InputResourcesFound, Status: corev1.ConditionUnknown},
-		{Type: TemplatingSucceeded, Status: corev1.ConditionUnknown},
-		{Type: SecretCreated, Status: corev1.ConditionUnknown},
-		{Type: Ready, Status: corev1.ConditionUnknown},
-	}
 }
 
 func (e SecretTemplate) Validate() error {

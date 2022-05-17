@@ -117,19 +117,7 @@ spec:
 
 		expectedStatus := []sgv1alpha1.Condition{
 			{
-				Type:   "InputResourcesFound",
-				Status: corev1.ConditionTrue,
-			},
-			{
-				Type:   "TemplatingSucceeded",
-				Status: corev1.ConditionTrue,
-			},
-			{
-				Type:   "SecretCreated",
-				Status: corev1.ConditionTrue,
-			},
-			{
-				Type:   "Ready",
+				Type:   "ReconcileSucceeded",
 				Status: corev1.ConditionTrue,
 			},
 		}
@@ -283,22 +271,11 @@ spec:
 
 		expectedStatus := []sgv1alpha1.Condition{
 			{
-				Type:   "InputResourcesFound",
-				Status: corev1.ConditionTrue,
-			},
-			{
-				Type:   "TemplatingSucceeded",
-				Status: corev1.ConditionTrue,
-			},
-			{
-				Type:   "SecretCreated",
-				Status: corev1.ConditionTrue,
-			},
-			{
-				Type:   "Ready",
+				Type:   "ReconcileSucceeded",
 				Status: corev1.ConditionTrue,
 			},
 		}
+
 		if !reflect.DeepEqual(secretTemplate.Status.Conditions, expectedStatus) {
 			t.Fatalf("Expected conditions to match, but was: %#v vs %s", secretTemplate.Status.Conditions, out)
 		}

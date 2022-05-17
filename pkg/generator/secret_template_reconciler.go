@@ -13,6 +13,7 @@ import (
 	sgv1alpha1 "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/apis/secretgen/v1alpha1"
 	sg2v1alpha1 "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/apis/secretgen2/v1alpha1"
 	"github.com/vmware-tanzu/carvel-secretgen-controller/pkg/client2/clientset/versioned/scheme"
+	"github.com/vmware-tanzu/carvel-secretgen-controller/pkg/reconciler"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -72,21 +73,23 @@ func (r *SecretTemplateReconciler) Reconcile(ctx context.Context, request reconc
 		return reconcile.Result{}, nil
 	}
 
+	status := &reconciler.Status{
+		secretTemplate.Status.GenericStatus,
+		func(st sgv1alpha1.GenericStatus) { secretTemplate.Status.GenericStatus = st },
+	}
+
+	status.SetReconciling(secretTemplate.ObjectMeta)
 	defer r.updateStatus(ctx, &secretTemplate)
 
-	secretTemplate.Status.InitializeConditions()
-	secretTemplate.Status.ObservedGeneration = secretTemplate.Generation
-
 	res, err := r.reconcile(ctx, &secretTemplate)
-
 	//TODO is this overly defensive?
 	if err != nil {
 		if deleteErr := r.deleteChildSecret(ctx, &secretTemplate); deleteErr != nil {
-			return reconcile.Result{}, secretTemplate.Status.WithReady(deleteErr)
+			return status.WithReconcileCompleted(res, deleteErr)
 		}
 	}
 
-	return res, secretTemplate.Status.WithReady(err)
+	return status.WithReconcileCompleted(res, err)
 }
 
 func (r *SecretTemplateReconciler) reconcile(ctx context.Context, secretTemplate *sg2v1alpha1.SecretTemplate) (reconcile.Result, error) {
@@ -100,33 +103,15 @@ func (r *SecretTemplateReconciler) reconcile(ctx context.Context, secretTemplate
 	//Resolve input resources
 	inputResources, err := resolveInputResources(ctx, secretTemplate, inputResourceclient)
 	if err != nil {
-		secretTemplate.Status.UpdateCondition(sgv1alpha1.Condition{
-			Type:    sg2v1alpha1.InputResourcesFound,
-			Status:  corev1.ConditionFalse,
-			Reason:  "UnableToResolveInputResources",
-			Message: err.Error(),
-		})
 		return reconcile.Result{}, err
 	}
-
-	secretTemplate.Status.UpdateCondition(sgv1alpha1.Condition{
-		Type:   sg2v1alpha1.InputResourcesFound,
-		Status: corev1.ConditionTrue,
-	})
 
 	//Template Secret Data
 	secretData := map[string][]byte{}
 	for key, expression := range secretTemplate.Spec.JSONPathTemplate.Data {
 		valueBuffer, err := JSONPath(expression).EvaluateWith(inputResources)
 		if err != nil {
-			dataErr := fmt.Errorf("templating data: %w", err)
-			secretTemplate.Status.UpdateCondition(sgv1alpha1.Condition{
-				Type:    sg2v1alpha1.TemplatingSucceeded,
-				Status:  corev1.ConditionFalse,
-				Reason:  "UnableToTemplateSecretData",
-				Message: dataErr.Error(),
-			})
-			return reconcile.Result{}, dataErr
+			return reconcile.Result{}, fmt.Errorf("templating data: %w", err)
 		}
 
 		decoded, err := base64.StdEncoding.DecodeString(valueBuffer.String())
@@ -142,24 +127,11 @@ func (r *SecretTemplateReconciler) reconcile(ctx context.Context, secretTemplate
 	for key, expression := range secretTemplate.Spec.JSONPathTemplate.StringData {
 		valueBuffer, err := JSONPath(expression).EvaluateWith(inputResources)
 		if err != nil {
-			stringDataErr := fmt.Errorf("templating stringData: %w", err)
-			secretTemplate.Status.UpdateCondition(sgv1alpha1.Condition{
-				Type:    sg2v1alpha1.TemplatingSucceeded,
-				Status:  corev1.ConditionFalse,
-				Reason:  "UnableToTemplateSecretStringData",
-				Message: stringDataErr.Error(),
-			})
-
-			return reconcile.Result{}, stringDataErr
+			return reconcile.Result{}, fmt.Errorf("templating stringData: %w", err)
 		}
 
 		secretStringData[key] = valueBuffer.String()
 	}
-
-	secretTemplate.Status.UpdateCondition(sgv1alpha1.Condition{
-		Type:   sg2v1alpha1.TemplatingSucceeded,
-		Status: corev1.ConditionTrue,
-	})
 
 	//Create Secret
 	secret := corev1.Secret{
@@ -169,7 +141,7 @@ func (r *SecretTemplateReconciler) reconcile(ctx context.Context, secretTemplate
 		},
 	}
 
-	if op, err := controllerutil.CreateOrUpdate(ctx, r.client, &secret, func() error {
+	if _, err = controllerutil.CreateOrUpdate(ctx, r.client, &secret, func() error {
 		secret.ObjectMeta.Labels = secretTemplate.GetLabels()
 		secret.ObjectMeta.Annotations = secretTemplate.GetAnnotations()
 		secret.StringData = secretStringData
@@ -177,29 +149,10 @@ func (r *SecretTemplateReconciler) reconcile(ctx context.Context, secretTemplate
 
 		return controllerutil.SetControllerReference(secretTemplate, &secret, scheme.Scheme)
 	}); err != nil {
-		var reason string
-		switch op {
-		case controllerutil.OperationResultUpdated:
-			reason = "UnableToUpdateSecret"
-		case controllerutil.OperationResultCreated:
-			reason = "UnableToCreateSecret"
-		}
-		secretTemplate.Status.UpdateCondition(sgv1alpha1.Condition{
-			Type:    sg2v1alpha1.SecretCreated,
-			Status:  corev1.ConditionFalse,
-			Reason:  reason,
-			Message: err.Error(),
-		})
-
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("creating/updating secret: %w", err)
 	}
 
 	secretTemplate.Status.Secret.Name = secret.Name
-
-	secretTemplate.Status.UpdateCondition(sgv1alpha1.Condition{
-		Type:   sg2v1alpha1.SecretCreated,
-		Status: corev1.ConditionTrue,
-	})
 
 	return reconcile.Result{
 		RequeueAfter: syncPeriod,
