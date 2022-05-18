@@ -221,6 +221,20 @@ spec:
                       type: string
                     description: 'Data key and value. Where key is the Secret Key and the value is a jsonpath surrounded by $( ). The fetched data MUST be base64 encoded. All InputResources are available via their identifying name. For example: key1: $(.secretinput1.data.value1) key2: $(.secretinput2.data.value2)'
                     type: object
+                  metadata:
+                    description: Metadata contains metadata for the Secret
+                    properties:
+                      annotations:
+                        additionalProperties:
+                          type: string
+                        description: Annotations to be placed on the generated secret
+                        type: object
+                      labels:
+                        additionalProperties:
+                          type: string
+                        description: Labels to be placed on the generated secret
+                        type: object
+                    type: object
                   stringData:
                     additionalProperties:
                       type: string
