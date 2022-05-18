@@ -102,11 +102,11 @@ spec:
 			"key4": []byte("val4"),
 		}
 		if !reflect.DeepEqual(secret.Data, expectedData) {
-			t.Fatalf("Expected secret data to match, but was: %#v vs %s", secret.Data, out)
+			t.Fatalf("Expected secret data to match, but was: %#v vs %s", secret.Data, expectedData)
 		}
 
-		if !reflect.DeepEqual(secret.Type, "secret-type") {
-			t.Fatalf("Expected secret type to match, but was: %#v vs %s", secret.Type, out)
+		if !reflect.DeepEqual(string(secret.Type), "secret-type") {
+			t.Fatalf("Expected secret type to match, but was: %s vs %s", secret.Type, "secret-type")
 		}
 	})
 
