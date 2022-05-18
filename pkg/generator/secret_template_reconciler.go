@@ -35,6 +35,7 @@ const (
 	syncPeriod = 30 * time.Second
 )
 
+// ClientLoader allows Kubernetes Clients to be loaded from a Service Account.
 type ClientLoader interface {
 	Client(ctx context.Context, saName, saNamespace string) (client.Client, error)
 }
@@ -100,7 +101,6 @@ func (r *SecretTemplateReconciler) Reconcile(ctx context.Context, request reconc
 }
 
 func (r *SecretTemplateReconciler) reconcile(ctx context.Context, secretTemplate *sg2v1alpha1.SecretTemplate) (reconcile.Result, error) {
-
 	//Resolve input resources
 	inputResources, err := r.resolveInputResources(ctx, secretTemplate)
 	if err != nil {
