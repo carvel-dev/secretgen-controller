@@ -91,7 +91,7 @@ type JSONPathTemplate struct {
 	// +optional
 	Data map[string]string `json:"data,omitempty"`
 
-	//Type is the type of Kubernetes Secret.
+	//Type is the type of Kubernetes Secret
 	// +optional
 	Type corev1.SecretType `json:"type,omitempty"`
 }
