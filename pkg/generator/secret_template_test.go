@@ -285,6 +285,10 @@ func Test_SecretTemplate(t *testing.T) {
 				assert.Equal(t, tc.expectedType, string(secret.Type))
 			}
 
+			if secretTemplate.Status.Secret.Name != secretTemplate.GetName() {
+				assert.Fail(t, "reference secret name incorrect", "reference secret name incorrect %s, but got %s", secretTemplate.GetName(), secretTemplate.Status.Secret.Name)
+			}
+
 			if !reflect.DeepEqual(secret.ObjectMeta.Annotations, tc.expectedAnnotations) {
 				assert.Fail(t, "annotations did not match", "annotations not equal expected %+v, but got %+v", tc.expectedAnnotations, secret.ObjectMeta.Annotations)
 			}
@@ -333,6 +337,36 @@ func Test_SecretTemplate_Errors(t *testing.T) {
 				},
 			},
 			expectedError: "cannot fetch input resource existingSecret: secrets \"existingSecret\" not found",
+		},
+		{
+			name: "reconciling secret template referencing a resource with invalid apiversion",
+			template: sg2v1alpha1.SecretTemplate{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "secretTemplate",
+					Namespace: "test",
+				},
+				Spec: sg2v1alpha1.SecretTemplateSpec{
+					ServiceAccountName: "test",
+					InputResources: []sg2v1alpha1.InputResource{{
+						Name: "creds",
+						Ref: sg2v1alpha1.InputResourceRef{
+							APIVersion: "//v1",
+							Kind:       "ConfigMap",
+							Name:       "existingConfigMap",
+						},
+					}},
+					JSONPathTemplate: sg2v1alpha1.JSONPathTemplate{
+						Data: map[string]string{
+							"key1": "$( .creds.data.inputKey1 )",
+							"key2": "$( .creds.data.inputKey2 )",
+						},
+						StringData: map[string]string{
+							"key3": "value3",
+						},
+					},
+				},
+			},
+			expectedError: "unable to resolve input resource creds: unexpected GroupVersion string: //v1",
 		},
 		{
 			name: "reconciling secret template with jsonpath that doesn't evaluate in data",
@@ -454,6 +488,65 @@ func Test_SecretTemplate_Errors(t *testing.T) {
 			assert.Equal(t, []sgv1alpha1.Condition{
 				{Type: sgv1alpha1.ReconcileFailed, Status: corev1.ConditionTrue, Message: tc.expectedError},
 			}, secretTemplate.Status.Conditions)
+
+			var secret corev1.Secret
+			err = k8sClient.Get(context.Background(), types.NamespacedName{
+				Name:      secretTemplate.Status.Secret.Name,
+				Namespace: secretTemplate.GetNamespace(),
+			}, &secret)
+			require.Error(t, err)
+		})
+	}
+}
+
+func Test_SecretTemplate_Deletion(t *testing.T) {
+	type test struct {
+		name     string
+		template sg2v1alpha1.SecretTemplate
+	}
+
+	tests := []test{
+		{
+			name: "reconciling secret template with deletion timestamp",
+			template: sg2v1alpha1.SecretTemplate{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:              "secretTemplate",
+					Namespace:         "test",
+					DeletionTimestamp: &metav1.Time{Time: time.Now()},
+				},
+				Spec: sg2v1alpha1.SecretTemplateSpec{
+					InputResources: []sg2v1alpha1.InputResource{{
+						Name: "creds",
+						Ref: sg2v1alpha1.InputResourceRef{
+							APIVersion: "v1",
+							Kind:       "Secret",
+							Name:       "existingSecret",
+						},
+					}},
+					JSONPathTemplate: sg2v1alpha1.JSONPathTemplate{
+						Data: map[string]string{
+							"key1": "$( .creds.data.inputKey1 )",
+							"key2": "$( .creds.data.inputKey2 )",
+						},
+						StringData: map[string]string{
+							"key3": "value3",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			secretTemplateReconciler, k8sClient := newReconciler(&tc.template)
+
+			_, err := reconcileObject(t, secretTemplateReconciler, &tc.template)
+			require.NoError(t, err)
+
+			var secretTemplate sg2v1alpha1.SecretTemplate
+			err = k8sClient.Get(context.Background(), namespacedNameFor(&tc.template), &secretTemplate)
+			require.NoError(t, err)
 
 			var secret corev1.Secret
 			err = k8sClient.Get(context.Background(), types.NamespacedName{
