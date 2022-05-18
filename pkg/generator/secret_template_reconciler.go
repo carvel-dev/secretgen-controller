@@ -143,12 +143,12 @@ func (r *SecretTemplateReconciler) reconcile(ctx context.Context, secretTemplate
 	}
 
 	if _, err = controllerutil.CreateOrUpdate(ctx, r.client, &secret, func() error {
-		secret.ObjectMeta.Labels = secretTemplate.GetLabels()
-		secret.ObjectMeta.Annotations = secretTemplate.GetAnnotations()
+		secret.ObjectMeta.Labels = secretTemplate.Spec.JSONPathTemplate.Metadata.Labels
+		secret.ObjectMeta.Annotations = secretTemplate.Spec.JSONPathTemplate.Metadata.Annotations
 		secret.StringData = secretStringData
 		secret.Data = secretData
 
-		// Secret Type is immutable, cannot update. TODO what is the best here?
+		// Secret Type is immutable, so cannot be updated. TODO what to do here?
 		if secret.Type == "" {
 			secret.Type = secretTemplate.Spec.JSONPathTemplate.Type
 		}

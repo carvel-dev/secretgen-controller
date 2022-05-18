@@ -94,6 +94,20 @@ type JSONPathTemplate struct {
 	//Type is the type of Kubernetes Secret
 	// +optional
 	Type corev1.SecretType `json:"type,omitempty"`
+
+	//Metadata contains metadata for the Secret
+	// +optional
+	Metadata SecretTemplateMetadata `json:"metadata,omitempty"`
+}
+
+//SecretTemplateMetadata allows the generated secret to contain metadata
+type SecretTemplateMetadata struct {
+	//Annotations to be placed on the generated secret
+	// +optional
+	Annotations map[string]string `json:"annotations,omitempty"`
+	//Labels to be placed on the generated secret
+	// +optional
+	Labels map[string]string `json:"labels,omitempty"`
 }
 
 // SecretTemplateStatus contains status information

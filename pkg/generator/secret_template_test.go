@@ -5,6 +5,7 @@ package generator_test
 
 import (
 	"context"
+	"reflect"
 	"testing"
 	"time"
 
@@ -26,10 +27,13 @@ import (
 
 func Test_SecretTemplate(t *testing.T) {
 	type test struct {
-		name            string
-		template        sg2v1alpha1.SecretTemplate
-		existingObjects []client.Object
-		expectedData    map[string]string
+		name                string
+		template            sg2v1alpha1.SecretTemplate
+		existingObjects     []client.Object
+		expectedData        map[string]string
+		expectedType        string
+		expectedLabels      map[string]string
+		expectedAnnotations map[string]string
 	}
 
 	tests := []test{
@@ -147,6 +151,64 @@ func Test_SecretTemplate(t *testing.T) {
 				"key1": "prefix-value1-suffix",
 			},
 		},
+		{
+			name: "reconciling secret template with type, annotations and labels",
+			template: sg2v1alpha1.SecretTemplate{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "secretTemplate",
+					Namespace: "test",
+				},
+				Spec: sg2v1alpha1.SecretTemplateSpec{
+					InputResources: []sg2v1alpha1.InputResource{{
+						Name: "creds",
+						Ref: sg2v1alpha1.InputResourceRef{
+							APIVersion: "v1",
+							Kind:       "Secret",
+							Name:       "existingSecret",
+						},
+					}},
+					JSONPathTemplate: sg2v1alpha1.JSONPathTemplate{
+						Type: "some-type",
+						Metadata: sg2v1alpha1.SecretTemplateMetadata{
+							Labels: map[string]string{
+								"label1key": "label1value",
+								"label2key": "label2value",
+							},
+							Annotations: map[string]string{
+								"annotation1key": "annotation1value",
+								"annotation2key": "annotation2value",
+							},
+						},
+						Data: map[string]string{
+							"key1": "$( .creds.data.inputKey1 )",
+							"key2": "$( .creds.data.inputKey2 )",
+						},
+						StringData: map[string]string{
+							"key3": "value3",
+						},
+					},
+				},
+			},
+			existingObjects: []client.Object{
+				secret("existingSecret", map[string]string{
+					"inputKey1": "value1",
+					"inputKey2": "value2"}),
+			},
+			expectedData: map[string]string{
+				"key1": "value1",
+				"key2": "value2",
+				"key3": "value3",
+			},
+			expectedType: "some-type",
+			expectedLabels: map[string]string{
+				"label1key": "label1value",
+				"label2key": "label2value",
+			},
+			expectedAnnotations: map[string]string{
+				"annotation1key": "annotation1value",
+				"annotation2key": "annotation2value",
+			},
+		},
 		// Failing (maybe this should only be supported in ytt?)
 		//
 		// {
@@ -217,6 +279,18 @@ func Test_SecretTemplate(t *testing.T) {
 
 			for key, value := range tc.expectedData {
 				assert.Equal(t, value, actual[key])
+			}
+
+			if tc.expectedType != "" {
+				assert.Equal(t, tc.expectedType, string(secret.Type))
+			}
+
+			if !reflect.DeepEqual(secret.ObjectMeta.Annotations, tc.expectedAnnotations) {
+				assert.Fail(t, "annotations did not match", "annotations not equal expected %+v, but got %+v", tc.expectedAnnotations, secret.ObjectMeta.Annotations)
+			}
+
+			if !reflect.DeepEqual(secret.ObjectMeta.Labels, tc.expectedLabels) {
+				assert.Fail(t, "labels did not match", "labels not equal expected %+v, but got %+v", tc.expectedLabels, secret.ObjectMeta.Labels)
 			}
 		})
 	}
