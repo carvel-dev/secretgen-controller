@@ -41,7 +41,7 @@ func (p JSONPath) EvaluateWith(values interface{}) (*bytes.Buffer, error) {
 // If the expression contains an opening $( and a closing ), toK8sJSONPathExpression will replace them with a { and a } respectively.
 func (p JSONPath) ToK8sJSONPath() string {
 	newPath := string(p)
-	var openPositions positions
+	var openPositions stack
 
 	for i := 0; i < len(newPath); i++ {
 		switch string(newPath[i]) {
@@ -69,13 +69,13 @@ func replace(s string, i int, old, new string) string {
 	return strings.Join([]string{s[0:i], s[i+len(old):]}, new)
 }
 
-type positions []int
+type stack []int
 
-func (s positions) push(position int) positions {
+func (s stack) push(position int) stack {
 	return append(s, position)
 }
 
-func (s positions) pop() positions {
+func (s stack) pop() stack {
 	if s.peek() == -1 {
 		return s
 	} else {
@@ -83,7 +83,7 @@ func (s positions) pop() positions {
 	}
 }
 
-func (s positions) peek() int {
+func (s stack) peek() int {
 	if len(s) == 0 {
 		return -1
 	}
