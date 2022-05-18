@@ -6,12 +6,14 @@ package generator
 import (
 	"context"
 	"fmt"
+	"net"
+	"os"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
+	certutil "k8s.io/client-go/util/cert"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	ctrl "sigs.k8s.io/controller-runtime/pkg/client/config"
 )
 
 const (
@@ -40,10 +42,12 @@ func (s *ServiceAccountLoader) Client(ctx context.Context, saName, saNamespace s
 }
 
 func (s *ServiceAccountLoader) restConfig(ctx context.Context, saName, saNamespace string) (*rest.Config, error) {
-	//Get existing config and override - should we do this another way?
-	cfg, err := ctrl.GetConfig()
-	if err != nil {
-		return nil, err
+	const (
+		rootCAFile = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+	)
+	host, port := os.Getenv("KUBERNETES_SERVICE_HOST"), os.Getenv("KUBERNETES_SERVICE_PORT")
+	if len(host) == 0 || len(port) == 0 {
+		return nil, rest.ErrNotInCluster
 	}
 
 	token, err := s.serviceAccountToken(ctx, saName, saNamespace)
@@ -51,10 +55,19 @@ func (s *ServiceAccountLoader) restConfig(ctx context.Context, saName, saNamespa
 		return nil, err
 	}
 
-	cfg.BearerTokenFile = "" //Ensure this is not set.
-	cfg.BearerToken = string(token)
+	tlsClientConfig := rest.TLSClientConfig{}
 
-	return cfg, nil
+	if _, err := certutil.NewPool(rootCAFile); err != nil {
+		return nil, fmt.Errorf("Expected to load root CA config from %s, but got err: %v", rootCAFile, err)
+	} else {
+		tlsClientConfig.CAFile = rootCAFile
+	}
+
+	return &rest.Config{
+		Host:            "https://" + net.JoinHostPort(host, port),
+		TLSClientConfig: tlsClientConfig,
+		BearerToken:     string(token),
+	}, nil
 }
 
 func (s *ServiceAccountLoader) serviceAccountToken(ctx context.Context, name, namespace string) ([]byte, error) {
