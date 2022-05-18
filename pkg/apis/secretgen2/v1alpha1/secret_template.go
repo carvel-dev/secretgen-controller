@@ -51,8 +51,7 @@ type SecretTemplateSpec struct {
 	// +optional
 	JSONPathTemplate JSONPathTemplate `json:"template,omitempty"`
 
-	//The Service Account used to read inputResources. If not specified, then the Service Account of
-	//secretgen controller is used.
+	//The Service Account used to read InputResources. If not specified, only Secrets can be read as InputResources.
 	// +optional
 	ServiceAccountName string `json:"serviceAccountName,omitempty"`
 }

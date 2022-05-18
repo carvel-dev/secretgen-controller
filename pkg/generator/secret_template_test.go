@@ -86,20 +86,20 @@ func Test_SecretTemplate(t *testing.T) {
 							Kind:       "ConfigMap",
 							Name:       "first",
 						},
-					},
-						{
-							Name: "creds",
-							Ref: sg2v1alpha1.InputResourceRef{
-								APIVersion: "v1",
-								Kind:       "Secret",
-								Name:       "$( .first.data.secretName )",
-							},
-						}},
+					}, {
+						Name: "creds",
+						Ref: sg2v1alpha1.InputResourceRef{
+							APIVersion: "v1",
+							Kind:       "Secret",
+							Name:       "$( .first.data.secretName )",
+						},
+					}},
 					JSONPathTemplate: sg2v1alpha1.JSONPathTemplate{
 						Data: map[string]string{
 							"key1": "$( .creds.data.inputKey1 )",
 						},
 					},
+					ServiceAccountName: "service-account-client",
 				},
 			},
 			existingObjects: []client.Object{
@@ -135,6 +135,7 @@ func Test_SecretTemplate(t *testing.T) {
 							"key1": "prefix-$(.map.data.inputKey1)-suffix",
 						},
 					},
+					ServiceAccountName: "service-account-client",
 				},
 			},
 			existingObjects: []client.Object{
@@ -318,6 +319,7 @@ func Test_SecretTemplate_Errors(t *testing.T) {
 							"key1": "prefix-$(.map.data.doesntExist)-suffix",
 						},
 					},
+					ServiceAccountName: "service-account-client",
 				},
 			},
 			existingObjects: []client.Object{
@@ -329,6 +331,37 @@ func Test_SecretTemplate_Errors(t *testing.T) {
 				}),
 			},
 			expectedError: "templating stringData: doesntExist is not found",
+		},
+		{
+			name: "reconciling secret template referencing non-secret without service account",
+			template: sg2v1alpha1.SecretTemplate{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "secretTemplate",
+					Namespace: "test",
+				},
+				Spec: sg2v1alpha1.SecretTemplateSpec{
+					InputResources: []sg2v1alpha1.InputResource{{
+						Name: "creds",
+						Ref: sg2v1alpha1.InputResourceRef{
+							APIVersion: "v1",
+							Kind:       "ConfigMap",
+							Name:       "existingcfgmap",
+						},
+					}},
+					JSONPathTemplate: sg2v1alpha1.JSONPathTemplate{
+						StringData: map[string]string{
+							"key1": "$( .creds.data.inputKey1 )",
+						},
+					},
+					ServiceAccountName: "",
+				},
+			},
+			existingObjects: []client.Object{
+				configMap("existingcfgmap", map[string]string{
+					"inputKey1": "value1",
+				}),
+			},
+			expectedError: "unable to load non-secrets without a specified serviceaccount",
 		},
 	}
 
@@ -398,8 +431,8 @@ func newReconciler(objects ...client.Object) (secretTemplateReconciler *generato
 	testLogr := zap.New(zap.UseDevMode(true))
 	k8sClient = fakeClient.NewClientBuilder().WithObjects(objects...).WithScheme(scheme.Scheme).Build()
 
-	saLoader := generator.NewServiceAccountLoader(k8sClient)
-	secretTemplateReconciler = generator.NewSecretTemplateReconciler(k8sClient, saLoader, testLogr)
+	fakeClientLoader := fakeClientLoader{client: k8sClient}
+	secretTemplateReconciler = generator.NewSecretTemplateReconciler(k8sClient, &fakeClientLoader, testLogr)
 
 	return secretTemplateReconciler, k8sClient
 }
@@ -416,4 +449,13 @@ func namespacedNameFor(object client.Object) types.NamespacedName {
 		Name:      object.GetName(),
 		Namespace: object.GetNamespace(),
 	}
+}
+
+// fakeClientLoader simply returns the same client for any Service Account
+type fakeClientLoader struct {
+	client client.Client
+}
+
+func (f *fakeClientLoader) Client(ctx context.Context, saName, saNamespace string) (client.Client, error) {
+	return f.client, nil
 }

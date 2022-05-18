@@ -127,11 +127,11 @@ spec:
 			},
 		}
 		if !reflect.DeepEqual(secretTemplate.Status.Conditions, expectedStatus) {
-			t.Fatalf("Expected conditions to match, but was: %#v vs %s", secretTemplate.Status.Conditions, out)
+			t.Fatalf("Expected conditions to match, but was: %#v vs %s", secretTemplate.Status.Conditions, expectedStatus)
 		}
 
 		if !reflect.DeepEqual(secretTemplate.Status.Secret.Name, "combined-secret") {
-			t.Fatalf("Expected .status.secret.name reference to match, but was: %#v vs %s", secretTemplate.Status.Secret.Name, out)
+			t.Fatalf("Expected .status.secret.name reference to match, but was: %#v vs %s", secretTemplate.Status.Secret.Name, "combined-secret")
 		}
 	})
 }
@@ -260,7 +260,7 @@ spec:
 			"key4": []byte("val4"),
 		}
 		if !reflect.DeepEqual(secret.Data, expectedData) {
-			t.Fatalf("Expected secret data to match, but was: %#v vs %s", secret.Data, out)
+			t.Fatalf("Expected secret data to match, but was: %#v vs %s", secret.Data, expectedData)
 		}
 	})
 
@@ -282,11 +282,11 @@ spec:
 		}
 
 		if !reflect.DeepEqual(secretTemplate.Status.Conditions, expectedStatus) {
-			t.Fatalf("Expected conditions to match, but was: %#v vs %s", secretTemplate.Status.Conditions, out)
+			t.Fatalf("Expected conditions to match, but was: %#v vs %s", secretTemplate.Status.Conditions, expectedStatus)
 		}
 
 		if !reflect.DeepEqual(secretTemplate.Status.Secret.Name, "combined-secret-sa") {
-			t.Fatalf("Expected .status.secret.name reference to match, but was: %#v vs %s", secretTemplate.Status.Secret.Name, out)
+			t.Fatalf("Expected .status.secret.name reference to match, but was: %#v vs %s", secretTemplate.Status.Secret.Name, "combined-secret-sa")
 		}
 	})
 }
