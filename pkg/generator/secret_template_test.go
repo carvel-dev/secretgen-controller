@@ -261,6 +261,35 @@ func Test_SecretTemplate_Errors(t *testing.T) {
 			expectedError: "cannot fetch input resource existingSecret: secrets \"existingSecret\" not found",
 		},
 		{
+			name: "reconciling secret template referencing resource with invalid apiVersion",
+			template: sg2v1alpha1.SecretTemplate{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "secretTemplate",
+					Namespace: "test",
+				},
+				Spec: sg2v1alpha1.SecretTemplateSpec{
+					InputResources: []sg2v1alpha1.InputResource{{
+						Name: "creds",
+						Ref: sg2v1alpha1.InputResourceRef{
+							APIVersion: "//v1",
+							Kind:       "Secret",
+							Name:       "existingSecret",
+						},
+					}},
+					JSONPathTemplate: sg2v1alpha1.JSONPathTemplate{
+						Data: map[string]string{
+							"key1": "$( .creds.data.inputKey1 )",
+							"key2": "$( .creds.data.inputKey2 )",
+						},
+						StringData: map[string]string{
+							"key3": "value3",
+						},
+					},
+				},
+			},
+			expectedError: "unable to resolve input resource creds: unexpected GroupVersion string: //v1",
+		},
+		{
 			name: "reconciling secret template with jsonpath that doesn't evaluate in data",
 			template: sg2v1alpha1.SecretTemplate{
 				ObjectMeta: metav1.ObjectMeta{
