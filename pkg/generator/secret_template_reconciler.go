@@ -86,6 +86,7 @@ func (r *SecretTemplateReconciler) Reconcile(ctx context.Context, request reconc
 	res, err := r.reconcile(ctx, &secretTemplate)
 	//TODO is this overly defensive?
 	if err != nil {
+		secretTemplate.Status.Secret.Name = ""
 		if deleteErr := r.deleteChildSecret(ctx, &secretTemplate); deleteErr != nil {
 			return status.WithReconcileCompleted(res, deleteErr)
 		}
@@ -183,7 +184,7 @@ func (r *SecretTemplateReconciler) updateStatus(ctx context.Context, secretTempl
 
 func (r *SecretTemplateReconciler) deleteChildSecret(ctx context.Context, secretTemplate *sg2v1alpha1.SecretTemplate) error {
 	secret := corev1.Secret{}
-	if err := r.client.Get(ctx, types.NamespacedName{Namespace: secretTemplate.GetName(), Name: secretTemplate.GetNamespace()}, &secret); err != nil {
+	if err := r.client.Get(ctx, types.NamespacedName{Namespace: secretTemplate.GetNamespace(), Name: secretTemplate.GetName()}, &secret); err != nil {
 		if errors.IsNotFound(err) {
 			return nil
 		}
