@@ -34,7 +34,7 @@ metadata:
   namespace: sg-template-test1
 spec:
   inputResources:
-  - name: secret1 
+  - name: secret1
     ref:
       apiVersion: v1
       kind: Secret
@@ -46,7 +46,7 @@ spec:
       name: secret2
   template:
     type: secret-type
-    data: 
+    data:
       key1: "$(.secret1.data.key1)"
       key2: "$(.secret1.data.key2)"
       key3: "$(.secret2.data.key3)"
@@ -184,13 +184,13 @@ func TestSecretTemplate_With_Service_Account(t *testing.T) {
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: sg-template-test1
+  name: sg-template-test2
 ---
 apiVersion: v1
 kind: Secret
 metadata:
   name: secret1
-  namespace: sg-template-test1
+  namespace: sg-template-test2
 type: Opaque
 stringData:
   key1: val1
@@ -200,7 +200,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: configmap1
-  namespace: sg-template-test1
+  namespace: sg-template-test2
 data:
   key3: val3
   key4: val4
@@ -209,13 +209,13 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: serviceaccount
-  namespace: sg-template-test1
+  namespace: sg-template-test2
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: secret-template-reader
-  namespace: sg-template-test1
+  namespace: sg-template-test2
 rules:
 - apiGroups:
   - ""
@@ -231,7 +231,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: sa-rb
-  namespace: sg-template-test1
+  namespace: sg-template-test2
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -239,17 +239,17 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: serviceaccount
-  namespace: sg-template-test1
+  namespace: sg-template-test2
 ---
 apiVersion: secretgen.carvel.dev/v1alpha1
 kind: SecretTemplate
 metadata:
   name: combined-secret-sa
-  namespace: sg-template-test1
+  namespace: sg-template-test2
 spec:
   serviceAccountName: serviceaccount
   inputResources:
-  - name: secret1 
+  - name: secret1
     ref:
       apiVersion: v1
       kind: Secret
@@ -260,7 +260,7 @@ spec:
       kind: ConfigMap
       name: configmap1
   template:
-    data: 
+    data:
       key1: "$(.secret1.data.key1)"
       key2: "$(.secret1.data.key2)"
     stringData:
@@ -282,7 +282,7 @@ spec:
 	})
 
 	logger.Section("Check secret was created", func() {
-		out := waitForSecretInNs(t, kubectl, "sg-template-test1", "combined-secret-sa")
+		out := waitForSecretInNs(t, kubectl, "sg-template-test2", "combined-secret-sa")
 
 		var secret corev1.Secret
 
@@ -303,7 +303,7 @@ spec:
 	})
 
 	logger.Section("Check status", func() {
-		out := waitForSecretTemplate(t, kubectl, "sg-template-test1", "combined-secret-sa", sgv1alpha1.Condition{
+		out := waitForSecretTemplate(t, kubectl, "sg-template-test2", "combined-secret-sa", sgv1alpha1.Condition{
 			Type:   "ReconcileSucceeded",
 			Status: corev1.ConditionTrue,
 		})
@@ -320,22 +320,101 @@ spec:
 	})
 }
 
-func getSecretTemplate(t *testing.T, kubectl Kubectl, nsName, name string) string {
-	args := []string{"get", "secrettemplate", name, "-o", "yaml"}
-	noNs := false
+func TestSecretTemplate_With_Service_Account_With_Insufficient_Permissions(t *testing.T) {
+	env := BuildEnv(t)
+	logger := Logger{}
+	kapp := Kapp{t, env.Namespace, logger}
+	kubectl := Kubectl{t, env.Namespace, logger}
 
-	if len(nsName) > 0 {
-		args = append(args, []string{"-n", nsName}...)
-		noNs = true
+	testYaml := `
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: sg-template-test3
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: secret1
+  namespace: sg-template-test3
+type: Opaque
+stringData:
+  key1: val1
+  key2: val2
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: configmap1
+  namespace: sg-template-test3
+data:
+  key3: val3
+  key4: val4
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: insuff-serviceaccount
+  namespace: sg-template-test3
+---
+apiVersion: secretgen.carvel.dev/v1alpha1
+kind: SecretTemplate
+metadata:
+  name: combined-secret-insuff-sa
+  namespace: sg-template-test3
+spec:
+  serviceAccountName: insuff-serviceaccount
+  inputResources:
+  - name: secret1
+    ref:
+      apiVersion: v1
+      kind: Secret
+      name: secret1
+  - name: configmap1
+    ref:
+      apiVersion: v1
+      kind: ConfigMap
+      name: configmap1
+  template:
+    data:
+      key1: "$(.secret1.data.key1)"
+      key2: "$(.secret1.data.key2)"
+    stringData:
+      key3: "$(.configmap1.data.key3)"
+      key4: "$(.configmap1.data.key4)"
+`
+
+	name := "test-secrettemplate-service-account-failure"
+	cleanUp := func() {
+		kapp.RunWithOpts([]string{"delete", "-a", name}, RunOpts{AllowError: true})
 	}
 
-	out, err := kubectl.RunWithOpts(args, RunOpts{AllowError: true, NoNamespace: noNs})
-	if err == nil {
-		return out
-	}
+	cleanUp()
+	defer cleanUp()
 
-	t.Fatalf("Expected to find secrettemplate '%s' but did not: %s", name, err)
-	panic("Unreachable")
+	logger.Section("Deploy", func() {
+		kapp.RunWithOpts([]string{"deploy", "-f", "-", "-a", name},
+			RunOpts{StdinReader: strings.NewReader(testYaml)})
+	})
+
+	logger.Section("Check status is failing", func() {
+		out := waitForSecretTemplate(t, kubectl, "sg-template-test3", "combined-secret-insuff-sa", sgv1alpha1.Condition{
+			Type:    "ReconcileFailed",
+			Status:  corev1.ConditionTrue,
+			Reason:  "",
+			Message: "cannot fetch input resource secret1: secrets \"secret1\" not found",
+		})
+
+		var secretTemplate sg2v1alpha1.SecretTemplate
+		err := yaml.Unmarshal([]byte(out), &secretTemplate)
+		if err != nil {
+			t.Fatalf("Failed to unmarshal: %s", err)
+		}
+
+		if !reflect.DeepEqual(secretTemplate.Status.Secret.Name, "") {
+			t.Fatalf("Expected .status.secret.name reference to match, but was: %#v vs %s", secretTemplate.Status.Secret.Name, "")
+		}
+	})
 }
 
 func waitForSecretTemplate(t *testing.T, kubectl Kubectl, nsName, name string, condition sgv1alpha1.Condition) string {
