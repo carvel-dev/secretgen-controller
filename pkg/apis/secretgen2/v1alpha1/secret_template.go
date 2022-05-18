@@ -9,6 +9,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// SecretTemplate allows the construction of secrets using data that reside in other Kubernetes resources
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +kubebuilder:subresource:status
@@ -26,6 +27,7 @@ type SecretTemplate struct {
 	Status SecretTemplateStatus `json:"status"`
 }
 
+// SecretTemplateList is a list of SecretTemplates
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type SecretTemplateList struct {
 	metav1.TypeMeta `json:",inline"`
@@ -38,6 +40,7 @@ type SecretTemplateList struct {
 	Items []SecretTemplate `json:"items"`
 }
 
+// SecretTemplateSpec contains spec information
 type SecretTemplateSpec struct {
 	//A list of input resources that are used to construct a new secret. Input Resources can refer to ANY Kubernetes API.
 	//If loading more than Secrets types ensure that `.spec.ServiceAccountName` is set to an appropriate value.
@@ -54,6 +57,7 @@ type SecretTemplateSpec struct {
 	ServiceAccountName string `json:"serviceAccountName,omitempty"`
 }
 
+// InputResource is references a single Kubernetes resource along with a identifying name
 type InputResource struct {
 	//The name of InputResource. This is used as the identifying name in templating to refer to this Input Resource.
 	Name string `json:"name"`
@@ -61,6 +65,7 @@ type InputResource struct {
 	Ref InputResourceRef `json:"ref"`
 }
 
+// InputResourceRef refers to a single Kubernetes resource
 type InputResourceRef struct {
 	APIVersion string `json:"apiVersion"`
 	Kind       string `json:"kind"`
@@ -70,6 +75,7 @@ type InputResourceRef struct {
 	Name string `json:"name"`
 }
 
+// JSONPathTemplate contains templating information used to construct a new secret
 type JSONPathTemplate struct {
 	//StringData key and value. Where key is the Secret Key and the value is a JSONPATH syntax surrounded by $( ).
 	//All InputResources are available via their identifying name.
@@ -87,6 +93,7 @@ type JSONPathTemplate struct {
 	Data map[string]string `json:"data,omitempty"`
 }
 
+// SecretTemplateStatus contains status information
 type SecretTemplateStatus struct {
 	// +optional
 	Secret corev1.LocalObjectReference `json:"secret,omitempty"`
@@ -96,6 +103,7 @@ type SecretTemplateStatus struct {
 	ObservedSecretResourceVersion string `json:"observedSecretResourceVersion,omitempty"`
 }
 
+// Validate runs validation on the SecretTemplate
 func (e SecretTemplate) Validate() error {
 	var errs []error
 

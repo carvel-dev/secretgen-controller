@@ -169,6 +169,7 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
+        description: SecretTemplate allows the construction of secrets using data that reside in other Kubernetes resources
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
@@ -179,10 +180,12 @@ spec:
           metadata:
             type: object
           spec:
+            description: SecretTemplateSpec contains spec information
             properties:
               inputResources:
                 description: A list of input resources that are used to construct a new secret. Input Resources can refer to ANY Kubernetes API. If loading more than Secrets types ensure that `.spec.ServiceAccountName` is set to an appropriate value. Input resources are read in the order they are defined. An Input resource's name can be evaluated dynamically from data in a previously evaluated input resource.
                 items:
+                  description: InputResource is references a single Kubernetes resource along with a identifying name
                   properties:
                     name:
                       description: The name of InputResource. This is used as the identifying name in templating to refer to this Input Resource.
@@ -223,11 +226,15 @@ spec:
                       type: string
                     description: 'StringData key and value. Where key is the Secret Key and the value is a JSONPATH syntax surrounded by $( ). All InputResources are available via their identifying name. For example: / key1: $(.input1.spec.value1) / key2: $(.input2.status.value2)'
                     type: object
+                  type:
+                    description: Type is the type of Kubernetes Secret
+                    type: string
                 type: object
             required:
             - inputResources
             type: object
           status:
+            description: SecretTemplateStatus contains status information
             properties:
               conditions:
                 items:

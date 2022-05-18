@@ -19,6 +19,7 @@ const (
 	jsonPathClose = "}"
 )
 
+// JSONPath represents a jsonpath parsable string surrounded in open/close syntax "$( )".
 type JSONPath string
 
 // EvaluateWith an expression with respect to values and return the result.
@@ -38,7 +39,7 @@ func (p JSONPath) EvaluateWith(values interface{}) (*bytes.Buffer, error) {
 	return buf, nil
 }
 
-// If the expression contains an opening $( and a closing ), toK8sJSONPathExpression will replace them with a { and a } respectively.
+// ToK8sJSONPath converst the syntax open close syntax "$(  )"" to { and a } respectively.
 func (p JSONPath) ToK8sJSONPath() string {
 	newPath := string(p)
 	var openPositions stack
@@ -78,15 +79,13 @@ func (s stack) push(position int) stack {
 func (s stack) pop() stack {
 	if s.peek() == -1 {
 		return s
-	} else {
-		return s[:len(s)-1]
 	}
+	return s[:len(s)-1]
 }
 
 func (s stack) peek() int {
 	if len(s) == 0 {
 		return -1
 	}
-
 	return s[len(s)-1]
 }

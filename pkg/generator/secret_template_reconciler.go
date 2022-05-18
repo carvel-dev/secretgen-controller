@@ -35,6 +35,7 @@ const (
 	syncPeriod = 30 * time.Second
 )
 
+// SecretTemplateReconciler watches for SecretTemplate Resources and generates a new secret from a set of input resources.
 type SecretTemplateReconciler struct {
 	client   client.Client
 	saLoader *ServiceAccountLoader
@@ -43,6 +44,7 @@ type SecretTemplateReconciler struct {
 
 var _ reconcile.Reconciler = &SecretTemplateReconciler{}
 
+// NewSecretTemplateReconciler create a new SecretTemplate Reconciler
 func NewSecretTemplateReconciler(client client.Client, loader *ServiceAccountLoader, log logr.Logger) *SecretTemplateReconciler {
 	return &SecretTemplateReconciler{client, loader, log}
 }
@@ -74,8 +76,8 @@ func (r *SecretTemplateReconciler) Reconcile(ctx context.Context, request reconc
 	}
 
 	status := &reconciler.Status{
-		secretTemplate.Status.GenericStatus,
-		func(st sgv1alpha1.GenericStatus) { secretTemplate.Status.GenericStatus = st },
+		S:          secretTemplate.Status.GenericStatus,
+		UpdateFunc: func(st sgv1alpha1.GenericStatus) { secretTemplate.Status.GenericStatus = st },
 	}
 
 	status.SetReconciling(secretTemplate.ObjectMeta)

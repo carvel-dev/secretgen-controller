@@ -1,3 +1,6 @@
+// Copyright 2021 VMware, Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 package generator
 
 import (
@@ -16,14 +19,17 @@ const (
 	saTokenType = "kubernetes.io/service-account-token"
 )
 
+// ServiceAccountLoader allows the construction of a k8s client from a Service Account
 type ServiceAccountLoader struct {
 	client client.Client // Used to load service accounts and their secrets.
 }
 
+// NewServiceAccountLoader creates a new ServiceAccountLoader
 func NewServiceAccountLoader(client client.Client) *ServiceAccountLoader {
 	return &ServiceAccountLoader{client}
 }
 
+// Client returns a new k8s client for a Service Account
 func (s *ServiceAccountLoader) Client(ctx context.Context, saName, saNamespace string) (client.Client, error) {
 	config, err := s.restConfig(ctx, saName, saNamespace)
 	if err != nil {

@@ -84,7 +84,7 @@ spec:
 			RunOpts{StdinReader: strings.NewReader(testYaml)})
 	})
 
-	logger.Section("Check secret was created", func() {
+	logger.Section("Check secret was created correctly", func() {
 		out := waitForSecretInNs(t, kubectl, "sg-template-test1", "combined-secret")
 
 		var secret corev1.Secret
@@ -137,7 +137,7 @@ func TestSecretTemplate_With_Service_Account(t *testing.T) {
 	kapp := Kapp{t, env.Namespace, logger}
 	kubectl := Kubectl{t, env.Namespace, logger}
 
-	test_yaml := `
+	testYaml := `
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -235,7 +235,7 @@ spec:
 
 	logger.Section("Deploy", func() {
 		kapp.RunWithOpts([]string{"deploy", "-f", "-", "-a", name},
-			RunOpts{StdinReader: strings.NewReader(test_yaml)})
+			RunOpts{StdinReader: strings.NewReader(testYaml)})
 	})
 
 	logger.Section("Check secret was created", func() {
