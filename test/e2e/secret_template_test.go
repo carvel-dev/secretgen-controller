@@ -64,6 +64,7 @@ spec:
       kind: Secret
       name: secret2
   template:
+    type: secret-type
     data: 
       key1: "$(.secret1.data.key1)"
       key2: "$(.secret1.data.key2)"
@@ -102,6 +103,10 @@ spec:
 		}
 		if !reflect.DeepEqual(secret.Data, expectedData) {
 			t.Fatalf("Expected secret data to match, but was: %#v vs %s", secret.Data, out)
+		}
+
+		if !reflect.DeepEqual(secret.Type, "secret-type") {
+			t.Fatalf("Expected secret type to match, but was: %#v vs %s", secret.Type, out)
 		}
 	})
 

@@ -149,6 +149,11 @@ func (r *SecretTemplateReconciler) reconcile(ctx context.Context, secretTemplate
 		secret.StringData = secretStringData
 		secret.Data = secretData
 
+		// Secret Type is immutable, cannot update. TODO what is the best here?
+		if secret.Type == "" {
+			secret.Type = secretTemplate.Spec.JSONPathTemplate.Type
+		}
+
 		return controllerutil.SetControllerReference(secretTemplate, &secret, scheme.Scheme)
 	}); err != nil {
 		return reconcile.Result{}, fmt.Errorf("creating/updating secret: %w", err)

@@ -91,6 +91,10 @@ type JSONPathTemplate struct {
 	// key2: $(.secretinput2.data.value2)
 	// +optional
 	Data map[string]string `json:"data,omitempty"`
+
+	//Type is the type of Kubernetes Secret.
+	// +optional
+	Type corev1.SecretType `json:"type,omitempty"`
 }
 
 // SecretTemplateStatus contains status information
