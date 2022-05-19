@@ -6,18 +6,18 @@ package generator
 import (
 	"context"
 	"fmt"
-	"net"
-	"os"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
 	certutil "k8s.io/client-go/util/cert"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	ctrl "sigs.k8s.io/controller-runtime/pkg/client/config"
 )
 
 const (
 	tokenKey    = "token"
+	caCert      = "ca.crt"
 	saTokenType = "kubernetes.io/service-account-token"
 )
 
@@ -42,42 +42,37 @@ func (s *ServiceAccountLoader) Client(ctx context.Context, saName, saNamespace s
 }
 
 func (s *ServiceAccountLoader) restConfig(ctx context.Context, saName, saNamespace string) (*rest.Config, error) {
-	const (
-		rootCAFile = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
-	)
-	host, port := os.Getenv("KUBERNETES_SERVICE_HOST"), os.Getenv("KUBERNETES_SERVICE_PORT")
-	if len(host) == 0 || len(port) == 0 {
-		return nil, rest.ErrNotInCluster
-	}
-
-	token, err := s.serviceAccountToken(ctx, saName, saNamespace)
+	cfg, err := ctrl.GetConfig()
 	if err != nil {
 		return nil, err
 	}
 
-	tlsClientConfig := rest.TLSClientConfig{}
+	token, cert, err := s.serviceAccountCredentials(ctx, saName, saNamespace)
+	if err != nil {
+		return nil, err
+	}
 
-	if _, err := certutil.NewPool(rootCAFile); err != nil {
-		return nil, fmt.Errorf("Expected to load root CA config from %s, but got err: %v", rootCAFile, err)
-	} else {
-		tlsClientConfig.CAFile = rootCAFile
+	if _, err := certutil.NewPoolFromBytes(cert); err != nil {
+		return nil, fmt.Errorf("expected to load root CA config, but got err: %v", err)
 	}
 
 	return &rest.Config{
-		Host:            "https://" + net.JoinHostPort(host, port),
-		TLSClientConfig: tlsClientConfig,
-		BearerToken:     string(token),
+		Host: cfg.Host,
+		TLSClientConfig: rest.TLSClientConfig{
+			CAData: cert,
+		},
+		BearerToken: string(token),
 	}, nil
 }
 
-func (s *ServiceAccountLoader) serviceAccountToken(ctx context.Context, name, namespace string) ([]byte, error) {
+func (s *ServiceAccountLoader) serviceAccountCredentials(ctx context.Context, name, namespace string) ([]byte, []byte, error) {
 	sa := corev1.ServiceAccount{}
 	if err := s.client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: name}, &sa); err != nil {
-		return nil, fmt.Errorf("unable to fetch service account %s:%s : %s", namespace, name, err)
+		return nil, nil, fmt.Errorf("unable to fetch service account %s:%s, %w", namespace, name, err)
 	}
 
 	if len(sa.Secrets) == 0 {
-		return nil, fmt.Errorf("no secrets found for service account %s", name)
+		return nil, nil, fmt.Errorf("no secrets found for service account %s:%s", namespace, name)
 	}
 
 	//TODO what to do if there are mutiple secrets?
@@ -85,17 +80,22 @@ func (s *ServiceAccountLoader) serviceAccountToken(ctx context.Context, name, na
 
 	secret := corev1.Secret{}
 	if err := s.client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: secretName}, &secret); err != nil {
-		return nil, fmt.Errorf("failed to fetch secret %s: %s", secretName, err)
+		return nil, nil, fmt.Errorf("failed to fetch secret %s:%s, %w", namespace, secretName, err)
 	}
 
 	if secret.Type != saTokenType {
-		return nil, fmt.Errorf("secret %s is not of type %s", secretName, saTokenType)
+		return nil, nil, fmt.Errorf("secret %s:%s is not of type %s", namespace, secretName, saTokenType)
 	}
+
 	tokenData, tokenFound := secret.Data[tokenKey]
-
 	if !tokenFound {
-		return nil, fmt.Errorf("secret %s does not contain token", secretName)
+		return nil, nil, fmt.Errorf("secret %s:%s does not contain %s field", namespace, secretName, tokenKey)
 	}
 
-	return tokenData, nil
+	certData, certFound := secret.Data[caCert]
+	if !certFound {
+		return nil, nil, fmt.Errorf("secret %s:%s does not contain %s field", namespace, secretName, caCert)
+	}
+
+	return tokenData, certData, nil
 }
