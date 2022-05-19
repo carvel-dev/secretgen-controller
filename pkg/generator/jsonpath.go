@@ -39,7 +39,7 @@ func (p JSONPath) EvaluateWith(values interface{}) (*bytes.Buffer, error) {
 	return buf, nil
 }
 
-// ToK8sJSONPath converst the syntax open close syntax "$(  )"" to { and a } respectively.
+// ToK8sJSONPath converts the syntax open close syntax "$(  )" to "{ }".
 func (p JSONPath) ToK8sJSONPath() string {
 	newPath := string(p)
 	var openPositions stack
