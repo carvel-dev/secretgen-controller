@@ -48,8 +48,7 @@ type SecretTemplateSpec struct {
 	InputResources []InputResource `json:"inputResources"`
 
 	//A JSONPath based template that can be used to create Secrets.
-	// +optional
-	JSONPathTemplate JSONPathTemplate `json:"template,omitempty"`
+	JSONPathTemplate JSONPathTemplate `json:"template"`
 
 	//The Service Account used to read InputResources. If not specified, only Secrets can be read as InputResources.
 	// +optional

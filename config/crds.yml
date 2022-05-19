@@ -246,6 +246,7 @@ spec:
                 type: object
             required:
             - inputResources
+            - template
             type: object
           status:
             description: SecretTemplateStatus contains status information
