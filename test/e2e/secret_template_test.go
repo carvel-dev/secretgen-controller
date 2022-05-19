@@ -22,16 +22,11 @@ func TestSecretTemplate_Full_Lifecycle(t *testing.T) {
 	kubectl := Kubectl{t, env.Namespace, logger}
 
 	testSecretTemplateYaml := `
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: sg-template-test1
 ---
 apiVersion: secretgen.carvel.dev/v1alpha1
 kind: SecretTemplate
 metadata:
   name: combined-secret
-  namespace: sg-template-test1
 spec:
   inputResources:
   - name: secret1
@@ -59,7 +54,6 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: secret1
-  namespace: sg-template-test1
 type: Opaque
 stringData:
   key1: val1
@@ -69,7 +63,6 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: secret2
-  namespace: sg-template-test1
 type: Opaque
 stringData:
   key3: val3
@@ -91,7 +84,7 @@ stringData:
 	})
 
 	logger.Section("Check secret wasn't created and template has ReconcileFailed", func() {
-		out := waitForSecretTemplate(t, kubectl, "sg-template-test1", "combined-secret", sgv1alpha1.Condition{
+		out := waitForSecretTemplate(t, kubectl, "combined-secret", sgv1alpha1.Condition{
 			Type:    "ReconcileFailed",
 			Status:  corev1.ConditionTrue,
 			Reason:  "",
@@ -115,7 +108,7 @@ stringData:
 	})
 
 	logger.Section("Check secret was created and template has ReconcileSucceeded", func() {
-		out := waitForSecretTemplate(t, kubectl, "sg-template-test1", "combined-secret", sgv1alpha1.Condition{
+		out := waitForSecretTemplate(t, kubectl, "combined-secret", sgv1alpha1.Condition{
 			Type:   "ReconcileSucceeded",
 			Status: corev1.ConditionTrue,
 		})
@@ -136,7 +129,7 @@ stringData:
 	})
 
 	logger.Section("Check secret was deleted and template has ReconcileFailed", func() {
-		out := waitForSecretTemplate(t, kubectl, "sg-template-test1", "combined-secret", sgv1alpha1.Condition{
+		out := waitForSecretTemplate(t, kubectl, "combined-secret", sgv1alpha1.Condition{
 			Type:   "ReconcileFailed",
 			Status: corev1.ConditionTrue,
 		})
@@ -151,7 +144,7 @@ stringData:
 			t.Fatalf("Expected .status.secret.name reference to match, but was: %#v vs %s", secretTemplate.Status.Secret.Name, "")
 		}
 
-		_, lastErr := kubectl.RunWithOpts([]string{"get", "secret", "combined-secret", "-o", "yaml"}, RunOpts{AllowError: true, NoNamespace: true})
+		_, lastErr := kubectl.RunWithOpts([]string{"get", "secret", "combined-secret", "-o", "yaml"}, RunOpts{AllowError: true})
 		if lastErr == nil {
 			t.Fatalf("Expected secret to not be present")
 		}
@@ -167,7 +160,7 @@ stringData:
 	})
 
 	logger.Section("Check secret was deleted", func() {
-		_, lastErr := kubectl.RunWithOpts([]string{"get", "secret", "combined-secret", "-o", "yaml"}, RunOpts{AllowError: true, NoNamespace: true})
+		_, lastErr := kubectl.RunWithOpts([]string{"get", "secret", "combined-secret", "-o", "yaml"}, RunOpts{AllowError: true})
 		if lastErr == nil {
 			t.Fatalf("Expected secret to not be present")
 		}
@@ -181,16 +174,11 @@ func TestSecretTemplate_With_Service_Account(t *testing.T) {
 	kubectl := Kubectl{t, env.Namespace, logger}
 
 	testYaml := `
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: sg-template-test2
 ---
 apiVersion: v1
 kind: Secret
 metadata:
   name: secret1
-  namespace: sg-template-test2
 type: Opaque
 stringData:
   key1: val1
@@ -200,7 +188,6 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: configmap1
-  namespace: sg-template-test2
 data:
   key3: val3
   key4: val4
@@ -209,13 +196,11 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: serviceaccount
-  namespace: sg-template-test2
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: secret-template-reader
-  namespace: sg-template-test2
 rules:
 - apiGroups:
   - ""
@@ -231,7 +216,6 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: sa-rb
-  namespace: sg-template-test2
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -239,13 +223,11 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: serviceaccount
-  namespace: sg-template-test2
 ---
 apiVersion: secretgen.carvel.dev/v1alpha1
 kind: SecretTemplate
 metadata:
   name: combined-secret-sa
-  namespace: sg-template-test2
 spec:
   serviceAccountName: serviceaccount
   inputResources:
@@ -282,7 +264,7 @@ spec:
 	})
 
 	logger.Section("Check secret was created", func() {
-		out := waitForSecretInNs(t, kubectl, "sg-template-test2", "combined-secret-sa")
+		out := waitForSecret(t, kubectl, "combined-secret-sa")
 
 		var secret corev1.Secret
 
@@ -303,7 +285,7 @@ spec:
 	})
 
 	logger.Section("Check status", func() {
-		out := waitForSecretTemplate(t, kubectl, "sg-template-test2", "combined-secret-sa", sgv1alpha1.Condition{
+		out := waitForSecretTemplate(t, kubectl, "combined-secret-sa", sgv1alpha1.Condition{
 			Type:   "ReconcileSucceeded",
 			Status: corev1.ConditionTrue,
 		})
@@ -327,16 +309,11 @@ func TestSecretTemplate_With_Service_Account_With_Insufficient_Permissions(t *te
 	kubectl := Kubectl{t, env.Namespace, logger}
 
 	testYaml := `
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: sg-template-test3
 ---
 apiVersion: v1
 kind: Secret
 metadata:
   name: secret1
-  namespace: sg-template-test3
 type: Opaque
 stringData:
   key1: val1
@@ -346,7 +323,6 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: configmap1
-  namespace: sg-template-test3
 data:
   key3: val3
   key4: val4
@@ -355,13 +331,11 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: insuff-serviceaccount
-  namespace: sg-template-test3
 ---
 apiVersion: secretgen.carvel.dev/v1alpha1
 kind: SecretTemplate
 metadata:
   name: combined-secret-insuff-sa
-  namespace: sg-template-test3
 spec:
   serviceAccountName: insuff-serviceaccount
   inputResources:
@@ -398,7 +372,7 @@ spec:
 	})
 
 	logger.Section("Check status is failing", func() {
-		out := waitForSecretTemplate(t, kubectl, "sg-template-test3", "combined-secret-insuff-sa", sgv1alpha1.Condition{
+		out := waitForSecretTemplate(t, kubectl, "combined-secret-insuff-sa", sgv1alpha1.Condition{
 			Type:    "ReconcileFailed",
 			Status:  corev1.ConditionTrue,
 			Reason:  "",
@@ -417,21 +391,13 @@ spec:
 	})
 }
 
-func waitForSecretTemplate(t *testing.T, kubectl Kubectl, nsName, name string, condition sgv1alpha1.Condition) string {
+func waitForSecretTemplate(t *testing.T, kubectl Kubectl, name string, condition sgv1alpha1.Condition) string {
 	waitArgs := []string{"wait", fmt.Sprintf("--for=condition=%s=%s", condition.Type, condition.Status), "secrettemplate", name}
 	getArgs := []string{"get", "secrettemplate", name, "-o", "yaml"}
 
-	noNs := false
+	kubectl.RunWithOpts(waitArgs, RunOpts{AllowError: true})
 
-	if len(nsName) > 0 {
-		waitArgs = append(waitArgs, []string{"-n", nsName}...)
-		getArgs = append(getArgs, []string{"-n", nsName}...)
-		noNs = true
-	}
-
-	kubectl.RunWithOpts(waitArgs, RunOpts{AllowError: true, NoNamespace: noNs})
-
-	out, err := kubectl.RunWithOpts(getArgs, RunOpts{AllowError: true, NoNamespace: noNs})
+	out, err := kubectl.RunWithOpts(getArgs, RunOpts{AllowError: true})
 	if err == nil {
 		return out
 	}
