@@ -65,7 +65,7 @@ func (p JSONPath) ToK8sJSONPath() string {
 // In string s, replace the substr old, at index i, with substr new.
 func replace(s string, i int, old, new string) string {
 	if i+len(old) > len(s) {
-		return fmt.Sprintf("%s}", s[0:i])
+		return fmt.Sprintf("%s%s", s[0:i], new)
 	}
 	return strings.Join([]string{s[0:i], s[i+len(old):]}, new)
 }
