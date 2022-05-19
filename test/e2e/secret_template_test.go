@@ -149,22 +149,6 @@ stringData:
 			t.Fatalf("Expected secret to not be present")
 		}
 	})
-
-	logger.Section("Recreate Input Resources", func() {
-		kapp.RunWithOpts([]string{"deploy", "-f", "-", "-a", name + "-inputs"},
-			RunOpts{StdinReader: strings.NewReader(testInputResourcesYaml)})
-	})
-
-	logger.Section("Delete SecretTemplate", func() {
-		kapp.RunWithOpts([]string{"delete", "-a", name + "-template"}, RunOpts{AllowError: true})
-	})
-
-	logger.Section("Check secret was deleted", func() {
-		_, lastErr := kubectl.RunWithOpts([]string{"get", "secret", "combined-secret", "-o", "yaml"}, RunOpts{AllowError: true})
-		if lastErr == nil {
-			t.Fatalf("Expected secret to not be present")
-		}
-	})
 }
 
 func TestSecretTemplate_With_Service_Account(t *testing.T) {

@@ -285,6 +285,10 @@ func Test_SecretTemplate(t *testing.T) {
 				assert.Equal(t, tc.expectedType, string(secret.Type))
 			}
 
+			if !isOwner(secret.GetOwnerReferences(), &secretTemplate) {
+				assert.Fail(t, "secret not owned by secrettemplate", "secret not owned by secrettemplate")
+			}
+
 			if secretTemplate.Status.Secret.Name != secretTemplate.GetName() {
 				assert.Fail(t, "reference secret name incorrect", "reference secret name incorrect %s, but got %s", secretTemplate.GetName(), secretTemplate.Status.Secret.Name)
 			}
@@ -616,6 +620,19 @@ func namespacedNameFor(object client.Object) types.NamespacedName {
 		Name:      object.GetName(),
 		Namespace: object.GetNamespace(),
 	}
+}
+
+func isOwner(owners []metav1.OwnerReference, object client.Object) bool {
+	for _, owner := range owners {
+		apiVersion, kind := object.GetObjectKind().GroupVersionKind().ToAPIVersionAndKind()
+		if owner.Name == object.GetName() &&
+			owner.Kind == kind &&
+			owner.APIVersion == apiVersion &&
+			*owner.Controller {
+			return true
+		}
+	}
+	return false
 }
 
 // fakeClientLoader simply returns the same client for any Service Account
