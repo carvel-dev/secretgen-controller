@@ -75,27 +75,28 @@ func (s *ServiceAccountLoader) serviceAccountCredentials(ctx context.Context, na
 		return nil, nil, fmt.Errorf("no secrets found for service account %s:%s", namespace, name)
 	}
 
-	//TODO what to do if there are mutiple secrets?
-	secretName := sa.Secrets[0].Name
+	for _, secretRef := range sa.Secrets {
+		secret := corev1.Secret{}
+		if err := s.client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: secretRef.Name}, &secret); err != nil {
+			return nil, nil, fmt.Errorf("failed to fetch secret %s:%s, %w", namespace, secretRef.Name, err)
+		}
 
-	secret := corev1.Secret{}
-	if err := s.client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: secretName}, &secret); err != nil {
-		return nil, nil, fmt.Errorf("failed to fetch secret %s:%s, %w", namespace, secretName, err)
+		if secret.Type != saTokenType {
+			continue
+		}
+
+		tokenData, tokenFound := secret.Data[tokenKey]
+		if !tokenFound {
+			return nil, nil, fmt.Errorf("secret %s:%s does not contain %s field", namespace, secretRef.Name, tokenKey)
+		}
+
+		certData, certFound := secret.Data[caCert]
+		if !certFound {
+			return nil, nil, fmt.Errorf("secret %s:%s does not contain %s field", namespace, secretRef.Name, caCert)
+		}
+
+		return tokenData, certData, nil
 	}
 
-	if secret.Type != saTokenType {
-		return nil, nil, fmt.Errorf("secret %s:%s is not of type %s", namespace, secretName, saTokenType)
-	}
-
-	tokenData, tokenFound := secret.Data[tokenKey]
-	if !tokenFound {
-		return nil, nil, fmt.Errorf("secret %s:%s does not contain %s field", namespace, secretName, tokenKey)
-	}
-
-	certData, certFound := secret.Data[caCert]
-	if !certFound {
-		return nil, nil, fmt.Errorf("secret %s:%s does not contain %s field", namespace, secretName, caCert)
-	}
-
-	return tokenData, certData, nil
+	return nil, nil, fmt.Errorf("serviceaccount %s:%s did not reference any secret of type %s", namespace, name, saTokenType)
 }
