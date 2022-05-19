@@ -14,6 +14,7 @@ Features:
 - supports generating certificates, passwords, RSA keys and SSH keys
 - supports exporting and importing secrets across namespaces
 - exporting/importing registry secrets across namespaces
+- supports generating secrets from data residing in other Kubernetes resources
 
 More details in [docs](docs/README.md).
 
