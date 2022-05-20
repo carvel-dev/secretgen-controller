@@ -18,25 +18,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Set up Go 1.x
-      uses: actions/setup-go@v1
+      uses: actions/setup-go@v3
       with:
         go-version: "1.17"
     - name: Check out code into the Go module directory
-      uses: actions/checkout@v1
+      uses: actions/checkout@v2
       with:
-        path: src/github.com/${{ github.repository }}
+          fetch-depth: 0
     - name: Install Carvel Tools
       uses: vmware-tanzu/carvel-setup-action@v1
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         only: ytt, kapp, kbld
-        ytt: v0.35.1
-        kapp: v0.37.0
-        kbld: v0.30.0
+        ytt: v0.40.1
+        kapp: v0.47.0
+        kbld: v0.33.0
     - name: Run Tests
       run: |
         set -e -x
-        export GOPATH=$(echo `pwd`/../../../../)
 
         mkdir /tmp/bin
         export PATH=/tmp/bin:$PATH
