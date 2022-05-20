@@ -132,6 +132,17 @@ func (r *SecretTemplateReconciler) reconcile(ctx context.Context, secretTemplate
 		secretStringData[key] = valueBuffer.String()
 	}
 
+	// Template Secret Annotations
+	secretAnnotations := map[string]string{}
+	for key, expression := range secretTemplate.Spec.JSONPathTemplate.Metadata.Annotations {
+		valueBuffer, err := JSONPath(expression).EvaluateWith(inputResources)
+		if err != nil {
+			return reconcile.Result{}, fmt.Errorf("templating annotations: %w", err)
+		}
+
+		secretAnnotations[key] = valueBuffer.String()
+	}
+
 	// Create/Update Secret
 	secret := corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
@@ -142,7 +153,7 @@ func (r *SecretTemplateReconciler) reconcile(ctx context.Context, secretTemplate
 
 	if _, err = controllerutil.CreateOrUpdate(ctx, r.client, &secret, func() error {
 		secret.ObjectMeta.Labels = secretTemplate.Spec.JSONPathTemplate.Metadata.Labels
-		secret.ObjectMeta.Annotations = secretTemplate.Spec.JSONPathTemplate.Metadata.Annotations
+		secret.ObjectMeta.Annotations = secretAnnotations
 		secret.StringData = secretStringData
 		secret.Data = secretData
 
