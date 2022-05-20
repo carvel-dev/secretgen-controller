@@ -5,16 +5,17 @@ on:
     types: [opened, reopened, synchronize]
     paths-ignore:
     - 'docs/**'
-  workflow_dispatch:
   push:
     branches:
       - develop
     paths-ignore:
     - 'docs/**'
     - '*.md'
+  workflow_dispatch:
 
 jobs:
-  create-cluster:
+  run-tests:
+    name: e2e tests on kind
     runs-on: ubuntu-latest
     steps:
       - name: Create k8s Kind Cluster
