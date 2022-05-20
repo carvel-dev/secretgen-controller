@@ -106,52 +106,27 @@ func (r *SecretTemplateReconciler) reconcile(ctx context.Context, secretTemplate
 	}
 
 	// Template Secret Data
-	secretData := map[string][]byte{}
-	for key, expression := range secretTemplate.Spec.JSONPathTemplate.Data {
-		valueBuffer, err := JSONPath(expression).EvaluateWith(inputResources)
-		if err != nil {
-			return reconcile.Result{}, fmt.Errorf("templating data: %w", err)
-		}
-
-		decoded, err := base64.StdEncoding.DecodeString(valueBuffer.String())
-		if err != nil {
-			return reconcile.Result{}, fmt.Errorf("failed decoding base64 from a Secret: %w", err)
-		}
-
-		secretData[key] = decoded
+	secretData, err := evaluateBytes(secretTemplate.Spec.JSONPathTemplate.Data, inputResources)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("templating data: %w", err)
 	}
 
 	// Template Secret StringData
-	secretStringData := map[string]string{}
-	for key, expression := range secretTemplate.Spec.JSONPathTemplate.StringData {
-		valueBuffer, err := JSONPath(expression).EvaluateWith(inputResources)
-		if err != nil {
-			return reconcile.Result{}, fmt.Errorf("templating stringData: %w", err)
-		}
-
-		secretStringData[key] = valueBuffer.String()
+	secretStringData, err := evaluate(secretTemplate.Spec.JSONPathTemplate.StringData, inputResources)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("templating stringData: %w", err)
 	}
 
 	// Template Secret Annotations
-	secretAnnotations := map[string]string{}
-	for key, expression := range secretTemplate.Spec.JSONPathTemplate.Metadata.Annotations {
-		valueBuffer, err := JSONPath(expression).EvaluateWith(inputResources)
-		if err != nil {
-			return reconcile.Result{}, fmt.Errorf("templating annotations: %w", err)
-		}
-
-		secretAnnotations[key] = valueBuffer.String()
+	secretAnnotations, err := evaluate(secretTemplate.Spec.JSONPathTemplate.Metadata.Annotations, inputResources)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("templating annotations: %w", err)
 	}
 
 	// Template Secret Labels
-	secretLabels := map[string]string{}
-	for key, expression := range secretTemplate.Spec.JSONPathTemplate.Metadata.Labels {
-		valueBuffer, err := JSONPath(expression).EvaluateWith(inputResources)
-		if err != nil {
-			return reconcile.Result{}, fmt.Errorf("templating labels: %w", err)
-		}
-
-		secretLabels[key] = valueBuffer.String()
+	secretLabels, err := evaluate(secretTemplate.Spec.JSONPathTemplate.Metadata.Labels, inputResources)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("templating labels: %w", err)
 	}
 
 	// Create/Update Secret
@@ -163,10 +138,10 @@ func (r *SecretTemplateReconciler) reconcile(ctx context.Context, secretTemplate
 	}
 
 	if _, err = controllerutil.CreateOrUpdate(ctx, r.client, &secret, func() error {
-		secret.ObjectMeta.Labels = secretLabels
-		secret.ObjectMeta.Annotations = secretAnnotations
-		secret.StringData = secretStringData
 		secret.Data = secretData
+		secret.StringData = secretStringData
+		secret.ObjectMeta.Annotations = secretAnnotations
+		secret.ObjectMeta.Labels = secretLabels
 
 		// Secret Type is immutable, so cannot be updated. TODO what to do here?
 		if secret.Type == "" {
@@ -289,4 +264,37 @@ func toUnstructured(apiVersion, kind, namespace, name string) (unstructured.Unst
 	obj.SetNamespace(namespace)
 
 	return obj, nil
+}
+
+func evaluate(mapping map[string]string, values map[string]interface{}) (map[string]string, error) {
+	evaluatedMapping := map[string]string{}
+	for key, expression := range mapping {
+		valueBuffer, err := JSONPath(expression).EvaluateWith(values)
+		if err != nil {
+			return nil, err
+		}
+
+		evaluatedMapping[key] = valueBuffer.String()
+	}
+
+	return evaluatedMapping, nil
+}
+
+func evaluateBytes(mapping map[string]string, values map[string]interface{}) (map[string][]byte, error) {
+	evaluatedMapping := map[string][]byte{}
+	for key, expression := range mapping {
+		valueBuffer, err := JSONPath(expression).EvaluateWith(values)
+		if err != nil {
+			return nil, err
+		}
+
+		decoded, err := base64.StdEncoding.DecodeString(valueBuffer.String())
+		if err != nil {
+			return nil, fmt.Errorf("failed decoding base64 from a Secret: %w", err)
+		}
+
+		evaluatedMapping[key] = decoded
+	}
+
+	return evaluatedMapping, nil
 }
