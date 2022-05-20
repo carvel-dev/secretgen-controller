@@ -242,7 +242,7 @@ func Test_SecretTemplate(t *testing.T) {
 			},
 		},
 		{
-			name: "reconciling secret template with type, annotations and labels",
+			name: "reconciling secret template with embedded stringData template in labels",
 			template: sg2v1alpha1.SecretTemplate{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "secretTemplate",
@@ -250,39 +250,26 @@ func Test_SecretTemplate(t *testing.T) {
 				},
 				Spec: sg2v1alpha1.SecretTemplateSpec{
 					InputResources: []sg2v1alpha1.InputResource{{
-						Name: "creds",
+						Name: "map",
 						Ref: sg2v1alpha1.InputResourceRef{
 							APIVersion: "v1",
-							Kind:       "Secret",
-							Name:       "existingSecret",
+							Kind:       "ConfigMap",
+							Name:       "existingcfgmap",
 						},
 					}},
 					JSONPathTemplate: sg2v1alpha1.JSONPathTemplate{
-						Type: "some-type",
 						Metadata: sg2v1alpha1.SecretTemplateMetadata{
 							Labels: map[string]string{
-								"label1key": "label1value",
-								"label2key": "label2value",
+								"label1": "prefix-$(.map.data.inputKey1)",
 							},
-							Annotations: map[string]string{
-								"annotation1key": "annotation1value",
-								"annotation2key": "annotation2value",
-							},
-						},
-						Data: map[string]string{
-							"key1": "$( .creds.data.inputKey1 )",
-							"key2": "$( .creds.data.inputKey2 )",
-						},
-						StringData: map[string]string{
-							"key3": "value3",
 						},
 					},
+					ServiceAccountName: "service-account-client",
 				},
 			},
 			existingObjects: []client.Object{
-				secret("existingSecret", map[string]string{
+				configMap("existingcfgmap", map[string]string{
 					"inputKey1": "value1",
-					"inputKey2": "value2",
 				}),
 			},
 			expectedSecret: corev1.Secret{
@@ -297,22 +284,90 @@ func Test_SecretTemplate(t *testing.T) {
 					OwnerReferences: []metav1.OwnerReference{
 						secretTemplateOwnerRef("secretTemplate"),
 					},
-					Annotations: map[string]string{
-						"annotation1key": "annotation1value",
-						"annotation2key": "annotation2value",
+					Labels: map[string]string{
+						"label1": "prefix-value1",
+					},
+				},
+			},
+		},
+		{
+			name: "reconciling secret template with type, annotations and labels",
+			template: sg2v1alpha1.SecretTemplate{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "secretTemplate",
+					Namespace: "test",
+				},
+				Spec: sg2v1alpha1.SecretTemplateSpec{
+					InputResources: []sg2v1alpha1.InputResource{{
+						Name: "creds",
+						Ref: sg2v1alpha1.InputResourceRef{
+							APIVersion: "v1",
+							Kind:       "Secret",
+							Name:       "existingSecret",
+						},
+					}, {
+						Name: "config",
+						Ref: sg2v1alpha1.InputResourceRef{
+							APIVersion: "v1",
+							Kind:       "ConfigMap",
+							Name:       "existingConfigMap",
+						},
+					}},
+					JSONPathTemplate: sg2v1alpha1.JSONPathTemplate{
+						Type: "some-type",
+						Metadata: sg2v1alpha1.SecretTemplateMetadata{
+							Labels: map[string]string{
+								"label1": "$( .config.data.inputKey1 )",
+							},
+							Annotations: map[string]string{
+								"annotation1": "$( .config.data.inputKey2 )",
+							},
+						},
+						Data: map[string]string{
+							"key1": "$( .creds.data.inputKey3 )",
+						},
+						StringData: map[string]string{
+							"key2": "$( .config.data.inputKey4 )",
+						},
+					},
+					ServiceAccountName: "service-account-client",
+				},
+			},
+			existingObjects: []client.Object{
+				secret("existingSecret", map[string]string{
+					"inputKey3": "value3",
+				}),
+				configMap("existingConfigMap", map[string]string{
+					"inputKey1": "value1",
+					"inputKey2": "value2",
+					"inputKey4": "value4",
+				}),
+			},
+			expectedSecret: corev1.Secret{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Secret",
+					APIVersion: "v1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:            "secretTemplate",
+					Namespace:       "test",
+					ResourceVersion: "1",
+					OwnerReferences: []metav1.OwnerReference{
+						secretTemplateOwnerRef("secretTemplate"),
 					},
 					Labels: map[string]string{
-						"label1key": "label1value",
-						"label2key": "label2value",
+						"label1": "value1",
+					},
+					Annotations: map[string]string{
+						"annotation1": "value2",
 					},
 				},
 				Type: "some-type",
 				Data: map[string][]byte{
-					"key1": []byte("value1"),
-					"key2": []byte("value2"),
+					"key1": []byte("value3"),
 				},
 				StringData: map[string]string{
-					"key3": "value3",
+					"key2": "value4",
 				},
 			},
 		},
@@ -554,6 +609,39 @@ func Test_SecretTemplate_Errors(t *testing.T) {
 				}),
 			},
 			expectedError: "templating annotations: doesntExist is not found",
+		},
+		{
+			name: "reconciling secret template with jsonpath that doesn't evaluate in labels",
+			template: sg2v1alpha1.SecretTemplate{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "secretTemplate",
+					Namespace: "test",
+				},
+				Spec: sg2v1alpha1.SecretTemplateSpec{
+					InputResources: []sg2v1alpha1.InputResource{{
+						Name: "map",
+						Ref: sg2v1alpha1.InputResourceRef{
+							APIVersion: "v1",
+							Kind:       "ConfigMap",
+							Name:       "existingcfgmap",
+						},
+					}},
+					JSONPathTemplate: sg2v1alpha1.JSONPathTemplate{
+						Metadata: sg2v1alpha1.SecretTemplateMetadata{
+							Labels: map[string]string{
+								"key1": "prefix-$(.map.data.doesntExist)-suffix",
+							},
+						},
+					},
+					ServiceAccountName: "service-account-client",
+				},
+			},
+			existingObjects: []client.Object{
+				configMap("existingcfgmap", map[string]string{
+					"inputKey1": "value1",
+				}),
+			},
+			expectedError: "templating labels: doesntExist is not found",
 		},
 		{
 			name: "reconciling secret template referencing non-secret without service account",
