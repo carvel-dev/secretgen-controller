@@ -49,7 +49,7 @@ func Test_SecretTemplate(t *testing.T) {
 							Name:       "existingSecret",
 						},
 					}},
-					JSONPathTemplate: sg2v1alpha1.JSONPathTemplate{
+					JSONPathTemplate: &sg2v1alpha1.JSONPathTemplate{
 						Data: map[string]string{
 							"key1": "$( .creds.data.inputKey1 )",
 							"key2": "$( .creds.data.inputKey2 )",
@@ -111,7 +111,7 @@ func Test_SecretTemplate(t *testing.T) {
 							Name:       "$( .first.data.secretName )",
 						},
 					}},
-					JSONPathTemplate: sg2v1alpha1.JSONPathTemplate{
+					JSONPathTemplate: &sg2v1alpha1.JSONPathTemplate{
 						Data: map[string]string{
 							"key1": "$( .creds.data.inputKey1 )",
 						},
@@ -161,7 +161,7 @@ func Test_SecretTemplate(t *testing.T) {
 							Name:       "existingcfgmap",
 						},
 					}},
-					JSONPathTemplate: sg2v1alpha1.JSONPathTemplate{
+					JSONPathTemplate: &sg2v1alpha1.JSONPathTemplate{
 						StringData: map[string]string{
 							"key1": "prefix-$(.map.data.inputKey1)-suffix",
 						},
@@ -208,7 +208,7 @@ func Test_SecretTemplate(t *testing.T) {
 							Name:       "existingcfgmap",
 						},
 					}},
-					JSONPathTemplate: sg2v1alpha1.JSONPathTemplate{
+					JSONPathTemplate: &sg2v1alpha1.JSONPathTemplate{
 						Metadata: sg2v1alpha1.SecretTemplateMetadata{
 							Annotations: map[string]string{
 								"annotation1": "$(.map.data.inputKey1)-suffix",
@@ -257,7 +257,7 @@ func Test_SecretTemplate(t *testing.T) {
 							Name:       "existingcfgmap",
 						},
 					}},
-					JSONPathTemplate: sg2v1alpha1.JSONPathTemplate{
+					JSONPathTemplate: &sg2v1alpha1.JSONPathTemplate{
 						Metadata: sg2v1alpha1.SecretTemplateMetadata{
 							Labels: map[string]string{
 								"label1": "prefix-$(.map.data.inputKey1)",
@@ -313,7 +313,7 @@ func Test_SecretTemplate(t *testing.T) {
 							Name:       "existingConfigMap",
 						},
 					}},
-					JSONPathTemplate: sg2v1alpha1.JSONPathTemplate{
+					JSONPathTemplate: &sg2v1alpha1.JSONPathTemplate{
 						Type: "some-type",
 						Metadata: sg2v1alpha1.SecretTemplateMetadata{
 							Labels: map[string]string{
@@ -389,7 +389,7 @@ func Test_SecretTemplate(t *testing.T) {
 		// 					Name:       "existingsecret",
 		// 				},
 		// 			}},
-		// 			JSONPathTemplate: sg2v1alpha1.JSONPathTemplate{
+		// 			JSONPathTemplate: &sg2v1alpha1.JSONPathTemplate{
 		// 				StringData: map[string]string{
 		// 					"key1": "prefix-$(.creds.inputKey1)-suffix",
 		// 				},
@@ -462,7 +462,7 @@ func Test_SecretTemplate_Errors(t *testing.T) {
 							Name:       "existingSecret",
 						},
 					}},
-					JSONPathTemplate: sg2v1alpha1.JSONPathTemplate{
+					JSONPathTemplate: &sg2v1alpha1.JSONPathTemplate{
 						Data: map[string]string{
 							"key1": "$( .creds.data.inputKey1 )",
 							"key2": "$( .creds.data.inputKey2 )",
@@ -492,7 +492,7 @@ func Test_SecretTemplate_Errors(t *testing.T) {
 							Name:       "existingConfigMap",
 						},
 					}},
-					JSONPathTemplate: sg2v1alpha1.JSONPathTemplate{
+					JSONPathTemplate: &sg2v1alpha1.JSONPathTemplate{
 						Data: map[string]string{
 							"key1": "$( .creds.data.inputKey1 )",
 							"key2": "$( .creds.data.inputKey2 )",
@@ -521,7 +521,7 @@ func Test_SecretTemplate_Errors(t *testing.T) {
 							Name:       "existingSecret",
 						},
 					}},
-					JSONPathTemplate: sg2v1alpha1.JSONPathTemplate{
+					JSONPathTemplate: &sg2v1alpha1.JSONPathTemplate{
 						Data: map[string]string{
 							"key1": "$( .creds.data.doesntExist1 )",
 						},
@@ -559,7 +559,7 @@ func Test_SecretTemplate_Errors(t *testing.T) {
 							Name:       "existingcfgmap",
 						},
 					}},
-					JSONPathTemplate: sg2v1alpha1.JSONPathTemplate{
+					JSONPathTemplate: &sg2v1alpha1.JSONPathTemplate{
 						StringData: map[string]string{
 							"key1": "prefix-$(.map.data.doesntExist)-suffix",
 						},
@@ -593,7 +593,7 @@ func Test_SecretTemplate_Errors(t *testing.T) {
 							Name:       "existingcfgmap",
 						},
 					}},
-					JSONPathTemplate: sg2v1alpha1.JSONPathTemplate{
+					JSONPathTemplate: &sg2v1alpha1.JSONPathTemplate{
 						Metadata: sg2v1alpha1.SecretTemplateMetadata{
 							Annotations: map[string]string{
 								"key1": "prefix-$(.map.data.doesntExist)-suffix",
@@ -626,7 +626,7 @@ func Test_SecretTemplate_Errors(t *testing.T) {
 							Name:       "existingcfgmap",
 						},
 					}},
-					JSONPathTemplate: sg2v1alpha1.JSONPathTemplate{
+					JSONPathTemplate: &sg2v1alpha1.JSONPathTemplate{
 						Metadata: sg2v1alpha1.SecretTemplateMetadata{
 							Labels: map[string]string{
 								"key1": "prefix-$(.map.data.doesntExist)-suffix",
@@ -659,7 +659,7 @@ func Test_SecretTemplate_Errors(t *testing.T) {
 							Name:       "existingcfgmap",
 						},
 					}},
-					JSONPathTemplate: sg2v1alpha1.JSONPathTemplate{
+					JSONPathTemplate: &sg2v1alpha1.JSONPathTemplate{
 						StringData: map[string]string{
 							"key1": "$( .creds.data.inputKey1 )",
 						},
@@ -726,7 +726,7 @@ func Test_SecretTemplate_Deletion(t *testing.T) {
 							Name:       "existingSecret",
 						},
 					}},
-					JSONPathTemplate: sg2v1alpha1.JSONPathTemplate{
+					JSONPathTemplate: &sg2v1alpha1.JSONPathTemplate{
 						Data: map[string]string{
 							"key1": "$( .creds.data.inputKey1 )",
 							"key2": "$( .creds.data.inputKey2 )",
