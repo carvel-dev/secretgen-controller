@@ -4,10 +4,9 @@
 package generator_test
 
 import (
-	"reflect"
-
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/vmware-tanzu/carvel-secretgen-controller/pkg/generator"
 )
@@ -37,9 +36,7 @@ func Test_SecretTemplate_EvaluateWith(t *testing.T) {
 		expression := generator.JSONPath(tc.expression)
 		result, err := expression.EvaluateWith(tc.values)
 		require.NoError(t, err)
-		if !reflect.DeepEqual(result.String(), tc.expected) {
-			t.Fatalf("expected: %v, got: %v", tc.expected, result)
-		}
+		assert.Equal(t, tc.expected, result.String())
 	}
 }
 
@@ -72,8 +69,6 @@ func Test_SecretTemplate_Templating_Syntax(t *testing.T) {
 	for _, tc := range tests {
 		expression := generator.JSONPath(tc.expression)
 		result := expression.ToK8sJSONPath()
-		if !reflect.DeepEqual(result, tc.expected) {
-			t.Fatalf("expected: %v, got: %v", tc.expected, result)
-		}
+		assert.Equal(t, tc.expected, result)
 	}
 }

@@ -5,11 +5,12 @@ package e2e
 
 import (
 	"fmt"
-	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/ghodss/yaml"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	sgv1alpha1 "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/apis/secretgen/v1alpha1"
 	sg2v1alpha1 "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/apis/secretgen2/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
@@ -93,13 +94,9 @@ stringData:
 
 		var secretTemplate sg2v1alpha1.SecretTemplate
 		err := yaml.Unmarshal([]byte(out), &secretTemplate)
-		if err != nil {
-			t.Fatalf("Failed to unmarshal: %s", err)
-		}
+		require.NoError(t, err, "Failed to unmarshal secrettemplate")
 
-		if !reflect.DeepEqual(secretTemplate.Status.Secret.Name, "") {
-			t.Fatalf("Expected .status.secret.name reference to match, but was: %#v vs %s", secretTemplate.Status.Secret.Name, "")
-		}
+		assert.Empty(t, secretTemplate.Status.Secret.Name, "Expected .status.secret.name reference to be empty")
 	})
 
 	logger.Section("Create Input Resources", func() {
@@ -115,13 +112,9 @@ stringData:
 
 		var secretTemplate sg2v1alpha1.SecretTemplate
 		err := yaml.Unmarshal([]byte(out), &secretTemplate)
-		if err != nil {
-			t.Fatalf("Failed to unmarshal: %s", err)
-		}
+		require.NoError(t, err, "Failed to unmarshal secrettemplate")
 
-		if !reflect.DeepEqual(secretTemplate.Status.Secret.Name, "combined-secret") {
-			t.Fatalf("Expected .status.secret.name reference to match, but was: %#v vs %s", secretTemplate.Status.Secret.Name, "combined-secret")
-		}
+		assert.Equal(t, "combined-secret", secretTemplate.Status.Secret.Name, "Expected .status.secret.name reference to match template name")
 	})
 
 	logger.Section("Delete Input Resources", func() {
@@ -136,18 +129,12 @@ stringData:
 
 		var secretTemplate sg2v1alpha1.SecretTemplate
 		err := yaml.Unmarshal([]byte(out), &secretTemplate)
-		if err != nil {
-			t.Fatalf("Failed to unmarshal: %s", err)
-		}
+		require.NoError(t, err, "Failed to unmarshal secrettemplate")
 
-		if !reflect.DeepEqual(secretTemplate.Status.Secret.Name, "") {
-			t.Fatalf("Expected .status.secret.name reference to match, but was: %#v vs %s", secretTemplate.Status.Secret.Name, "")
-		}
+		assert.Empty(t, secretTemplate.Status.Secret.Name, "Expected .status.secret.name reference to be empty")
 
 		_, lastErr := kubectl.RunWithOpts([]string{"get", "secret", "combined-secret", "-o", "yaml"}, RunOpts{AllowError: true})
-		if lastErr == nil {
-			t.Fatalf("Expected secret to not be present")
-		}
+		require.Error(t, lastErr, "Expected secret to not be present")
 	})
 }
 
@@ -251,11 +238,8 @@ spec:
 		out := waitForSecret(t, kubectl, "combined-secret-sa")
 
 		var secret corev1.Secret
-
 		err := yaml.Unmarshal([]byte(out), &secret)
-		if err != nil {
-			t.Fatalf("Failed to unmarshal: %s", err)
-		}
+		require.NoError(t, err, "Failed to unmarshal secret")
 
 		expectedData := map[string][]byte{
 			"key1": []byte("val1"),
@@ -263,9 +247,8 @@ spec:
 			"key3": []byte("val3"),
 			"key4": []byte("val4"),
 		}
-		if !reflect.DeepEqual(secret.Data, expectedData) {
-			t.Fatalf("Expected secret data to match, but was: %#v vs %s", secret.Data, expectedData)
-		}
+
+		assert.Equal(t, expectedData, secret.Data, "Expected data to match")
 	})
 
 	logger.Section("Check status", func() {
@@ -276,13 +259,9 @@ spec:
 
 		var secretTemplate sg2v1alpha1.SecretTemplate
 		err := yaml.Unmarshal([]byte(out), &secretTemplate)
-		if err != nil {
-			t.Fatalf("Failed to unmarshal: %s", err)
-		}
+		require.NoError(t, err, "Failed to unmarshal secrettemplate")
 
-		if !reflect.DeepEqual(secretTemplate.Status.Secret.Name, "combined-secret-sa") {
-			t.Fatalf("Expected .status.secret.name reference to match, but was: %#v vs %s", secretTemplate.Status.Secret.Name, "combined-secret-sa")
-		}
+		assert.Equal(t, "combined-secret-sa", secretTemplate.Status.Secret.Name, "Expected .status.secret.name reference to match template name")
 	})
 }
 
@@ -365,13 +344,9 @@ spec:
 
 		var secretTemplate sg2v1alpha1.SecretTemplate
 		err := yaml.Unmarshal([]byte(out), &secretTemplate)
-		if err != nil {
-			t.Fatalf("Failed to unmarshal: %s", err)
-		}
+		require.NoError(t, err, "Failed to unmarshal secrettemplate")
 
-		if !reflect.DeepEqual(secretTemplate.Status.Secret.Name, "") {
-			t.Fatalf("Expected .status.secret.name reference to match, but was: %#v vs %s", secretTemplate.Status.Secret.Name, "")
-		}
+		assert.Empty(t, secretTemplate.Status.Secret.Name, "Expected .status.secret.name reference to be empty")
 	})
 }
 
@@ -386,6 +361,6 @@ func waitForSecretTemplate(t *testing.T, kubectl Kubectl, name string, condition
 		return out
 	}
 
-	t.Fatalf("Expected to find secrettemplate '%s' but did not: %s", name, err)
+	require.NoError(t, err, "Expected to find secrettemplate '%s' but did not: %s", name)
 	panic("Unreachable")
 }

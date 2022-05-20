@@ -5,7 +5,6 @@ package generator_test
 
 import (
 	"context"
-	"reflect"
 	"testing"
 	"time"
 
@@ -252,7 +251,7 @@ func Test_SecretTemplate(t *testing.T) {
 
 			res, err := reconcileObject(t, secretTemplateReconciler, &tc.template)
 			require.NoError(t, err)
-			assert.Equal(t, res.RequeueAfter, 30*time.Second)
+			assert.Equal(t, 30*time.Second, res.RequeueAfter)
 
 			var secretTemplate sg2v1alpha1.SecretTemplate
 			err = k8sClient.Get(context.Background(), namespacedNameFor(&tc.template), &secretTemplate)
@@ -289,17 +288,11 @@ func Test_SecretTemplate(t *testing.T) {
 				assert.Fail(t, "secret not owned by secrettemplate", "secret not owned by secrettemplate")
 			}
 
-			if secretTemplate.Status.Secret.Name != secretTemplate.GetName() {
-				assert.Fail(t, "reference secret name incorrect", "reference secret name incorrect %s, but got %s", secretTemplate.GetName(), secretTemplate.Status.Secret.Name)
-			}
+			assert.Equal(t, secretTemplate.GetName(), secretTemplate.Status.Secret.Name, "reference secret name incorrect")
 
-			if !reflect.DeepEqual(secret.ObjectMeta.Annotations, tc.expectedAnnotations) {
-				assert.Fail(t, "annotations did not match", "annotations not equal expected %+v, but got %+v", tc.expectedAnnotations, secret.ObjectMeta.Annotations)
-			}
+			assert.Equal(t, tc.expectedAnnotations, secret.ObjectMeta.Annotations, "secret annotations not equal")
 
-			if !reflect.DeepEqual(secret.ObjectMeta.Labels, tc.expectedLabels) {
-				assert.Fail(t, "labels did not match", "labels not equal expected %+v, but got %+v", tc.expectedLabels, secret.ObjectMeta.Labels)
-			}
+			assert.Equal(t, tc.expectedLabels, secret.ObjectMeta.Labels, "secret labels not equal")
 		})
 	}
 }
