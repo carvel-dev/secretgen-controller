@@ -291,6 +291,49 @@ func Test_SecretTemplate(t *testing.T) {
 			},
 		},
 		{
+			name: "reconciling secret template with embedded stringData template in type",
+			template: sg2v1alpha1.SecretTemplate{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "secretTemplate",
+					Namespace: "test",
+				},
+				Spec: sg2v1alpha1.SecretTemplateSpec{
+					InputResources: []sg2v1alpha1.InputResource{{
+						Name: "map",
+						Ref: sg2v1alpha1.InputResourceRef{
+							APIVersion: "v1",
+							Kind:       "ConfigMap",
+							Name:       "existingcfgmap",
+						},
+					}},
+					JSONPathTemplate: &sg2v1alpha1.JSONPathTemplate{
+						Type: corev1.SecretType("$(.map.data.inputKey1)"),
+					},
+					ServiceAccountName: "service-account-client",
+				},
+			},
+			existingObjects: []client.Object{
+				configMap("existingcfgmap", map[string]string{
+					"inputKey1": "Opaque",
+				}),
+			},
+			expectedSecret: corev1.Secret{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Secret",
+					APIVersion: "v1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:            "secretTemplate",
+					Namespace:       "test",
+					ResourceVersion: "1",
+					OwnerReferences: []metav1.OwnerReference{
+						secretTemplateOwnerRef("secretTemplate"),
+					},
+				},
+				Type: corev1.SecretType("Opaque"),
+			},
+		},
+		{
 			name: "reconciling secret template with type, annotations and labels",
 			template: sg2v1alpha1.SecretTemplate{
 				ObjectMeta: metav1.ObjectMeta{
@@ -642,6 +685,35 @@ func Test_SecretTemplate_Errors(t *testing.T) {
 				}),
 			},
 			expectedError: "templating labels: doesntExist is not found",
+		},
+		{
+			name: "reconciling secret template with jsonpath that doesn't evaluate in labels",
+			template: sg2v1alpha1.SecretTemplate{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "secretTemplate",
+					Namespace: "test",
+				},
+				Spec: sg2v1alpha1.SecretTemplateSpec{
+					InputResources: []sg2v1alpha1.InputResource{{
+						Name: "map",
+						Ref: sg2v1alpha1.InputResourceRef{
+							APIVersion: "v1",
+							Kind:       "ConfigMap",
+							Name:       "existingcfgmap",
+						},
+					}},
+					JSONPathTemplate: &sg2v1alpha1.JSONPathTemplate{
+						Type: corev1.SecretType("$(.map.data.doesntExist)"),
+					},
+					ServiceAccountName: "service-account-client",
+				},
+			},
+			existingObjects: []client.Object{
+				configMap("existingcfgmap", map[string]string{
+					"inputKey1": "Opaque",
+				}),
+			},
+			expectedError: "templating type: doesntExist is not found",
 		},
 		{
 			name: "reconciling secret template referencing non-secret without service account",

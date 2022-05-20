@@ -105,28 +105,9 @@ func (r *SecretTemplateReconciler) reconcile(ctx context.Context, secretTemplate
 		return reconcile.Result{}, err
 	}
 
-	// Template Secret Data
-	secretData, err := evaluateBytes(secretTemplate.Spec.JSONPathTemplate.Data, inputResources)
+	evaluatedTemplateSecret, err := evaluateTemplate(*secretTemplate.Spec.JSONPathTemplate, inputResources)
 	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("templating data: %w", err)
-	}
-
-	// Template Secret StringData
-	secretStringData, err := evaluate(secretTemplate.Spec.JSONPathTemplate.StringData, inputResources)
-	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("templating stringData: %w", err)
-	}
-
-	// Template Secret Annotations
-	secretAnnotations, err := evaluate(secretTemplate.Spec.JSONPathTemplate.Metadata.Annotations, inputResources)
-	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("templating annotations: %w", err)
-	}
-
-	// Template Secret Labels
-	secretLabels, err := evaluate(secretTemplate.Spec.JSONPathTemplate.Metadata.Labels, inputResources)
-	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("templating labels: %w", err)
+		return reconcile.Result{}, err
 	}
 
 	// Create/Update Secret
@@ -138,15 +119,13 @@ func (r *SecretTemplateReconciler) reconcile(ctx context.Context, secretTemplate
 	}
 
 	if _, err = controllerutil.CreateOrUpdate(ctx, r.client, &secret, func() error {
-		secret.Data = secretData
-		secret.StringData = secretStringData
-		secret.ObjectMeta.Annotations = secretAnnotations
-		secret.ObjectMeta.Labels = secretLabels
+		secret.Data = evaluatedTemplateSecret.Data
+		secret.StringData = evaluatedTemplateSecret.StringData
+		secret.ObjectMeta.Annotations = evaluatedTemplateSecret.Annotations
+		secret.ObjectMeta.Labels = evaluatedTemplateSecret.Labels
 
 		// Secret Type is immutable, so cannot be updated. TODO what to do here?
-		if secret.Type == "" {
-			secret.Type = secretTemplate.Spec.JSONPathTemplate.Type
-		}
+		secret.Type = evaluatedTemplateSecret.Type
 
 		return controllerutil.SetControllerReference(secretTemplate, &secret, scheme.Scheme)
 	}); err != nil {
@@ -264,6 +243,48 @@ func toUnstructured(apiVersion, kind, namespace, name string) (unstructured.Unst
 	obj.SetNamespace(namespace)
 
 	return obj, nil
+}
+
+func evaluateTemplate(template sg2v1alpha1.JSONPathTemplate, values map[string]interface{}) (corev1.Secret, error) {
+	// Template Secret Data
+	data, err := evaluateBytes(template.Data, values)
+	if err != nil {
+		return corev1.Secret{}, fmt.Errorf("templating data: %w", err)
+	}
+
+	// Template Secret StringData
+	stringData, err := evaluate(template.StringData, values)
+	if err != nil {
+		return corev1.Secret{}, fmt.Errorf("templating stringData: %w", err)
+	}
+
+	// Template Secret Annotations
+	annotations, err := evaluate(template.Metadata.Annotations, values)
+	if err != nil {
+		return corev1.Secret{}, fmt.Errorf("templating annotations: %w", err)
+	}
+
+	// Template Secret Labels
+	labels, err := evaluate(template.Metadata.Labels, values)
+	if err != nil {
+		return corev1.Secret{}, fmt.Errorf("templating labels: %w", err)
+	}
+
+	// Template Secret Type
+	typeBuffer, err := JSONPath(template.Type).EvaluateWith(values)
+	if err != nil {
+		return corev1.Secret{}, fmt.Errorf("templating type: %w", err)
+	}
+
+	return corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Labels:      labels,
+			Annotations: annotations,
+		},
+		Type:       corev1.SecretType(typeBuffer.String()),
+		StringData: stringData,
+		Data:       data,
+	}, nil
 }
 
 func evaluate(mapping map[string]string, values map[string]interface{}) (map[string]string, error) {
