@@ -30,8 +30,6 @@ import (
 )
 
 const (
-	// Matches default sync in kapp-controller
-	// See: https://github.com/vmware-tanzu/carvel-kapp-controller/blob/develop/pkg/app/reconcile_timer.go
 	syncPeriod = 30 * time.Second
 )
 
