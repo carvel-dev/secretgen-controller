@@ -56,7 +56,7 @@ func NewSecretTemplateReconciler(client client.Client, loader ClientLoader, log 
 
 // AttachWatches adds starts watches this reconciler requires.
 func (r *SecretTemplateReconciler) AttachWatches(controller controller.Controller) error {
-	//Watch for changes to created Secrets
+	// Watch for changes to created Secrets
 	if err := controller.Watch(&source.Kind{Type: &corev1.Secret{}}, &handler.EnqueueRequestForOwner{OwnerType: &sg2v1alpha1.SecretTemplate{}}); err != nil {
 		return err
 	}
@@ -89,7 +89,7 @@ func (r *SecretTemplateReconciler) Reconcile(ctx context.Context, request reconc
 	defer r.updateStatus(ctx, &secretTemplate)
 
 	res, err := r.reconcile(ctx, &secretTemplate)
-	//TODO is this overly defensive?
+	// TODO is this overly defensive?
 	if err != nil {
 		secretTemplate.Status.Secret.Name = ""
 		if deleteErr := r.deleteChildSecret(ctx, &secretTemplate); deleteErr != nil {
@@ -101,13 +101,13 @@ func (r *SecretTemplateReconciler) Reconcile(ctx context.Context, request reconc
 }
 
 func (r *SecretTemplateReconciler) reconcile(ctx context.Context, secretTemplate *sg2v1alpha1.SecretTemplate) (reconcile.Result, error) {
-	//Resolve input resources
+	// Resolve input resources
 	inputResources, err := r.resolveInputResources(ctx, secretTemplate)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	//Template Secret Data
+	// Template Secret Data
 	secretData := map[string][]byte{}
 	for key, expression := range secretTemplate.Spec.JSONPathTemplate.Data {
 		valueBuffer, err := JSONPath(expression).EvaluateWith(inputResources)
@@ -123,7 +123,7 @@ func (r *SecretTemplateReconciler) reconcile(ctx context.Context, secretTemplate
 		secretData[key] = decoded
 	}
 
-	//Template Secret StringData
+	// Template Secret StringData
 	secretStringData := map[string]string{}
 	for key, expression := range secretTemplate.Spec.JSONPathTemplate.StringData {
 		valueBuffer, err := JSONPath(expression).EvaluateWith(inputResources)
@@ -134,7 +134,7 @@ func (r *SecretTemplateReconciler) reconcile(ctx context.Context, secretTemplate
 		secretStringData[key] = valueBuffer.String()
 	}
 
-	//Create/Update Secret
+	// Create/Update Secret
 	secret := corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      secretTemplate.GetName(),
@@ -219,7 +219,7 @@ func (r *SecretTemplateReconciler) resolveInputResources(ctx context.Context, se
 
 	for _, inputResource := range secretTemplate.Spec.InputResources {
 
-		//Ensure we only load Secrets if using the default Client.
+		// Ensure we only load Secrets if using the default Client.
 		if secretTemplate.Spec.ServiceAccountName == "" && (inputResource.Ref.Kind != "Secret" || inputResource.Ref.APIVersion != "v1") {
 			return nil, fmt.Errorf("unable to load non-secrets without a specified serviceaccount")
 		}
@@ -231,7 +231,7 @@ func (r *SecretTemplateReconciler) resolveInputResources(ctx context.Context, se
 
 		key := types.NamespacedName{Namespace: secretTemplate.Namespace, Name: unstructuredResource.GetName()}
 
-		//TODO: Setup dynamic watch - first pass periodically re-reconciles
+		// TODO: Setup dynamic watch - first pass periodically re-reconciles
 		if err := inputResourceclient.Get(ctx, key, &unstructuredResource); err != nil {
 			return nil, fmt.Errorf("cannot fetch input resource %s: %w", unstructuredResource.GetName(), err)
 		}

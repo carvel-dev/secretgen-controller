@@ -42,24 +42,24 @@ type SecretTemplateList struct {
 
 // SecretTemplateSpec contains spec information
 type SecretTemplateSpec struct {
-	//A list of input resources that are used to construct a new secret. Input Resources can refer to ANY Kubernetes API.
-	//If loading more than Secrets types ensure that `.spec.ServiceAccountName` is set to an appropriate value.
-	//Input resources are read in the order they are defined. An Input resource's name can be evaluated dynamically from data in a previously evaluated input resource.
+	// A list of input resources that are used to construct a new secret. Input Resources can refer to ANY Kubernetes API.
+	// If loading more than Secrets types ensure that `.spec.ServiceAccountName` is set to an appropriate value.
+	// Input resources are read in the order they are defined. An Input resource's name can be evaluated dynamically from data in a previously evaluated input resource.
 	InputResources []InputResource `json:"inputResources"`
 
-	//A JSONPath based template that can be used to create Secrets.
+	// A JSONPath based template that can be used to create Secrets.
 	JSONPathTemplate JSONPathTemplate `json:"template"`
 
-	//The Service Account used to read InputResources. If not specified, only Secrets can be read as InputResources.
+	// The Service Account used to read InputResources. If not specified, only Secrets can be read as InputResources.
 	// +optional
 	ServiceAccountName string `json:"serviceAccountName,omitempty"`
 }
 
 // InputResource is references a single Kubernetes resource along with a identifying name
 type InputResource struct {
-	//The name of InputResource. This is used as the identifying name in templating to refer to this Input Resource.
+	// The name of InputResource. This is used as the identifying name in templating to refer to this Input Resource.
 	Name string `json:"name"`
-	//The reference to the Input Resource
+	// The reference to the Input Resource
 	Ref InputResourceRef `json:"ref"`
 }
 
@@ -68,43 +68,43 @@ type InputResourceRef struct {
 	APIVersion string `json:"apiVersion"`
 	Kind       string `json:"kind"`
 
-	//The name of the input resource. This field can itself contain JSONPATH syntax to load the name dynamically
-	//from other input resources. For example this field could be set to a static value of "my-secret" or a dynamic valid of "$(.anotherinputresource.spec.name)".
+	// The name of the input resource. This field can itself contain JSONPATH syntax to load the name dynamically
+	// from other input resources. For example this field could be set to a static value of "my-secret" or a dynamic valid of "$(.anotherinputresource.spec.name)".
 	Name string `json:"name"`
 }
 
 // JSONPathTemplate contains templating information used to construct a new secret
 type JSONPathTemplate struct {
-	//StringData key and value. Where key is the Secret Key and the value is a JSONPATH syntax surrounded by $( ).
-	//All InputResources are available via their identifying name.
-	//For example:
-	/// key1: $(.input1.spec.value1)
-	/// key2: $(.input2.status.value2)
+	// StringData key and value. Where key is the Secret Key and the value is a JSONPATH syntax surrounded by $( ).
+	// All InputResources are available via their identifying name.
+	// For example:
+	//   key1: $(.input1.spec.value1)
+	//   key2: $(.input2.status.value2)
 	// +optional
 	StringData map[string]string `json:"stringData,omitempty"`
-	//Data key and value. Where key is the Secret Key and the value is a jsonpath surrounded by $( ). The fetched data MUST be base64 encoded.
-	//All InputResources are available via their identifying name.
-	//For example:
-	// key1: $(.secretinput1.data.value1)
-	// key2: $(.secretinput2.data.value2)
+	// Data key and value. Where key is the Secret Key and the value is a jsonpath surrounded by $( ). The fetched data MUST be base64 encoded.
+	// All InputResources are available via their identifying name.
+	// For example:
+	//   key1: $(.secretinput1.data.value1)
+	//   key2: $(.secretinput2.data.value2)
 	// +optional
 	Data map[string]string `json:"data,omitempty"`
 
-	//Type is the type of Kubernetes Secret
+	// Type is the type of Kubernetes Secret
 	// +optional
 	Type corev1.SecretType `json:"type,omitempty"`
 
-	//Metadata contains metadata for the Secret
+	// Metadata contains metadata for the Secret
 	// +optional
 	Metadata SecretTemplateMetadata `json:"metadata,omitempty"`
 }
 
-//SecretTemplateMetadata allows the generated secret to contain metadata
+// SecretTemplateMetadata allows the generated secret to contain metadata
 type SecretTemplateMetadata struct {
-	//Annotations to be placed on the generated secret
+	// Annotations to be placed on the generated secret
 	// +optional
 	Annotations map[string]string `json:"annotations,omitempty"`
-	//Labels to be placed on the generated secret
+	// Labels to be placed on the generated secret
 	// +optional
 	Labels map[string]string `json:"labels,omitempty"`
 }
