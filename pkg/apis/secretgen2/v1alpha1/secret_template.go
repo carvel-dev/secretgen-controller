@@ -118,12 +118,3 @@ type SecretTemplateStatus struct {
 	// +optional
 	ObservedSecretResourceVersion string `json:"observedSecretResourceVersion,omitempty"`
 }
-
-// Validate runs validation on the SecretTemplate
-func (e SecretTemplate) Validate() error {
-	var errs []error
-
-	//TODO
-
-	return combinedErrs("Validation errors", errs)
-}
