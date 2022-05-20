@@ -26,13 +26,10 @@ import (
 
 func Test_SecretTemplate(t *testing.T) {
 	type test struct {
-		name                string
-		template            sg2v1alpha1.SecretTemplate
-		existingObjects     []client.Object
-		expectedData        map[string]string
-		expectedType        string
-		expectedLabels      map[string]string
-		expectedAnnotations map[string]string
+		name            string
+		template        sg2v1alpha1.SecretTemplate
+		existingObjects []client.Object
+		expectedSecret  corev1.Secret
 	}
 
 	tests := []test{
@@ -66,12 +63,29 @@ func Test_SecretTemplate(t *testing.T) {
 			existingObjects: []client.Object{
 				secret("existingSecret", map[string]string{
 					"inputKey1": "value1",
-					"inputKey2": "value2"}),
+					"inputKey2": "value2",
+				}),
 			},
-			expectedData: map[string]string{
-				"key1": "value1",
-				"key2": "value2",
-				"key3": "value3",
+			expectedSecret: corev1.Secret{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Secret",
+					APIVersion: "v1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:            "secretTemplate",
+					Namespace:       "test",
+					ResourceVersion: "1",
+					OwnerReferences: []metav1.OwnerReference{
+						secretTemplateOwnerRef("secretTemplate"),
+					},
+				},
+				Data: map[string][]byte{
+					"key1": []byte("value1"),
+					"key2": []byte("value2"),
+				},
+				StringData: map[string]string{
+					"key3": "value3",
+				},
 			},
 		},
 		{
@@ -113,8 +127,22 @@ func Test_SecretTemplate(t *testing.T) {
 					"inputKey1": "value1",
 				}),
 			},
-			expectedData: map[string]string{
-				"key1": "value1",
+			expectedSecret: corev1.Secret{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Secret",
+					APIVersion: "v1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:            "secretTemplate",
+					Namespace:       "test",
+					ResourceVersion: "1",
+					OwnerReferences: []metav1.OwnerReference{
+						secretTemplateOwnerRef("secretTemplate"),
+					},
+				},
+				Data: map[string][]byte{
+					"key1": []byte("value1"),
+				},
 			},
 		},
 		{
@@ -146,8 +174,22 @@ func Test_SecretTemplate(t *testing.T) {
 					"inputKey1": "value1",
 				}),
 			},
-			expectedData: map[string]string{
-				"key1": "prefix-value1-suffix",
+			expectedSecret: corev1.Secret{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Secret",
+					APIVersion: "v1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:            "secretTemplate",
+					Namespace:       "test",
+					ResourceVersion: "1",
+					OwnerReferences: []metav1.OwnerReference{
+						secretTemplateOwnerRef("secretTemplate"),
+					},
+				},
+				StringData: map[string]string{
+					"key1": "prefix-value1-suffix",
+				},
 			},
 		},
 		{
@@ -191,21 +233,38 @@ func Test_SecretTemplate(t *testing.T) {
 			existingObjects: []client.Object{
 				secret("existingSecret", map[string]string{
 					"inputKey1": "value1",
-					"inputKey2": "value2"}),
+					"inputKey2": "value2",
+				}),
 			},
-			expectedData: map[string]string{
-				"key1": "value1",
-				"key2": "value2",
-				"key3": "value3",
-			},
-			expectedType: "some-type",
-			expectedLabels: map[string]string{
-				"label1key": "label1value",
-				"label2key": "label2value",
-			},
-			expectedAnnotations: map[string]string{
-				"annotation1key": "annotation1value",
-				"annotation2key": "annotation2value",
+			expectedSecret: corev1.Secret{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Secret",
+					APIVersion: "v1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:            "secretTemplate",
+					Namespace:       "test",
+					ResourceVersion: "1",
+					OwnerReferences: []metav1.OwnerReference{
+						secretTemplateOwnerRef("secretTemplate"),
+					},
+					Annotations: map[string]string{
+						"annotation1key": "annotation1value",
+						"annotation2key": "annotation2value",
+					},
+					Labels: map[string]string{
+						"label1key": "label1value",
+						"label2key": "label2value",
+					},
+				},
+				Type: "some-type",
+				Data: map[string][]byte{
+					"key1": []byte("value1"),
+					"key2": []byte("value2"),
+				},
+				StringData: map[string]string{
+					"key3": "value3",
+				},
 			},
 		},
 		// Failing (maybe this should only be supported in ytt?)
@@ -261,38 +320,15 @@ func Test_SecretTemplate(t *testing.T) {
 				{Type: sgv1alpha1.ReconcileSucceeded, Status: corev1.ConditionTrue},
 			}, secretTemplate.Status.Conditions)
 
-			var secret corev1.Secret
+			var actualSecret corev1.Secret
 			err = k8sClient.Get(context.Background(), types.NamespacedName{
 				Name:      secretTemplate.Status.Secret.Name,
 				Namespace: secretTemplate.GetNamespace(),
-			}, &secret)
+			}, &actualSecret)
 			require.NoError(t, err)
 
-			actual := map[string]string{}
-			for key, value := range secret.StringData {
-				actual[key] = value
-			}
-			for key, value := range secret.Data {
-				actual[key] = string(value)
-			}
-
-			for key, value := range tc.expectedData {
-				assert.Equal(t, value, actual[key])
-			}
-
-			if tc.expectedType != "" {
-				assert.Equal(t, tc.expectedType, string(secret.Type))
-			}
-
-			if !isOwner(secret.GetOwnerReferences(), &secretTemplate) {
-				assert.Fail(t, "secret not owned by secrettemplate", "secret not owned by secrettemplate")
-			}
-
+			assert.Equal(t, tc.expectedSecret, actualSecret)
 			assert.Equal(t, secretTemplate.GetName(), secretTemplate.Status.Secret.Name, "reference secret name incorrect")
-
-			assert.Equal(t, tc.expectedAnnotations, secret.ObjectMeta.Annotations, "secret annotations not equal")
-
-			assert.Equal(t, tc.expectedLabels, secret.ObjectMeta.Labels, "secret labels not equal")
 		})
 	}
 }
@@ -615,17 +651,16 @@ func namespacedNameFor(object client.Object) types.NamespacedName {
 	}
 }
 
-func isOwner(owners []metav1.OwnerReference, object client.Object) bool {
-	for _, owner := range owners {
-		apiVersion, kind := object.GetObjectKind().GroupVersionKind().ToAPIVersionAndKind()
-		if owner.Name == object.GetName() &&
-			owner.Kind == kind &&
-			owner.APIVersion == apiVersion &&
-			*owner.Controller {
-			return true
-		}
+func secretTemplateOwnerRef(name string) metav1.OwnerReference {
+	truthy := true
+
+	return metav1.OwnerReference{
+		APIVersion:         "secretgen.carvel.dev/v1alpha1",
+		Kind:               "SecretTemplate",
+		Name:               name,
+		Controller:         &truthy,
+		BlockOwnerDeletion: &truthy,
 	}
-	return false
 }
 
 // fakeClientLoader simply returns the same client for any Service Account
