@@ -30,14 +30,14 @@ jobs:
       - uses: actions/setup-go@v3 # default version of go is 1.10
         with:
           go-version: "1.17.6"
-    - name: Install Carvel Tools
-      uses: vmware-tanzu/carvel-setup-action@v1
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        only: ytt, kapp, kbld
-        ytt: v0.40.1
-        kapp: v0.47.0
-        kbld: v0.33.0
+      - name: Install Carvel Tools
+        uses: vmware-tanzu/carvel-setup-action@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          only: ytt, kapp, kbld
+          ytt: v0.40.1
+          kapp: v0.47.0
+          kbld: v0.33.0
       # Run benchmark with `go test -bench` and stores the output to a file
       - name: Install kc and run e2e tests on kind
         run: |
