@@ -36,7 +36,6 @@ jobs:
     - name: Run Tests
       run: |
         set -e -x
-        export GOPATH=$(echo `pwd`/../../../../)
 
         mkdir /tmp/bin
         export PATH=/tmp/bin:$PATH
