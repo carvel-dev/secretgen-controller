@@ -64,6 +64,7 @@ func (r *SecretTemplateReconciler) AttachWatches(controller controller.Controlle
 // Reconcile is the entrypoint for incoming requests from k8s
 func (r *SecretTemplateReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := r.log.WithValues("request", request)
+	log.Info("reconciling")
 
 	secretTemplate := sg2v1alpha1.SecretTemplate{}
 	if err := r.client.Get(ctx, types.NamespacedName{Namespace: request.Namespace, Name: request.Name}, &secretTemplate); err != nil {
