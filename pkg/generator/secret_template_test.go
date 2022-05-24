@@ -13,6 +13,7 @@ import (
 	sgv1alpha1 "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/apis/secretgen/v1alpha1"
 	sg2v1alpha1 "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/apis/secretgen2/v1alpha1"
 	"github.com/vmware-tanzu/carvel-secretgen-controller/pkg/client2/clientset/versioned/scheme"
+	"github.com/vmware-tanzu/carvel-secretgen-controller/pkg/tracker"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -423,7 +424,11 @@ func Test_SecretTemplate(t *testing.T) {
 
 			res, err := reconcileObject(t, secretTemplateReconciler, &tc.template)
 			require.NoError(t, err)
-			assert.Equal(t, 30*time.Second, res.RequeueAfter)
+			if tc.template.Spec.ServiceAccountName == "" {
+				assert.Equal(t, 0*time.Second, res.RequeueAfter)
+			} else {
+				assert.Equal(t, 30*time.Second, res.RequeueAfter)
+			}
 
 			var secretTemplate sg2v1alpha1.SecretTemplate
 			err = k8sClient.Get(context.Background(), namespacedNameFor(&tc.template), &secretTemplate)
@@ -781,7 +786,7 @@ func newReconciler(objects ...client.Object) (secretTemplateReconciler *generato
 	k8sClient = fakeClient.NewClientBuilder().WithObjects(objects...).WithScheme(scheme.Scheme).Build()
 
 	fakeClientLoader := fakeClientLoader{client: k8sClient}
-	secretTemplateReconciler = generator.NewSecretTemplateReconciler(k8sClient, &fakeClientLoader, testLogr)
+	secretTemplateReconciler = generator.NewSecretTemplateReconciler(k8sClient, &fakeClientLoader, tracker.NewTracker(), testLogr)
 
 	return secretTemplateReconciler, k8sClient
 }

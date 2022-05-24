@@ -38,18 +38,26 @@ type ClientLoader interface {
 	Client(ctx context.Context, saName, saNamespace string) (client.Client, error)
 }
 
+// Tracker allows a tracking resource to track multiple other resources
+type Tracker interface {
+	Track(tracking types.NamespacedName, tracked ...types.NamespacedName)
+	UntrackAll(tracking types.NamespacedName)
+	GetTracking(tracked types.NamespacedName) []types.NamespacedName
+}
+
 // SecretTemplateReconciler watches for SecretTemplate Resources and generates a new secret from a set of input resources.
 type SecretTemplateReconciler struct {
-	client   client.Client
-	saLoader ClientLoader
-	log      logr.Logger
+	client        client.Client
+	saLoader      ClientLoader
+	secretTracker Tracker
+	log           logr.Logger
 }
 
 var _ reconcile.Reconciler = &SecretTemplateReconciler{}
 
 // NewSecretTemplateReconciler create a new SecretTemplate Reconciler
-func NewSecretTemplateReconciler(client client.Client, loader ClientLoader, log logr.Logger) *SecretTemplateReconciler {
-	return &SecretTemplateReconciler{client, loader, log}
+func NewSecretTemplateReconciler(client client.Client, loader ClientLoader, secretTracker Tracker, log logr.Logger) *SecretTemplateReconciler {
+	return &SecretTemplateReconciler{client, loader, secretTracker, log}
 }
 
 // AttachWatches adds starts watches this reconciler requires.
@@ -58,6 +66,25 @@ func (r *SecretTemplateReconciler) AttachWatches(controller controller.Controlle
 	if err := controller.Watch(&source.Kind{Type: &corev1.Secret{}}, &handler.EnqueueRequestForOwner{OwnerType: &sg2v1alpha1.SecretTemplate{}}); err != nil {
 		return err
 	}
+
+	// Watch for secrets that are being Tracked
+	err := controller.Watch(&source.Kind{Type: &corev1.Secret{}}, handler.EnqueueRequestsFromMapFunc(
+		func(a client.Object) []reconcile.Request {
+			var requests []reconcile.Request
+			secretKey := types.NamespacedName{Namespace: a.GetNamespace(), Name: a.GetName()}
+			for _, tracking := range r.secretTracker.GetTracking(secretKey) {
+				requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{
+					Name:      tracking.Name,
+					Namespace: tracking.Namespace,
+				}})
+			}
+			return requests
+		},
+	))
+	if err != nil {
+		return err
+	}
+
 	return controller.Watch(&source.Kind{Type: &sg2v1alpha1.SecretTemplate{}}, &handler.EnqueueRequestForObject{})
 }
 
@@ -66,10 +93,14 @@ func (r *SecretTemplateReconciler) Reconcile(ctx context.Context, request reconc
 	log := r.log.WithValues("request", request)
 	log.Info("reconciling")
 
+	secretKey := types.NamespacedName{Namespace: request.Namespace, Name: request.Name}
 	secretTemplate := sg2v1alpha1.SecretTemplate{}
-	if err := r.client.Get(ctx, types.NamespacedName{Namespace: request.Namespace, Name: request.Name}, &secretTemplate); err != nil {
+	if err := r.client.Get(ctx, secretKey, &secretTemplate); err != nil {
 		if errors.IsNotFound(err) {
 			log.Info("Not found")
+
+			// Clear tracking if the SecretTemplate has been deleted.
+			r.secretTracker.UntrackAll(secretKey)
 			return reconcile.Result{}, nil
 		}
 		return reconcile.Result{}, err
@@ -126,9 +157,12 @@ func (r *SecretTemplateReconciler) reconcile(ctx context.Context, secretTemplate
 
 	secretTemplate.Status.Secret.Name = secret.Name
 
-	return reconcile.Result{
-		RequeueAfter: syncPeriod,
-	}, nil
+	// If not tracking input resources, periodically requeue
+	if !shouldTrackInputResources(secretTemplate) {
+		return reconcile.Result{RequeueAfter: syncPeriod}, nil
+	}
+
+	return reconcile.Result{}, nil
 }
 
 func (r *SecretTemplateReconciler) updateStatus(ctx context.Context, secretTemplate *sg2v1alpha1.SecretTemplate) error {
@@ -166,10 +200,11 @@ func (r *SecretTemplateReconciler) resolveInputResources(ctx context.Context, se
 		return nil, fmt.Errorf("unable to load client for reading Input Resources: %w", err)
 	}
 
+	secretTemplateKey := types.NamespacedName{Namespace: secretTemplate.Namespace, Name: secretTemplate.Name}
+
+	resolvedInputResourceKeys := []types.NamespacedName{}
 	resolvedInputResources := map[string]interface{}{}
-
 	for _, inputResource := range secretTemplate.Spec.InputResources {
-
 		// Ensure we only load Secrets if using the default Client.
 		if secretTemplate.Spec.ServiceAccountName == "" && (inputResource.Ref.Kind != "Secret" || inputResource.Ref.APIVersion != "v1") {
 			return nil, fmt.Errorf("unable to load non-secrets without a specified serviceaccount")
@@ -182,13 +217,20 @@ func (r *SecretTemplateReconciler) resolveInputResources(ctx context.Context, se
 
 		key := types.NamespacedName{Namespace: secretTemplate.Namespace, Name: unstructuredResource.GetName()}
 
-		// TODO: Setup dynamic watch - first pass periodically re-reconciles
 		if err := inputResourceclient.Get(ctx, key, &unstructuredResource); err != nil {
 			return nil, fmt.Errorf("cannot fetch input resource %s: %w", unstructuredResource.GetName(), err)
 		}
 
 		resolvedInputResources[inputResource.Name] = unstructuredResource.UnstructuredContent()
+		resolvedInputResourceKeys = append(resolvedInputResourceKeys, key)
 	}
+
+	if shouldTrackInputResources(secretTemplate) {
+		//Untrack everything first incase input resources have changed.
+		r.secretTracker.UntrackAll(secretTemplateKey)
+		r.secretTracker.Track(secretTemplateKey, resolvedInputResourceKeys...)
+	}
+
 	return resolvedInputResources, nil
 }
 
@@ -200,6 +242,13 @@ func resolveInputResource(ref sg2v1alpha1.InputResourceRef, namespace string, in
 	}
 
 	return toUnstructured(ref.APIVersion, ref.Kind, namespace, resolvedName.String())
+}
+
+// Returns whether we should track the resources contained in a SecretTemplate.
+// We only track resources when a ServiceAccountName has not been specified. This implicitly means
+// we only track Secret resources.
+func shouldTrackInputResources(s *sg2v1alpha1.SecretTemplate) bool {
+	return s.Spec.ServiceAccountName == ""
 }
 
 func toUnstructured(apiVersion, kind, namespace, name string) (unstructured.Unstructured, error) {
