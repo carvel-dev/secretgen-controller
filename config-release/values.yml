@@ -1,4 +1,6 @@
 #@data/values-schema
 ---
-push_images: true
-image_repo: ghcr.io/vmware-tanzu/carvel-secretgen-controller
+#@overlay/match-child-defaults
+dev:
+  push_images: true
+  image_repo: ghcr.io/vmware-tanzu/carvel-secretgen-controller
