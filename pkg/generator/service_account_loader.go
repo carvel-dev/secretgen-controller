@@ -6,29 +6,29 @@ package generator
 import (
 	"context"
 	"fmt"
+	"os"
+	"time"
 
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/types"
+	authv1 "k8s.io/api/authentication/v1"
 	"k8s.io/client-go/rest"
 	certutil "k8s.io/client-go/util/cert"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrl "sigs.k8s.io/controller-runtime/pkg/client/config"
 )
 
-const (
-	tokenKey    = "token"
-	caCert      = "ca.crt"
-	saTokenType = "kubernetes.io/service-account-token"
-)
+type TokenManager interface {
+	GetServiceAccountToken(namespace, name string, tr *authv1.TokenRequest) (*authv1.TokenRequest, error)
+}
 
 // ServiceAccountLoader allows the construction of a k8s client from a Service Account
 type ServiceAccountLoader struct {
-	client client.Client // Used to load service accounts and their secrets.
+	// Ensures a valid token for a ServiceAccount is available.
+	tokenManager TokenManager
 }
 
 // NewServiceAccountLoader creates a new ServiceAccountLoader
-func NewServiceAccountLoader(client client.Client) *ServiceAccountLoader {
-	return &ServiceAccountLoader{client}
+func NewServiceAccountLoader(manager TokenManager) *ServiceAccountLoader {
+	return &ServiceAccountLoader{manager}
 }
 
 // Client returns a new k8s client for a Service Account
@@ -47,56 +47,35 @@ func (s *ServiceAccountLoader) restConfig(ctx context.Context, saName, saNamespa
 		return nil, err
 	}
 
-	token, cert, err := s.serviceAccountCredentials(ctx, saName, saNamespace)
+	expiration := int64(time.Hour.Seconds())
+	tokenRequest, err := s.tokenManager.GetServiceAccountToken(saNamespace, saName, &authv1.TokenRequest{
+		Spec: authv1.TokenRequestSpec{
+			ExpirationSeconds: &expiration,
+		},
+	})
 	if err != nil {
 		return nil, err
 	}
 
-	if _, err := certutil.NewPoolFromBytes(cert); err != nil {
+	var caData []byte
+	if len(cfg.CAData) > 0 {
+		caData = cfg.CAData
+	}
+	if cfg.CAFile != "" {
+		caData, err = os.ReadFile(cfg.CAFile)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if _, err := certutil.NewPoolFromBytes(caData); err != nil {
 		return nil, fmt.Errorf("expected to load root CA config, but got err: %v", err)
 	}
 
 	return &rest.Config{
 		Host: cfg.Host,
 		TLSClientConfig: rest.TLSClientConfig{
-			CAData: cert,
+			CAData: caData,
 		},
-		BearerToken: string(token),
+		BearerToken: tokenRequest.Status.Token,
 	}, nil
-}
-
-func (s *ServiceAccountLoader) serviceAccountCredentials(ctx context.Context, name, namespace string) ([]byte, []byte, error) {
-	sa := corev1.ServiceAccount{}
-	if err := s.client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: name}, &sa); err != nil {
-		return nil, nil, fmt.Errorf("unable to fetch service account %s:%s, %w", namespace, name, err)
-	}
-
-	if len(sa.Secrets) == 0 {
-		return nil, nil, fmt.Errorf("no secrets found for service account %s:%s", namespace, name)
-	}
-
-	for _, secretRef := range sa.Secrets {
-		secret := corev1.Secret{}
-		if err := s.client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: secretRef.Name}, &secret); err != nil {
-			return nil, nil, fmt.Errorf("failed to fetch secret %s:%s, %w", namespace, secretRef.Name, err)
-		}
-
-		if secret.Type != saTokenType {
-			continue
-		}
-
-		tokenData, tokenFound := secret.Data[tokenKey]
-		if !tokenFound {
-			return nil, nil, fmt.Errorf("secret %s:%s does not contain %s field", namespace, secretRef.Name, tokenKey)
-		}
-
-		certData, certFound := secret.Data[caCert]
-		if !certFound {
-			return nil, nil, fmt.Errorf("secret %s:%s does not contain %s field", namespace, secretRef.Name, caCert)
-		}
-
-		return tokenData, certData, nil
-	}
-
-	return nil, nil, fmt.Errorf("serviceaccount %s:%s did not reference any secret of type %s", namespace, name, saTokenType)
 }

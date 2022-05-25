@@ -15,6 +15,7 @@ import (
 	sg2v1alpha1 "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/apis/secretgen2/v1alpha1"
 	sgclient "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/client/clientset/versioned"
 	"github.com/vmware-tanzu/carvel-secretgen-controller/pkg/generator"
+	"github.com/vmware-tanzu/carvel-secretgen-controller/pkg/satoken"
 	"github.com/vmware-tanzu/carvel-secretgen-controller/pkg/sharing"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -74,7 +75,7 @@ func main() {
 	sshKeyReconciler := generator.NewSSHKeyReconciler(sgClient, coreClient, log.WithName("sshkey"))
 	exitIfErr(entryLog, "registering", registerCtrl("sshkey", mgr, sshKeyReconciler))
 
-	saLoader := generator.NewServiceAccountLoader(mgr.GetClient())
+	saLoader := generator.NewServiceAccountLoader(satoken.NewManager(coreClient, log.WithName("template")))
 	secretTemplateReconciler := generator.NewSecretTemplateReconciler(mgr.GetClient(), saLoader, log.WithName("template"))
 	exitIfErr(entryLog, "registering", registerCtrl("template", mgr, secretTemplateReconciler))
 
