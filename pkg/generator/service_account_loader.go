@@ -16,6 +16,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime/pkg/client/config"
 )
 
+// TokenManager handles getting a valid token for a given ServiceAccount.
 type TokenManager interface {
 	GetServiceAccountToken(namespace, name string, tr *authv1.TokenRequest) (*authv1.TokenRequest, error)
 }
