@@ -1,10 +1,7 @@
-#@ load("@ytt:overlay", "overlay")
-
-#@overlay/match by=overlay.subset({"kind": "Sources"})
 ---
+apiVersion: kbld.k14s.io/v1alpha1
+kind: Sources
 sources:
-#@overlay/replace
-#@overlay/match by=overlay.subset({"image": "secretgen-controller"})
 - image: secretgen-controller
   path: .
   docker:

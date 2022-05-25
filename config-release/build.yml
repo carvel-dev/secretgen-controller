@@ -1,17 +1,26 @@
 #@ load("@ytt:data", "data")
+#@ load("@ytt:overlay", "overlay")
 
+---
 apiVersion: kbld.k14s.io/v1alpha1
 kind: Sources
 sources:
+#@ if data.values.push_images:
+#@overlay/replace
+#@overlay/match by=overlay.subset({"image": "secretgen-controller"})
 - image: secretgen-controller
   path: .
-  #@ if/end data.values.push_images:
   docker:
     build:
       #! Always rebuild image
       pull: true
       noCache: true
       rawOptions: #@ ["--build-arg", "SGCTRL_VER="+data.values.secretgen_controller_version]
+#@ else:
+- image: secretgen-controller
+  path: .
+#@ end
+  
 
 #@ if/end data.values.push_images:
 ---

@@ -1,4 +1,5 @@
 #@ load("@ytt:data", "data")
+#@ load("@ytt:assert", "assert")
 
 apiVersion: apps/v1
 kind: Deployment
@@ -6,7 +7,7 @@ metadata:
   name: secretgen-controller
   namespace: #@ data.values.namespace
   annotations:
-    secretgen-controller.carvel.dev/version: #@ data.values.secretgen_controller_version
+    secretgen-controller.carvel.dev/version: #@ data.values.secretgen_controller_version or assert.fail("'secretgen_controller_version' must be set")
 spec:
   selector:
     matchLabels:
