@@ -57,7 +57,24 @@ func (s *ServiceAccountLoader) restConfig(ctx context.Context, saName, saNamespa
 		return nil, err
 	}
 
+	caData, err := getCACert(cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	return &rest.Config{
+		Host: cfg.Host,
+		TLSClientConfig: rest.TLSClientConfig{
+			CAData: caData,
+		},
+		BearerToken: tokenRequest.Status.Token,
+	}, nil
+}
+
+func getCACert(cfg *rest.Config) ([]byte, error) {
 	var caData []byte
+	var err error
+
 	if len(cfg.CAData) > 0 {
 		caData = cfg.CAData
 	}
@@ -71,11 +88,5 @@ func (s *ServiceAccountLoader) restConfig(ctx context.Context, saName, saNamespa
 		return nil, fmt.Errorf("expected to load root CA config, but got err: %v", err)
 	}
 
-	return &rest.Config{
-		Host: cfg.Host,
-		TLSClientConfig: rest.TLSClientConfig{
-			CAData: caData,
-		},
-		BearerToken: tokenRequest.Status.Token,
-	}, nil
+	return caData, nil
 }
