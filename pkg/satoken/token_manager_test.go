@@ -20,9 +20,10 @@ import (
 
 func TestTokenCachingAndExpiration(t *testing.T) {
 	type suite struct {
-		clock *testingclock.FakeClock
-		tg    *fakeTokenGetter
-		mgr   *Manager
+		clock    *testingclock.FakeClock
+		getter   *fakeTokenGetter
+		reviewer *fakeTokenReviewer
+		mgr      *Manager
 	}
 
 	type testCase struct {
@@ -41,7 +42,7 @@ func TestTokenCachingAndExpiration(t *testing.T) {
 				_, err := s.mgr.GetServiceAccountToken("a", "b", getTokenRequest())
 
 				assert.NoErrorf(t, err, "unexpected error getting token")
-				assert.Equal(t, s.tg.count, 1, "expected refresh to not be called, call count was %d", s.tg.count)
+				assert.Equal(t, s.getter.count, 1, "expected refresh to not be called, call count was %d", s.getter.count)
 			},
 		},
 		{
@@ -53,7 +54,7 @@ func TestTokenCachingAndExpiration(t *testing.T) {
 				_, err := s.mgr.GetServiceAccountToken("a", "b", getTokenRequest())
 
 				assert.NoErrorf(t, err, "unexpected error getting token")
-				assert.Equal(t, s.tg.count, 2, "expected token to be refreshed, call count was %d", s.tg.count)
+				assert.Equal(t, s.getter.count, 2, "expected token to be refreshed, call count was %d", s.getter.count)
 			},
 		},
 		{
@@ -81,8 +82,8 @@ func TestTokenCachingAndExpiration(t *testing.T) {
 			s := &suite{
 				clock: clock,
 				mgr:   NewManager(nil, log),
-				tg: &fakeTokenGetter{
-					tr: &authenticationv1.TokenRequest{
+				getter: &fakeTokenGetter{
+					request: &authenticationv1.TokenRequest{
 						Spec: authenticationv1.TokenRequestSpec{
 							ExpirationSeconds: &expSecs,
 						},
@@ -92,17 +93,28 @@ func TestTokenCachingAndExpiration(t *testing.T) {
 						},
 					},
 				},
+				reviewer: &fakeTokenReviewer{
+					review: &authenticationv1.TokenReview{
+						Spec: authenticationv1.TokenReviewSpec{
+							Token: "foo",
+						},
+						Status: authenticationv1.TokenReviewStatus{
+							Authenticated: true,
+						},
+					},
+				},
 			}
-			s.mgr.getToken = s.tg.getToken
+			s.mgr.getToken = s.getter.getToken
+			s.mgr.reviewToken = s.reviewer.reviewToken
 			s.mgr.clock = s.clock
 
 			_, err := s.mgr.GetServiceAccountToken("a", "b", getTokenRequest())
 			assert.NoErrorf(t, err, "unexpected error getting token")
-			assert.Equal(t, s.tg.count, 1, "unexpected client call, call count was %d", s.tg.count)
+			assert.Equal(t, s.getter.count, 1, "unexpected client call, call count was %d", s.getter.count)
 
 			_, err = s.mgr.GetServiceAccountToken("a", "b", getTokenRequest())
 			assert.NoErrorf(t, err, "unexpected error getting token")
-			assert.Equal(t, s.tg.count, 1, "expected token to be served from cache, call count was %d", s.tg.count)
+			assert.Equal(t, s.getter.count, 1, "expected token to be served from cache, call count was %d", s.getter.count)
 
 			c.f(t, s)
 		})
@@ -114,6 +126,7 @@ func TestRequiresRefresh(t *testing.T) {
 
 	type testCase struct {
 		now, exp      time.Time
+		authenticated bool
 		expectRefresh bool
 	}
 
@@ -121,21 +134,31 @@ func TestRequiresRefresh(t *testing.T) {
 		{
 			now:           start.Add(1 * time.Minute),
 			exp:           start.Add(maxTTL),
+			authenticated: true,
 			expectRefresh: false,
 		},
 		{
 			now:           start.Add(59 * time.Minute),
 			exp:           start.Add(maxTTL),
+			authenticated: true,
 			expectRefresh: false,
 		},
 		{
 			now:           start.Add(61 * time.Minute),
 			exp:           start.Add(maxTTL),
+			authenticated: true,
 			expectRefresh: true,
 		},
 		{
 			now:           start.Add(3 * time.Hour),
 			exp:           start.Add(maxTTL),
+			authenticated: true,
+			expectRefresh: true,
+		},
+		{
+			now:           start.Add(1 * time.Minute),
+			exp:           start.Add(maxTTL),
+			authenticated: false,
 			expectRefresh: true,
 		},
 	}
@@ -153,9 +176,20 @@ func TestRequiresRefresh(t *testing.T) {
 					ExpirationTimestamp: metav1.Time{Time: c.exp},
 				},
 			}
+			reviewer := &fakeTokenReviewer{
+				review: &authenticationv1.TokenReview{
+					Spec: authenticationv1.TokenReviewSpec{
+						Token: "foo",
+					},
+					Status: authenticationv1.TokenReviewStatus{
+						Authenticated: c.authenticated,
+					},
+				},
+			}
 
 			mgr := NewManager(nil, log)
 			mgr.clock = clock
+			mgr.reviewToken = reviewer.reviewToken
 
 			rr := mgr.requiresRefresh(tr)
 			assert.Equal(t, rr, c.expectRefresh, "unexpected requiresRefresh result, got: %v, want: %v - %s", rr, c.expectRefresh, c)
@@ -203,14 +237,25 @@ func TestCleanup(t *testing.T) {
 }
 
 type fakeTokenGetter struct {
-	count int
-	tr    *authenticationv1.TokenRequest
-	err   error
+	count   int
+	request *authenticationv1.TokenRequest
+	err     error
 }
 
 func (ftg *fakeTokenGetter) getToken(name, namespace string, tr *authenticationv1.TokenRequest) (*authenticationv1.TokenRequest, error) {
 	ftg.count++
-	return ftg.tr, ftg.err
+	return ftg.request, ftg.err
+}
+
+type fakeTokenReviewer struct {
+	count  int
+	review *authenticationv1.TokenReview
+	err    error
+}
+
+func (ftr *fakeTokenReviewer) reviewToken(tr *authenticationv1.TokenReview) (*authenticationv1.TokenReview, error) {
+	ftr.count++
+	return ftr.review, ftr.err
 }
 
 func getTokenRequest() *authenticationv1.TokenRequest {
