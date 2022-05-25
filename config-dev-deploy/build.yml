@@ -1,3 +1,4 @@
+#@ load("@ytt:data", "data")
 ---
 apiVersion: kbld.k14s.io/v1alpha1
 kind: Sources
@@ -10,3 +11,11 @@ sources:
       noCache: false
       file: Dockerfile.dev
       buildkit: true
+
+#@ if/end data.values.push_images:
+---
+apiVersion: kbld.k14s.io/v1alpha1
+kind: ImageDestinations
+destinations:
+- image: secretgen-controller
+  newImage: #@ data.values.image_repo
