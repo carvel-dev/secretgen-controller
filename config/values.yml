@@ -2,7 +2,4 @@
 ---
 namespace: secretgen-controller
 create_namespace: true
-
-secretgen_controller_version: ""
-push_images: ""
-image_repo: ""
+secretgen_controller_version: "develop"
