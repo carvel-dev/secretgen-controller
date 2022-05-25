@@ -1,5 +1,6 @@
 #@data/values-schema
 ---
+#@overlay/match missing_ok=True
 #@overlay/match-child-defaults
 dev:
   push_images: true
