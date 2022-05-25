@@ -106,7 +106,7 @@ func (r *SecretTemplateReconciler) reconcile(ctx context.Context, secretTemplate
 		return reconcile.Result{}, err
 	}
 
-	evaluatedTemplateSecret, err := evaluateTemplate(*secretTemplate.Spec.JSONPathTemplate, inputResources)
+	evaluatedTemplateSecret, err := evaluateTemplate(secretTemplate.Spec.JSONPathTemplate, inputResources)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -246,7 +246,7 @@ func toUnstructured(apiVersion, kind, namespace, name string) (unstructured.Unst
 	return obj, nil
 }
 
-func evaluateTemplate(template sg2v1alpha1.JSONPathTemplate, values map[string]interface{}) (corev1.Secret, error) {
+func evaluateTemplate(template *sg2v1alpha1.JSONPathTemplate, values map[string]interface{}) (corev1.Secret, error) {
 	// Template Secret Data
 	data, err := evaluateBytes(template.Data, values)
 	if err != nil {
