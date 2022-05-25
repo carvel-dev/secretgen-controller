@@ -1,8 +1,8 @@
-#@data/values
+#@data/values-schema
 ---
 namespace: secretgen-controller
 create_namespace: true
 
-push_images: false
-image_repo: docker.io/k14s/secretgen-controller-test
-secretgen_controller_version: "develop"
+secretgen_controller_version: ""
+push_images: ""
+image_repo: ""
