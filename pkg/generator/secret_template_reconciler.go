@@ -87,16 +87,7 @@ func (r *SecretTemplateReconciler) Reconcile(ctx context.Context, request reconc
 	status.SetReconciling(secretTemplate.ObjectMeta)
 	defer r.updateStatus(ctx, &secretTemplate)
 
-	res, err := r.reconcile(ctx, &secretTemplate)
-	// TODO is this overly defensive?
-	if err != nil {
-		secretTemplate.Status.Secret.Name = ""
-		if deleteErr := r.deleteChildSecret(ctx, &secretTemplate); deleteErr != nil {
-			return status.WithReconcileCompleted(res, deleteErr)
-		}
-	}
-
-	return status.WithReconcileCompleted(res, err)
+	return status.WithReconcileCompleted(r.reconcile(ctx, &secretTemplate))
 }
 
 func (r *SecretTemplateReconciler) reconcile(ctx context.Context, secretTemplate *sg2v1alpha1.SecretTemplate) (reconcile.Result, error) {
@@ -150,21 +141,6 @@ func (r *SecretTemplateReconciler) updateStatus(ctx context.Context, secretTempl
 
 	if err := r.client.Status().Update(ctx, &existingSecretTemplate); err != nil {
 		return fmt.Errorf("updating secretTemplate status: %w", err)
-	}
-
-	return nil
-}
-
-func (r *SecretTemplateReconciler) deleteChildSecret(ctx context.Context, secretTemplate *sg2v1alpha1.SecretTemplate) error {
-	secret := corev1.Secret{}
-	if err := r.client.Get(ctx, types.NamespacedName{Namespace: secretTemplate.GetNamespace(), Name: secretTemplate.GetName()}, &secret); err != nil {
-		if errors.IsNotFound(err) {
-			return nil
-		}
-	}
-
-	if err := r.client.Delete(ctx, &secret); err != nil {
-		return fmt.Errorf("deleting secret: %w", err)
 	}
 
 	return nil

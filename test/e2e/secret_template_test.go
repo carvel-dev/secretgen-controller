@@ -121,7 +121,7 @@ stringData:
 		kapp.RunWithOpts([]string{"delete", "-a", name + "-inputs"}, RunOpts{AllowError: true})
 	})
 
-	logger.Section("Check secret was deleted and template has ReconcileFailed", func() {
+	logger.Section("Check template has ReconcileFailed but secret remains", func() {
 		out := waitForSecretTemplate(t, kubectl, "combined-secret", sgv1alpha1.Condition{
 			Type:   "ReconcileFailed",
 			Status: corev1.ConditionTrue,
@@ -131,10 +131,10 @@ stringData:
 		err := yaml.Unmarshal([]byte(out), &secretTemplate)
 		require.NoError(t, err, "Failed to unmarshal secrettemplate")
 
-		assert.Empty(t, secretTemplate.Status.Secret.Name, "Expected .status.secret.name reference to be empty")
+		assert.NotEmpty(t, secretTemplate.Status.Secret.Name, "Expected .status.secret.name reference to not be empty")
 
-		_, lastErr := kubectl.RunWithOpts([]string{"get", "secret", "combined-secret", "-o", "yaml"}, RunOpts{AllowError: true})
-		require.Error(t, lastErr, "Expected secret to not be present")
+		_, err = kubectl.RunWithOpts([]string{"get", "secret", "combined-secret", "-o", "yaml"}, RunOpts{AllowError: true})
+		require.NoError(t, err, "Expected secret to still be present")
 	})
 }
 
