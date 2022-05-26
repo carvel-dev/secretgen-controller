@@ -75,7 +75,7 @@ func main() {
 	sshKeyReconciler := generator.NewSSHKeyReconciler(sgClient, coreClient, log.WithName("sshkey"))
 	exitIfErr(entryLog, "registering", registerCtrl("sshkey", mgr, sshKeyReconciler))
 
-	saLoader := generator.NewServiceAccountLoader(satoken.NewManager(coreClient, log.WithName("template")), &generator.KubeconfigGetter{}, &generator.CACertGetter{})
+	saLoader := generator.NewServiceAccountLoader(satoken.NewManager(coreClient, log.WithName("template")))
 	secretTemplateReconciler := generator.NewSecretTemplateReconciler(mgr.GetClient(), saLoader, log.WithName("template"))
 	exitIfErr(entryLog, "registering", registerCtrl("template", mgr, secretTemplateReconciler))
 
