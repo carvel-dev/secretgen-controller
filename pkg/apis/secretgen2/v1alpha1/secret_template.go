@@ -48,6 +48,7 @@ type SecretTemplateSpec struct {
 	InputResources []InputResource `json:"inputResources"`
 
 	// A JSONPath based template that can be used to create Secrets.
+	// +optional
 	JSONPathTemplate *JSONPathTemplate `json:"template,omitempty"`
 
 	// The Service Account used to read InputResources. If not specified, only Secrets can be read as InputResources.
@@ -80,7 +81,7 @@ type JSONPathTemplate struct {
 	// For example:
 	//   key1: static-text
 	//   key2: $(.input1.spec.value1)
-	//   key3: combined-$(.input2.status.value3)-$(.input2.status.value4)
+	//   key3: combined-$(.input2.status.value2)-$(.input2.status.value3)
 	// +optional
 	StringData map[string]string `json:"stringData,omitempty"`
 	// Data key and value. Where key is the Secret Key and the value is a jsonpath surrounded by $( ). The fetched data MUST be base64 encoded.
