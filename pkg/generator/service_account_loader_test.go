@@ -66,10 +66,7 @@ func Test_RestConfig(t *testing.T) {
 			cfg, err := saLoader.RestConfig(context.Background(), "test-name", "test-namespace")
 			require.NoError(t, err)
 
-			assert.Equal(t, tc.saConfig, *cfg)
-			if tc.localKubeconfig.CAFile != "" {
-				assert.Equal(t, tc.localKubeconfig.Host, caCertGetter.cfg.Host)
-			}
+			assert.Equal(t, caCertGetter.caCert, cfg.CAData)
 			assert.Equal(t, "test-name", manager.saName)
 			assert.Equal(t, "test-namespace", manager.saNamespace)
 		})
