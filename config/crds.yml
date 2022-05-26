@@ -238,7 +238,7 @@ spec:
                   stringData:
                     additionalProperties:
                       type: string
-                    description: 'StringData key and value. Where key is the Secret Key and the value is a JSONPATH syntax surrounded by $( ). All InputResources are available via their identifying name. For example:   key1: $(.input1.spec.value1)   key2: $(.input2.status.value2)'
+                    description: 'StringData key and value. Where key is the Secret Key and the value can contain a JSONPATH syntax surrounded by $( ). All InputResources are available via their identifying name. For example:   key1: static-text   key2: $(.input1.spec.value1)   key3: combined-$(.input2.status.value3)-$(.input2.status.value4)'
                     type: object
                   type:
                     description: Type is the type of Kubernetes Secret
@@ -246,7 +246,6 @@ spec:
                 type: object
             required:
             - inputResources
-            - template
             type: object
           status:
             description: SecretTemplateStatus contains status information
