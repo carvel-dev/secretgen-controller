@@ -7,6 +7,7 @@
 package satoken
 
 import (
+	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -39,7 +40,7 @@ func TestTokenCachingAndExpiration(t *testing.T) {
 			f: func(t *testing.T, s *suite) {
 				s.clock.SetTime(s.clock.Now())
 
-				_, err := s.mgr.GetServiceAccountToken("a", "b", getTokenRequest())
+				_, err := s.mgr.GetServiceAccountToken(context.Background(), "a", "b", getTokenRequest())
 
 				assert.NoErrorf(t, err, "unexpected error getting token")
 				assert.Equal(t, s.getter.count, 1, "expected refresh to not be called, call count was %d", s.getter.count)
@@ -51,7 +52,7 @@ func TestTokenCachingAndExpiration(t *testing.T) {
 			f: func(t *testing.T, s *suite) {
 				s.clock.SetTime(s.clock.Now().Add(time.Hour + time.Minute))
 
-				_, err := s.mgr.GetServiceAccountToken("a", "b", getTokenRequest())
+				_, err := s.mgr.GetServiceAccountToken(context.Background(), "a", "b", getTokenRequest())
 
 				assert.NoErrorf(t, err, "unexpected error getting token")
 				assert.Equal(t, s.getter.count, 2, "expected token to be refreshed, call count was %d", s.getter.count)
@@ -66,7 +67,7 @@ func TestTokenCachingAndExpiration(t *testing.T) {
 					err: fmt.Errorf("err"),
 				}
 				s.mgr.getToken = tg.getToken
-				tr, err := s.mgr.GetServiceAccountToken("a", "b", getTokenRequest())
+				tr, err := s.mgr.GetServiceAccountToken(context.Background(), "a", "b", getTokenRequest())
 
 				assert.NoErrorf(t, err, "unexpected error getting token")
 				assert.Equal(t, tr.Status.Token, "foo", "unexpected token")
@@ -108,11 +109,11 @@ func TestTokenCachingAndExpiration(t *testing.T) {
 			s.mgr.reviewToken = s.reviewer.reviewToken
 			s.mgr.clock = s.clock
 
-			_, err := s.mgr.GetServiceAccountToken("a", "b", getTokenRequest())
+			_, err := s.mgr.GetServiceAccountToken(context.Background(), "a", "b", getTokenRequest())
 			assert.NoErrorf(t, err, "unexpected error getting token")
 			assert.Equal(t, s.getter.count, 1, "unexpected client call, call count was %d", s.getter.count)
 
-			_, err = s.mgr.GetServiceAccountToken("a", "b", getTokenRequest())
+			_, err = s.mgr.GetServiceAccountToken(context.Background(), "a", "b", getTokenRequest())
 			assert.NoErrorf(t, err, "unexpected error getting token")
 			assert.Equal(t, s.getter.count, 1, "expected token to be served from cache, call count was %d", s.getter.count)
 
@@ -191,7 +192,7 @@ func TestRequiresRefresh(t *testing.T) {
 			mgr.clock = clock
 			mgr.reviewToken = reviewer.reviewToken
 
-			rr := mgr.requiresRefresh(tr)
+			rr := mgr.requiresRefresh(context.Background(), tr)
 			assert.Equal(t, rr, c.expectRefresh, "unexpected requiresRefresh result, got: %v, want: %v - %s", rr, c.expectRefresh, c)
 		})
 	}
@@ -242,7 +243,7 @@ type fakeTokenGetter struct {
 	err     error
 }
 
-func (ftg *fakeTokenGetter) getToken(name, namespace string, tr *authenticationv1.TokenRequest) (*authenticationv1.TokenRequest, error) {
+func (ftg *fakeTokenGetter) getToken(ctx context.Context, name, namespace string, tr *authenticationv1.TokenRequest) (*authenticationv1.TokenRequest, error) {
 	ftg.count++
 	return ftg.request, ftg.err
 }
@@ -253,7 +254,7 @@ type fakeTokenReviewer struct {
 	err    error
 }
 
-func (ftr *fakeTokenReviewer) reviewToken(tr *authenticationv1.TokenReview) (*authenticationv1.TokenReview, error) {
+func (ftr *fakeTokenReviewer) reviewToken(ctx context.Context, tr *authenticationv1.TokenReview) (*authenticationv1.TokenReview, error) {
 	ftr.count++
 	return ftr.review, ftr.err
 }

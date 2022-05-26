@@ -33,11 +33,11 @@ var _ generator.TokenManager = &Manager{}
 // NewManager returns a new token manager.
 func NewManager(c clientset.Interface, log logr.Logger) *Manager {
 	m := &Manager{
-		getToken: func(name, namespace string, tr *authenticationv1.TokenRequest) (*authenticationv1.TokenRequest, error) {
-			return c.CoreV1().ServiceAccounts(namespace).CreateToken(context.TODO(), name, tr, metav1.CreateOptions{})
+		getToken: func(ctx context.Context, name, namespace string, tr *authenticationv1.TokenRequest) (*authenticationv1.TokenRequest, error) {
+			return c.CoreV1().ServiceAccounts(namespace).CreateToken(ctx, name, tr, metav1.CreateOptions{})
 		},
-		reviewToken: func(tr *authenticationv1.TokenReview) (*authenticationv1.TokenReview, error) {
-			return c.AuthenticationV1().TokenReviews().Create(context.Background(), tr, metav1.CreateOptions{})
+		reviewToken: func(ctx context.Context, tr *authenticationv1.TokenReview) (*authenticationv1.TokenReview, error) {
+			return c.AuthenticationV1().TokenReviews().Create(ctx, tr, metav1.CreateOptions{})
 		},
 		cache: make(map[string]*authenticationv1.TokenRequest),
 		clock: clock.RealClock{},
@@ -55,8 +55,8 @@ type Manager struct {
 	cache      map[string]*authenticationv1.TokenRequest
 
 	// mocked for testing
-	getToken    func(name, namespace string, tr *authenticationv1.TokenRequest) (*authenticationv1.TokenRequest, error)
-	reviewToken func(tr *authenticationv1.TokenReview) (*authenticationv1.TokenReview, error)
+	getToken    func(ctx context.Context, name, namespace string, tr *authenticationv1.TokenRequest) (*authenticationv1.TokenRequest, error)
+	reviewToken func(ctx context.Context, tr *authenticationv1.TokenReview) (*authenticationv1.TokenReview, error)
 	clock       clock.Clock
 
 	log logr.Logger
@@ -70,16 +70,16 @@ type Manager struct {
 // * If the token is refreshed successfully, save it in the cache and return the token.
 // * If refresh fails and the old token is still valid, log an error and return the old token.
 // * If refresh fails and the old token is no longer valid, return an error
-func (m *Manager) GetServiceAccountToken(namespace, name string, tr *authenticationv1.TokenRequest) (*authenticationv1.TokenRequest, error) {
+func (m *Manager) GetServiceAccountToken(ctx context.Context, namespace, name string, tr *authenticationv1.TokenRequest) (*authenticationv1.TokenRequest, error) {
 	key := fmt.Sprintf("%q/%q", name, namespace)
 
 	ctr, ok := m.get(key)
 
-	if ok && !m.requiresRefresh(ctr) {
+	if ok && !m.requiresRefresh(ctx, ctr) {
 		return ctr, nil
 	}
 
-	tr, err := m.getToken(name, namespace, tr)
+	tr, err := m.getToken(ctx, name, namespace, tr)
 	if err != nil {
 		switch {
 		case !ok:
@@ -124,8 +124,8 @@ func (m *Manager) expired(t *authenticationv1.TokenRequest) bool {
 }
 
 // requiresRefresh returns true if the token is older half of it's maxTTL
-func (m *Manager) requiresRefresh(tr *authenticationv1.TokenRequest) bool {
-	review, err := m.reviewToken(&authenticationv1.TokenReview{
+func (m *Manager) requiresRefresh(ctx context.Context, tr *authenticationv1.TokenRequest) bool {
+	review, err := m.reviewToken(ctx, &authenticationv1.TokenReview{
 		Spec: authenticationv1.TokenReviewSpec{
 			Token: tr.Status.Token,
 		},

@@ -18,7 +18,7 @@ import (
 
 // TokenManager handles getting a valid token for a given ServiceAccount.
 type TokenManager interface {
-	GetServiceAccountToken(namespace, name string, tr *authv1.TokenRequest) (*authv1.TokenRequest, error)
+	GetServiceAccountToken(ctx context.Context, namespace, name string, tr *authv1.TokenRequest) (*authv1.TokenRequest, error)
 }
 
 // ServiceAccountLoader allows the construction of a k8s client from a Service Account
@@ -49,7 +49,7 @@ func (s *ServiceAccountLoader) restConfig(ctx context.Context, saName, saNamespa
 	}
 
 	expiration := int64(time.Hour.Seconds())
-	tokenRequest, err := s.tokenManager.GetServiceAccountToken(saNamespace, saName, &authv1.TokenRequest{
+	tokenRequest, err := s.tokenManager.GetServiceAccountToken(ctx, saNamespace, saName, &authv1.TokenRequest{
 		Spec: authv1.TokenRequestSpec{
 			ExpirationSeconds: &expiration,
 		},
