@@ -18,8 +18,7 @@ func Test_SecretTemplate_EvaluateWith(t *testing.T) {
 		expected   string
 	}
 
-	// We probably shouldn't test too much here as it's a really just a k8s library.
-	// TODO: Should we ensure that EvaluateWith only returns one string/node
+	// Shouldn't test too much here as it's a passing through to a k8s library.
 	tests := []test{
 		{expression: "static-value", values: map[string]interface{}{
 			"key": "value",
