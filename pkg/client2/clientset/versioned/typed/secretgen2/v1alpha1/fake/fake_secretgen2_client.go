@@ -20,6 +20,10 @@ func (c *FakeSecretgenV1alpha1) SecretImports(namespace string) v1alpha1.SecretI
 	return &FakeSecretImports{c, namespace}
 }
 
+func (c *FakeSecretgenV1alpha1) SecretTemplates(namespace string) v1alpha1.SecretTemplateInterface {
+	return &FakeSecretTemplates{c, namespace}
+}
+
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
 func (c *FakeSecretgenV1alpha1) RESTClient() rest.Interface {

@@ -21,4 +21,10 @@ time kapp delete -y -a secret-export
 time kapp deploy -y -a ssh-key -f examples/ssh-key.yml
 time kapp delete -y -a ssh-key
 
+time kapp deploy -y -a secret-template -f examples/secret-template.yml
+time kapp delete -y -a secret-template
+
+time kapp deploy -y -a secret-template-non-secret-inputs -f examples/secret-template-non-secret-inputs.yml
+time kapp delete -y -a secret-template-non-secret-inputs
+
 echo SUCCESS

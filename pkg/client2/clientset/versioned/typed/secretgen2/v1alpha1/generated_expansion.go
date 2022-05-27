@@ -5,3 +5,5 @@ package v1alpha1
 type SecretExportExpansion interface{}
 
 type SecretImportExpansion interface{}
+
+type SecretTemplateExpansion interface{}

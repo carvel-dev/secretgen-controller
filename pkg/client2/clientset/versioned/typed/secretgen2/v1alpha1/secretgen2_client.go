@@ -12,6 +12,7 @@ type SecretgenV1alpha1Interface interface {
 	RESTClient() rest.Interface
 	SecretExportsGetter
 	SecretImportsGetter
+	SecretTemplatesGetter
 }
 
 // SecretgenV1alpha1Client is used to interact with features provided by the secretgen.carvel.dev group.
@@ -25,6 +26,10 @@ func (c *SecretgenV1alpha1Client) SecretExports(namespace string) SecretExportIn
 
 func (c *SecretgenV1alpha1Client) SecretImports(namespace string) SecretImportInterface {
 	return newSecretImports(c, namespace)
+}
+
+func (c *SecretgenV1alpha1Client) SecretTemplates(namespace string) SecretTemplateInterface {
+	return newSecretTemplates(c, namespace)
 }
 
 // NewForConfig creates a new SecretgenV1alpha1Client for the given config.
