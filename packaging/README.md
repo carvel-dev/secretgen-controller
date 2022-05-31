@@ -19,8 +19,13 @@ The following configuration values can be set to customize the secretgen-control
 
 | Value | Required/Optional | Description |
 |-------|-------------------|-------------|
-| `namespace` | Optional | The namespace in which to deploy secretgen-controller.|
+| `namespace` | Optional | The namespace in which to deploy secretgen-controller. |
 | `create_namespace` | Optional | A boolean that indicates whether to create the namespace specified. Default value is `true`. |
+| `deployment.updateStrategy` | Optional | Update strategy of deployments, either 'RollingUpdate' or empty (use default strategy). |
+| `deployment.rollingUpdate.maxUnavailable` | Optional | The maxUnavailable of rollingUpdate. Applied only if RollingUpdate is used as updateStrategy. |
+| `deployment.rollingUpdate.maxSurge` | Optional | The maxSurge of rollingUpdate. Applied only if RollingUpdate is used as updateStrategy. |
+| `deployment.nodeSelector` | Optional | NodeSelector configuration applied to all the deployments. |
+
 
 ## Usage Example
 

@@ -4,3 +4,4 @@
 /tmp
 /Dockerfile.dev
 .idea
+/config-deploy
