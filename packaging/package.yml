@@ -16,24 +16,44 @@ spec:
   releaseNotes: #@ "https://github.com/vmware-tanzu/carvel-secretgen-controller/releases/tag/" + data.values.version
   valuesSchema:
     openAPIv3:
-      title: #@ data.values.name + data.values.version + ' values schema'
+      title: #@ data.values.name + ' ' + data.values.version + ' values schema'
       type: object
       additionalProperties: false
       description: OpenAPIv3 Schema for secretgen-controller
       properties:
-        secretgenController:
+        namespace:
+          type: string
+          default: secretgen-controller
+          description: The namespace in which to deploy secretgen-controller
+        createNamespace:
+          type: boolean
+          default: true
+          description: Whether to create namespace specified for secretgen-controller
+        deployment:
           type: object
           additionalProperties: false
-          description: Configuration for secretgen-controller
+          description: Configuration for secretgen-controller deployment
           properties:
-            namespace:
+            updateStrategy:
               type: string
-              default: secretgen-controller
-              description: The namespace in which to deploy secretgen-controller
-            createNamespace:
-              type: boolean
-              default: true
-              description: Whether to create namespace specified for secretgen-controller
+              default: ""
+              description: "Update strategy of deployments, either 'RollingUpdate' or empty (use default strategy)"
+            rollingUpdate:
+              type: object
+              description: "Configuration for a rollingUpdate strategy"
+              properties:
+                maxUnavailable:
+                  type: integer
+                  default: 1
+                  description: "The maxUnavailable of rollingUpdate. Applied only if RollingUpdate is used as updateStrategy"
+                maxSurge:
+                  type: integer
+                  default: 0
+                  description: "The maxSurge of rollingUpdate. Applied only if RollingUpdate is used as updateStrategy"
+                nodeSelector:
+                  nullable: true
+                  default: null
+                  description: "NodeSelector configuration applied to all the deployments"
   licenses:
   - Apache 2.0
   template:

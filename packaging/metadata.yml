@@ -9,6 +9,6 @@ spec:
   shortDescription: "Secret generation and sharing"
   providerName: carvel.dev
   maintainers:
-    - name: carvel.dev
+    - name: Carvel team (see www.carvel.dev for team members)
   categories:
     - "package management"
