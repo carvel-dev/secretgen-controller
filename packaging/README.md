@@ -19,8 +19,8 @@ The following configuration values can be set to customize the secretgen-control
 
 | Value | Required/Optional | Description |
 |-------|-------------------|-------------|
-| `secretgenController.namespace` | Optional | The namespace in which to deploy secretgen-controller.|
-| `secretgenController.createNamespace` | Optional | A boolean that indicates whether to create the namespace specified. Default value is `true`. |
+| `namespace` | Optional | The namespace in which to deploy secretgen-controller.|
+| `create_namespace` | Optional | A boolean that indicates whether to create the namespace specified. Default value is `true`. |
 
 ## Usage Example
 
