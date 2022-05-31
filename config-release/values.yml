@@ -1,7 +1,10 @@
 #@data/values-schema
 ---
-#@overlay/match missing_ok=True
-#@overlay/match-child-defaults
+#@overlay/match-child-defaults missing_ok=True
+#@schema/desc "Configuration explicity for developing secretgen-controller"
 dev:
+  #@schema/desc "Whether to push images to the OCI registry or not"
   push_images: true
+  #@schema/desc "Location of secretgen-controller image"
   image_repo: ghcr.io/vmware-tanzu/carvel-secretgen-controller
+
