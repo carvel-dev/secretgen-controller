@@ -204,6 +204,16 @@ func (r *SecretTemplateReconciler) resolveInputResources(ctx context.Context, se
 
 	resolvedInputResourceKeys := []types.NamespacedName{}
 	resolvedInputResources := map[string]interface{}{}
+
+	// Ensure we track any resources we have resolved, even if we failed to resolve them all.
+	defer func() {
+		if shouldTrackInputResources(secretTemplate) {
+			//Untrack everything first incase input resources have changed.
+			r.secretTracker.UntrackAll(secretTemplateKey)
+			r.secretTracker.Track(secretTemplateKey, resolvedInputResourceKeys...)
+		}
+	}()
+
 	for _, inputResource := range secretTemplate.Spec.InputResources {
 		// Ensure we only load Secrets if using the default Client.
 		if secretTemplate.Spec.ServiceAccountName == "" && (inputResource.Ref.Kind != "Secret" || inputResource.Ref.APIVersion != "v1") {
@@ -223,12 +233,6 @@ func (r *SecretTemplateReconciler) resolveInputResources(ctx context.Context, se
 
 		resolvedInputResources[inputResource.Name] = unstructuredResource.UnstructuredContent()
 		resolvedInputResourceKeys = append(resolvedInputResourceKeys, key)
-	}
-
-	if shouldTrackInputResources(secretTemplate) {
-		//Untrack everything first incase input resources have changed.
-		r.secretTracker.UntrackAll(secretTemplateKey)
-		r.secretTracker.Track(secretTemplateKey, resolvedInputResourceKeys...)
 	}
 
 	return resolvedInputResources, nil
