@@ -3,6 +3,6 @@
 #@schema/desc "The name of secretgen-controller Package"
 name: secretgen-controller.carvel.dev
 #@schema/desc "The version of secretgen-controller Package"
-version:
+version: develop
 #@schema/desc "The image of secretgen-controller Package"
-image:
+image: ghcr.io/vmware-tanzu/carvel-secretgen-controller-package-bundle
