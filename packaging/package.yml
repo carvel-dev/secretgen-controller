@@ -16,7 +16,7 @@ spec:
   releaseNotes: #@ "https://github.com/vmware-tanzu/carvel-secretgen-controller/releases/tag/" + data.values.version
   valuesSchema:
     openAPIv3:
-      title: #@ data.values.name + data.values.version + ' values schema'
+      title: #@ data.values.name + ' ' + data.values.version + ' values schema'
       type: object
       additionalProperties: false
       description: OpenAPIv3 Schema for secretgen-controller
@@ -40,13 +40,13 @@ spec:
               description: "Update strategy of deployments, either 'RollingUpdate' or empty (use default strategy)"
             rollingUpdate:
               type: object
-              description:
+              description: "Configuration for a rollingUpdate strategy"
               properties:
                 maxUnavailable:
                   type: integer
                   default: 1
                   description: "The maxUnavailable of rollingUpdate. Applied only if RollingUpdate is used as updateStrategy"
-                maxSurge: int
+                maxSurge:
                   type: integer
                   default: 0
                   description: "The maxSurge of rollingUpdate. Applied only if RollingUpdate is used as updateStrategy"
