@@ -44,7 +44,7 @@ jobs:
           set -e -x
           kubectl version --short
 
-          ytt -f config/ | kbld -f- > kbld.out 2> kbldmeta.out
+          ytt -f config/ -f config-build -f config-deploy | kbld -f- > kbld.out 2> kbldmeta.out
           cat kbldmeta.out | tail -n 1 | sed 's/.*final: secretgen-controller -> \(.*\)$/\1/p'  | tail -n 1 | xargs kind load docker-image --name kinder
           kapp deploy -a sg -f kbld.out -c -y
 
