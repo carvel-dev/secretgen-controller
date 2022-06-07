@@ -1,13 +1,13 @@
 #@ load("@ytt:data", "data")
 #@ load("@ytt:assert", "assert")
-
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: secretgen-controller
   namespace: #@ data.values.namespace
   annotations:
-    secretgen-controller.carvel.dev/version: #@ data.values.secretgen_controller_version or assert.fail("'secretgen_controller_version' must be set")
+    secretgen-controller.carvel.dev/version: v0.8.0
 spec:
   #@ if data.values.deployment.updateStrategy != "":
   #@overlay/match missing_ok=True
@@ -18,7 +18,7 @@ spec:
     rollingUpdate:
       maxUnavailable: #@ data.values.deployment.rollingUpdate.maxUnavailable
       maxSurge: #@ data.values.deployment.rollingUpdate.maxSurge
-    #@ end
+      #@ end
   #@ end
   selector:
     matchLabels:
@@ -32,15 +32,15 @@ spec:
     spec:
       serviceAccount: secretgen-controller-sa
       containers:
-      - name: secretgen-controller
-        image: secretgen-controller
-        resources:
-          requests:
-            cpu: 120m
-            memory: 100Mi
-        securityContext:
-          runAsUser: 1000
-          runAsGroup: 2000
+        - name: secretgen-controller
+          image: secretgen-controller
+          resources:
+            requests:
+              cpu: 120m
+              memory: 100Mi
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 2000
       securityContext:
         fsGroup: 3000
       #@ if data.values.deployment.nodeSelector != None:

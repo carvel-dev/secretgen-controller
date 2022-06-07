@@ -1,21 +1,12 @@
 #@data/values-schema
 ---
-#@schema/desc "The namespace in which to deploy secretgen-controller"
-namespace: secretgen-controller
-#@schema/desc "Whether to create namespace specified for secretgen-controller"
-create_namespace: true
-secretgen_controller_version: "develop"
-
-#@schema/desc "Configuration for secretgen-controller deployment"
-#@overlay/match-child-defaults missing_ok=True
-deployment:
-  #@schema/desc "Update strategy of deployments, either 'RollingUpdate' or empty (use default strategy)"
-  updateStrategy: "RollingUpdate"
-  rollingUpdate:
-    #@schema/desc "The maxUnavailable of rollingUpdate. Applied only if RollingUpdate is used as updateStrategy"
-    maxUnavailable: 1
-    #@schema/desc "The maxSurge of rollingUpdate. Applied only if RollingUpdate is used as updateStrategy"
-    maxSurge: 0
-  #@schema/type any=True
-  #@schema/desc "NodeSelector configuration applied to all the deployments"
-  nodeSelector: null
+#@overlay/match missing_ok=True
+#@overlay/match-child-defaults
+#@schema/desc "Configuration explicity for developing secretgen-controller"
+dev:
+  #@schema/desc "Whether to push images to the OCI registry or not"
+  push_images: true
+  #@schema/desc "Location of secretgen-controller image"
+  image_repo: ghcr.io/vmware-tanzu/carvel-secretgen-controller
+  #@schema/desc "Development version"
+  version: develop
