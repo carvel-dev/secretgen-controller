@@ -10,4 +10,4 @@ run_image_start=`cat Dockerfile | grep -n "\- run \-" | cut -d':' -f1`
 tail -n +$run_image_start Dockerfile | \
   sed 's/COPY.*secretgen-controller/COPY controller-linux-amd64 secretgen-controller/' >> Dockerfile.dev
 
-ytt -f config/package-bundle/contents -f config/dev --data-value-yaml dev.rapid_deploy=true | kbld -f- | kapp deploy -a sg -f- -c -y
+ytt -f config/package-bundle/config -f config/dev --data-value-yaml dev.rapid_deploy=true | kbld -f- | kapp deploy -a sg -f- -c -y

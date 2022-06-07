@@ -46,15 +46,42 @@ Run the release script:  `hack/build-release.sh`
 Push the tag `git push --tags origin HEAD` and then in the github UI make a new
 release from that tag.
 In the release, add a triple-tick section at the bottom with the checksum that
-was output by the release script and the filename (release.yml,  omit the
+was output by the release script and the filename (release.yml, package.yml and metadata.yml,  omit the
 `./tmp` prefix). Ensure there's two spaces between the checksum and the filename
 to make it interoperable with checksum tooling verification.
 
 In your OS UI, open the secretgen-controller repo tmp folder and drag the
-release.yml asset into the github UI release as an attached file.
+release.yml, package.yml and metadata.yml assets into the github UI release as attached files.
 
 Test the release artifact to ensure it actually works
 `kapp deploy -a secretgen -f releases/1.2.3.yml`
+Ensure the deployment and build worked by running the e2e tests:
+you may need to `export SECRETGEN_E2E_NAMESPACE=secretgen-test`
+then `./hack/test-e2e.sh`.
+
+Test the package artifact to ensure it actually works
+`kapp delete -a secretgen`
+
+Create a PackageInstall file (pkgi.yml) which will be used to install of Secretgen-controller package
+
+```
+---
+apiVersion: packaging.carvel.dev/v1alpha1
+kind: PackageInstall
+metadata:
+  name: secretgen-controller
+spec:
+  serviceAccountName: cluster-admin-sa
+  packageRef:
+    refName: secretgen-controller.carvel.dev
+    apiVersion: packaging.carvel.dev/v1alpha1
+    versionSelection:
+      constraints: ">0.8.0"
+```
+
+> Note: cluster-admin-sa comes from deploying https://github.com/vmware-tanzu/carvel-kapp-controller/tree/develop/examples/rbac
+
+`kapp deploy -a secretgen-package -f package.yml -f metadata.yml -f pkgi.yml`
 Ensure the deployment and build worked by running the e2e tests:
 you may need to `export SECRETGEN_E2E_NAMESPACE=secretgen-test`
 then `./hack/test-e2e.sh`.
