@@ -1,0 +1,14 @@
+---
+apiVersion: imgpkg.carvel.dev/v1alpha1
+images:
+- annotations:
+    kbld.carvel.dev/id: secretgen-controller
+    kbld.carvel.dev/origins: |
+      - local:
+          path: /Users/nhickey/workspace/carvel/carvel-secretgen-controller
+      - git:
+          dirty: true
+          remoteURL: git@github.com:vmware-tanzu/carvel-secretgen-controller.git
+          sha: 6404d4c5b61a245835e8da25871b49961f76be64
+  image: index.docker.io/neilh93/secretgen-controller-test@sha256:92b3a954212b09981673e4a15c6118ba2d4c6a93c014c4fba5f44724e45162eb
+kind: ImagesLock
