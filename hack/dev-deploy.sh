@@ -12,5 +12,5 @@ tail -n +$run_image_start Dockerfile | \
 
 yq eval ".dev.rapid_deploy = true" -i config-deploy/values.yml
 
-ytt -f config/ -f config-build/ -f config-deploy/ | kbld -f- | kapp deploy -a sg -f- -c -y
+ytt -f config/release -f config-build/ -f config-deploy/ | kbld -f- | kapp deploy -a sg -f- -c -y
 
