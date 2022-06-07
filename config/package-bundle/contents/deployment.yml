@@ -41,7 +41,6 @@ spec:
         fsGroup: 3000
       #@ if/end data.values.deployment.nodeSelector != None:
       nodeSelector:
-        #@ for key in data.values.deployment.nodeSelector:
+        #@ for/end key in data.values.deployment.nodeSelector:
         #@yaml/text-templated-strings
         (@= key @): #@ data.values.deployment.nodeSelector[key]
-#@ end
