@@ -17,6 +17,7 @@ imgpkg push -b ghcr.io/vmware-tanzu/carvel-secretgen-controller-package-bundle:"
 ytt -f config/package/package.yml -f config/package/values.yml -v version="$version" -v image="$(yq eval '.bundle.image' bundle-image.yml)" > ./tmp/package.yml
 
 cp config/package/metadata.yml ./tmp/metadata.yml
+rm ./bundle-image.yml
 
 shasum -a 256 ./tmp/release*.yml
 
