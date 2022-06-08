@@ -7,4 +7,4 @@ version: develop
 #@schema/desc "The image of secretgen-controller Package"
 image: ghcr.io/vmware-tanzu/carvel-secretgen-controller-package-bundle
 #@schema/desc "The generated openapi schema of secretgen-controller Package"
-openapi: map
+openapi: ""
