@@ -9,6 +9,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/go-logr/logr"
 	sgv1alpha1 "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/apis/secretgen/v1alpha1"
@@ -21,12 +22,14 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
+	"sigs.k8s.io/controller-runtime/pkg/ratelimiter"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -77,8 +80,11 @@ func main() {
 	exitIfErr(entryLog, "registering", registerCtrl("sshkey", mgr, sshKeyReconciler))
 
 	saLoader := generator.NewServiceAccountLoader(satoken.NewManager(coreClient, log.WithName("template")))
+
+	// Set SecretTemplate's maximum exponential to reduce reconcile time for inputresource errors
+	rateLimiter := workqueue.NewItemExponentialFailureRateLimiter(100*time.Millisecond, 120*time.Second)
 	secretTemplateReconciler := generator.NewSecretTemplateReconciler(mgr.GetClient(), saLoader, tracker.NewTracker(), log.WithName("template"))
-	exitIfErr(entryLog, "registering", registerCtrl("template", mgr, secretTemplateReconciler))
+	exitIfErr(entryLog, "registering", registerCtrlWithRateLimiter("template", mgr, secretTemplateReconciler, rateLimiter))
 
 	{
 		secretExports := sharing.NewSecretExportsWarmedUp(
@@ -110,12 +116,18 @@ type reconcilerWithWatches interface {
 }
 
 func registerCtrl(desc string, mgr manager.Manager, reconciler reconcilerWithWatches) error {
+	return registerCtrlWithRateLimiter(desc, mgr, reconciler, workqueue.DefaultControllerRateLimiter())
+}
+
+func registerCtrlWithRateLimiter(desc string, mgr manager.Manager, reconciler reconcilerWithWatches, ratelimiter ratelimiter.RateLimiter) error {
 	ctrlName := "sg-" + desc
 
 	ctrlOpts := controller.Options{
 		Reconciler: reconciler,
 		// Default MaxConcurrentReconciles is 1. Keeping at that
 		// since we are not doing anything that we need to parallelize for.
+
+		RateLimiter: ratelimiter,
 	}
 
 	ctrl, err := controller.New(ctrlName, mgr, ctrlOpts)
