@@ -30,13 +30,9 @@ RUN CGO_ENABLED=0 GOOS=linux go build -mod=vendor -ldflags="-X 'main.Version=$SG
 # --- run ---
 FROM photon:3.0
 
-RUN tdnf install -y shadow-tools
-
-RUN groupadd -g 2000 secretgen-controller && useradd -r -u 1000 --create-home -g secretgen-controller secretgen-controller
-RUN chmod g+w /etc/pki/tls/certs/ca-bundle.crt && chgrp secretgen-controller /etc/pki/tls/certs/ca-bundle.crt
-USER secretgen-controller
-
 COPY --from=0 /go/src/github.com/vmware-tanzu/carvel-secretgen-controller/controller secretgen-controller
 
+# Run as secretgen-controller by default, will be overridden to a random uid on OpenShift
+USER 1000
 ENV PATH="/:${PATH}"
 ENTRYPOINT ["/secretgen-controller"]
