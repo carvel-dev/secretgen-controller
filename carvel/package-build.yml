@@ -1,0 +1,68 @@
+annotations:
+  fetch-content-from: Release artifact from Github Repository
+apiVersion: kctrl.carvel.dev/v1alpha1
+creationTimestamp: null
+kind: PackageBuild
+spec:
+  imgpkg:
+    registryUrl: docker.io/ysethiya/sgc:2.4.6
+  package:
+    apiVersion: data.packaging.carvel.dev/v1alpha1
+    kind: Package
+    metadata:
+      creationTimestamp: null
+      name: sgc.corp.com.2.4.6
+      namespace: default
+    spec:
+      licenses:
+      - Apache 2.0
+      - MIT
+      refName: sgc.corp.com
+      releaseNotes: |
+        Initial release of the cert-manager
+      releasedAt: null
+      template:
+        spec:
+          deploy:
+          - kapp: {}
+          fetch:
+          - imgpkgBundle:
+              image: index.docker.io/ysethiya/sgc@sha256:f3746ae37786d7b8e6088e104a972d5e2f3333bb5a6adae3ec7e87144301a527
+          template:
+          - ytt:
+              paths:
+              - config
+          - kbld:
+              paths:
+              - '-'
+              - .imgpkg/images.yml
+      valuesSchema:
+        openAPIv3: null
+      version: 2.4.6
+  packageMetadata:
+    apiVersion: data.packaging.carvel.dev/v1alpha1
+    kind: PackageMetadata
+    metadata:
+      creationTimestamp: null
+      name: sgc.corp.com
+      namespace: default
+    spec:
+      categories:
+      - demo
+      displayName: sgc
+      longDescription: Simple app consisting of a k8s deployment and service
+      shortDescription: Simple app for demoing
+  vendir:
+    apiVersion: vendir.k14s.io/v1alpha1
+    directories:
+    - contents:
+      - githubRelease:
+          disableAutoChecksumValidation: true
+          slug: vmware-tanzu/carvel-secretgen-controller
+          tag: v0.9.1
+        includePaths:
+        - release.yml
+        path: .
+      path: config/upstream
+    kind: Config
+    minimumRequiredVersion: 0.12.0
