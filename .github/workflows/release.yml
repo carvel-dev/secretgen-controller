@@ -25,10 +25,11 @@ jobs:
         with:
           ref: pkg-authoring
           repository: vmware-tanzu/carvel-kapp-controller
-          script: |
-            ./cli/hack/build.sh
-            cd carvel
-            ./cli/kctrl pkg build create -y -v 1.0.0
+      - run: |
+          ./cli/hack/build.sh
+          cd carvel
+          ./cli/kctrl pkg build create -y -v 1.0.0
+          ls -la
             
 
 
