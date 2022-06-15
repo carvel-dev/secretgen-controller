@@ -21,7 +21,7 @@ jobs:
           go-version: 1.17.6
 
       - name: Fetch kctrl
-        uses: actions/checkout@v0.38.1
+        uses: actions/checkout@v3
         with:
           ref: pkg-authoring
           repository: vmware-tanzu/carvel-kapp-controller
