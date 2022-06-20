@@ -31,10 +31,16 @@ jobs:
         run: |
           pwd
           ls
-          cat README.md
+          cd carvel-kapp-controller/cli
+          ls 
+          ./hack/build.sh
+          ls
+          ./kctrl version
+          cp kctrl ../../kctrl
 
       - name: Run Package build
         run: |
+          ls -la
           cd carvel
           ./cli/kctrl pkg build create -y -v 1.0.0
           ls -la
