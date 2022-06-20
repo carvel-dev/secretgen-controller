@@ -26,29 +26,31 @@ jobs:
           ref: pkg-authoring
           repository: vmware-tanzu/carvel-kapp-controller
           path: carvel-kapp-controller
+          fetch-depth: 0
 
       - name: Build kctrl
         working-directory: ./carvel-kapp-controller/cli
         run: |
           ls
-          set -e -x -u
-          VERSION="v0.38.3"
-          
-          # makes builds reproducible
-          export CGO_ENABLED=0
-          LDFLAGS="-X github.com/vmware-tanzu/carvel-kapp-controller/cli/pkg/kctrl/version.Version=$VERSION"
-          
-          go mod vendor
-          go mod tidy
-          go fmt ./cmd/... ./pkg/... ./test/...
-          
-          go build -ldflags="$LDFLAGS" -trimpath -o kctrl ./cmd/kctrl/...
-          ./kctrl version
-          
-          # compile tests, but do not run them: https://github.com/golang/go/issues/15513#issuecomment-839126426
-          # go test --exec=echo ./... >/dev/null
-          
-          echo "Success"
+          ./hack/build.sh
+#          set -e -x -u
+#          VERSION="v0.38.3"
+#
+#          # makes builds reproducible
+#          export CGO_ENABLED=0
+#          LDFLAGS="-X github.com/vmware-tanzu/carvel-kapp-controller/cli/pkg/kctrl/version.Version=$VERSION"
+#
+#          go mod vendor
+#          go mod tidy
+#          go fmt ./cmd/... ./pkg/... ./test/...
+#
+#          go build -ldflags="$LDFLAGS" -trimpath -o kctrl ./cmd/kctrl/...
+#          ./kctrl version
+#
+#          # compile tests, but do not run them: https://github.com/golang/go/issues/15513#issuecomment-839126426
+#          # go test --exec=echo ./... >/dev/null
+#
+#          echo "Success"
 #          cp kctrl ../../carvel/kctrl
 
 #      - name: Checkout to publish-package branch
