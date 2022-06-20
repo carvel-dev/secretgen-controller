@@ -30,6 +30,7 @@ jobs:
       - name: Build kctrl
         working-directory: ./carvel-kapp-controller/cli
         run: |
+          ls
           ./hack/build.sh
           ls
           ./kctrl version
