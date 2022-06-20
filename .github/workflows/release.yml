@@ -6,8 +6,8 @@ on:
       - "v*"
 
 jobs:
-  kappreleaser:
-    name: kapp release
+  sgcreleaser:
+    name: secretgen controller release
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -30,7 +30,13 @@ jobs:
         run: |
           pwd
           ls
-          ./cli/hack/build.sh
+          cd cli
+          ./hack/build.sh
+          ./kctrl version
+          
+
+      - name: Run Package build
+        run: |
           cd carvel
           ./cli/kctrl pkg build create -y -v 1.0.0
           ls -la
