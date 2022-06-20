@@ -28,21 +28,18 @@ jobs:
           path: carvel-kapp-controller
 
       - name: Build kctrl
+        working-directory: ./carvel-kapp-controller/cli
         run: |
-          pwd
-          ls
-          cd carvel-kapp-controller/cli
-          ls 
           ./hack/build.sh
           ls
           ./kctrl version
-          cp kctrl ../../kctrl
+          cp kctrl ../../carvel/kctrl
 
       - name: Run Package build
+        working-directory: ./carvel
         run: |
           ls -la
-          cd carvel
-          ./cli/kctrl pkg build create -y -v 1.0.0
+          ./kctrl pkg build create -y -v 1.0.0
           ls -la
             
 
