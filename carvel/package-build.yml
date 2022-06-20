@@ -15,7 +15,7 @@ spec:
       namespace: default
     spec:
       licenses:
-        - Apache 2.0
+      - Apache 2.0
       refName: samplepackage.corp.com
       releaseNotes: |
         Initial release of the simple app package
@@ -23,18 +23,18 @@ spec:
       template:
         spec:
           deploy:
-            - kapp: {}
+          - kapp: {}
           fetch:
-            - imgpkgBundle:
-                image: index.docker.io/ysethiya/test-2@sha256:7bcd692d4e22fc203e8f763cace99e56160b31f55acd27f43b031cd02902db57
+          - imgpkgBundle:
+              image: index.docker.io/ysethiya/test-2@sha256:7bcd692d4e22fc203e8f763cace99e56160b31f55acd27f43b031cd02902db57
           template:
-            - kbld:
-                paths:
-                  - '-'
-                  - .imgpkg/images.yml
-            - ytt:
-                paths:
-                  - config
+          - kbld:
+              paths:
+              - '-'
+              - .imgpkg/images.yml
+          - ytt:
+              paths:
+              - config
       valuesSchema:
         openAPIv3: null
       version: 1.0.0
@@ -47,20 +47,20 @@ spec:
       namespace: default
     spec:
       categories:
-        - demo
+      - demo
       displayName: samplepackage
       longDescription: Simple app consisting of a k8s deployment and service
       shortDescription: Simple app for demoing
   vendir:
     apiVersion: vendir.k14s.io/v1alpha1
     directories:
-      - contents:
-          - directory:
-              path: ../../../config
-            path: file
-          - directory:
-              path: ../../../config-release
-            path: values
-        path: config/upstream
+    - contents:
+      - directory:
+          path: ../../../../config
+        path: file
+      - directory:
+          path: ../../../../config-release
+        path: values
+      path: config/upstream
     kind: Config
     minimumRequiredVersion: 0.12.0
