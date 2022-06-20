@@ -56,10 +56,10 @@ spec:
     directories:
       - contents:
           - directory:
-              path: ../../../config/package-bundle/contents
+              path: ../../../config
             path: file
           - directory:
-              path: ../../../config/release
+              path: ../../../config-release
             path: values
         path: config/upstream
     kind: Config

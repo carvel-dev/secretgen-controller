@@ -51,10 +51,10 @@ jobs:
           echo "Success"
           cp kctrl ../../carvel/kctrl
 
-      - name: Checkout to publish-package branch
-        uses: actions/checkout@v3
-        with:
-          ref: nh-publish-package
+#      - name: Checkout to publish-package branch
+#        uses: actions/checkout@v3
+#        with:
+#          ref: nh-publish-package
 
       - name: Run Package build
         working-directory: ./carvel
