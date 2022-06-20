@@ -25,15 +25,17 @@ jobs:
         with:
           ref: pkg-authoring
           repository: vmware-tanzu/carvel-kapp-controller
+        run: |
+          pwd
+          ls
+          cat README.md
+          ./hack/build.sh
 
       - name: Build kctrl
         run: |
           pwd
           ls
-          cd cli
-          ./hack/build.sh
-          ./kctrl version
-          
+          cat README.md
 
       - name: Run Package build
         run: |
