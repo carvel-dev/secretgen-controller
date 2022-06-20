@@ -31,9 +31,24 @@ jobs:
         working-directory: ./carvel-kapp-controller/cli
         run: |
           ls
-          ./hack/build.sh
-          ls
+          set -e -x -u
+          VERSION="v0.38.3"
+          
+          # makes builds reproducible
+          export CGO_ENABLED=0
+          LDFLAGS="-X github.com/vmware-tanzu/carvel-kapp-controller/cli/pkg/kctrl/version.Version=$VERSION"
+          
+          go mod vendor
+          go mod tidy
+          go fmt ./cmd/... ./pkg/... ./test/...
+          
+          go build -ldflags="$LDFLAGS" -trimpath -o kctrl ./cmd/kctrl/...
           ./kctrl version
+          
+          # compile tests, but do not run them: https://github.com/golang/go/issues/15513#issuecomment-839126426
+          # go test --exec=echo ./... >/dev/null
+          
+          echo "Success"
           cp kctrl ../../carvel/kctrl
 
       - name: Run Package build
@@ -41,7 +56,6 @@ jobs:
         run: |
           ls -la
           ./kctrl pkg build create -y -v 1.0.0
-          ls -la
             
 
 
