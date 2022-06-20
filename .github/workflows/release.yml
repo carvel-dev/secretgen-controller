@@ -20,6 +20,10 @@ jobs:
         with:
           go-version: 1.17.6
 
+      - name: Install Carvel Tools
+        run: |
+          curl -L https://carvel.dev/install.sh | bash
+
       - name: Fetch kctrl
         uses: actions/checkout@v3
         with:
@@ -31,37 +35,11 @@ jobs:
       - name: Build kctrl
         working-directory: ./carvel-kapp-controller/cli
         run: |
-          ls
           ./hack/build.sh
-#          set -e -x -u
-#          VERSION="v0.38.3"
-#
-#          # makes builds reproducible
-#          export CGO_ENABLED=0
-#          LDFLAGS="-X github.com/vmware-tanzu/carvel-kapp-controller/cli/pkg/kctrl/version.Version=$VERSION"
-#
-#          go mod vendor
-#          go mod tidy
-#          go fmt ./cmd/... ./pkg/... ./test/...
-#
-#          go build -ldflags="$LDFLAGS" -trimpath -o kctrl ./cmd/kctrl/...
-#          ./kctrl version
-#
-#          # compile tests, but do not run them: https://github.com/golang/go/issues/15513#issuecomment-839126426
-#          # go test --exec=echo ./... >/dev/null
-#
-#          echo "Success"
-#          cp kctrl ../../carvel/kctrl
-
-#      - name: Checkout to publish-package branch
-#        uses: actions/checkout@v3
-#        with:
-#          ref: nh-publish-package
 
       - name: Run Package build
         working-directory: ./carvel
         run: |
-          ls -la
           ./../carvel-kapp-controller/cli/kctrl pkg build create -y -v 1.0.0
             
 
