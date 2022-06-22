@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/ghodss/yaml"
-	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	"github.com/stretchr/testify/require"
 )
 
 func TestExportSuccessful(t *testing.T) {
