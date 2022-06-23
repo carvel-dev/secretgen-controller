@@ -5,6 +5,7 @@ set -e -x -u
 source ./hack/version-util.sh
 
 mkdir -p tmp/
+mkdir -p config/package-bundle/.imgpkg/
 
 export version="$(get_sgctrl_ver)"
 
@@ -19,6 +20,8 @@ ytt -f config/package/package.yml -f config/package/values.yml -v version="$vers
 cp config/package/metadata.yml ./tmp/metadata.yml
 rm ./bundle-image.yml
 
-shasum -a 256 ./tmp/release*.yml
+shasum -a 256 ./tmp/release.yml
+shasum -a 256 ./tmp/package.yml
+shasum -a 256 ./tmp/metadata.yml
 
 echo SUCCESS
