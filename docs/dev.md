@@ -76,7 +76,7 @@ spec:
     refName: secretgen-controller.carvel.dev
     apiVersion: packaging.carvel.dev/v1alpha1
     versionSelection:
-      constraints: >0.8.0
+      constraints: ">0.8.0"
 ```
 
 > Note: cluster-admin-sa comes from deploying https://github.com/vmware-tanzu/carvel-kapp-controller/tree/develop/examples/rbac
