@@ -10,11 +10,11 @@
 apiVersion: data.packaging.carvel.dev/v1alpha1
 kind: Package
 metadata:
-  name: #@ data.values.name
+  name: #@ data.values.name + '.' + data.values.version
 spec:
   refName: #@ data.values.name
   version: #@ data.values.version
-  releaseNotes: #@ "https://github.com/vmware-tanzu/carvel-secretgen-controller/releases/tag/" + data.values.version
+  releaseNotes: #@ "https://github.com/vmware-tanzu/carvel-secretgen-controller/releases/tag/v" + data.values.version
   valuesSchema:
     openAPIv3: #@ yaml.decode(data.values.openapi)["components"]["schemas"]["dataValues"]
   licenses:

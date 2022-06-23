@@ -8,21 +8,22 @@ mkdir -p tmp/
 mkdir -p config/package-bundle/.imgpkg/
 
 export version="$(get_sgctrl_ver)"
+export version_without_v_prefix="$(get_sgctrl_ver_without_v)"
 
-yq eval '.metadata.annotations."secretgen-controller.carvel.dev/version" = env(version)' -i "config/package-bundle/contents/deployment.yml"
+yq eval '.metadata.annotations."secretgen-controller.carvel.dev/version" = env(version)' -i "config/package-bundle/config/deployment.yml"
 
-ytt -f config/package-bundle/contents -f config/release -v dev.version="$version" | kbld --imgpkg-lock-output config/package-bundle/.imgpkg/images.yml -f- > ./tmp/release.yml
+ytt -f config/package-bundle/config -f config/release -v dev.version="$version_without_v_prefix" | kbld --imgpkg-lock-output config/package-bundle/.imgpkg/images.yml -f- > ./tmp/release.yml
 
-imgpkg push -b ghcr.io/vmware-tanzu/carvel-secretgen-controller-package-bundle:"$version" -f config/package-bundle --lock-output ./bundle-image.yml
+imgpkg push -b ghcr.io/vmware-tanzu/carvel-secretgen-controller-package-bundle:"$version" -f config/package-bundle --lock-output ./tmp/bundle-image.yml
 
 # generate openapi schema for package
-ytt -f config/package-bundle/contents --data-values-schema-inspect -o openapi-v3 > ./schema-openapi.yml
+ytt -f config/package-bundle/config --data-values-schema-inspect -o openapi-v3 > ./tmp/schema-openapi.yml
 
-ytt -f config/package/package.yml -f config/package/values.yml --data-value-file openapi=./schema-openapi.yml -v version="$version" -v image="$(yq eval '.bundle.image' bundle-image.yml)" > ./tmp/package.yml
+ytt -f config/package/package.yml -f config/package/values.yml --data-value-file openapi=./tmp/schema-openapi.yml -v version="$version_without_v_prefix" -v image="$(yq eval '.bundle.image' ./tmp/bundle-image.yml)" > ./tmp/package.yml
 
 cp config/package/metadata.yml ./tmp/metadata.yml
-rm ./bundle-image.yml
-rm ./schema-openapi.yml
+rm ./tmp/bundle-image.yml
+rm ./tmp/schema-openapi.yml
 
 shasum -a 256 ./tmp/release.yml
 shasum -a 256 ./tmp/package.yml
