@@ -9,6 +9,17 @@ metadata:
   annotations:
     secretgen-controller.carvel.dev/version: #@ data.values.secretgen_controller_version or assert.fail("'secretgen_controller_version' must be set")
 spec:
+  #@ if data.values.deployment.updateStrategy != "":
+  #@overlay/match missing_ok=True
+  strategy:
+    type: #@ data.values.deployment.updateStrategy
+    #@overlay/match missing_ok=True
+    #@ if data.values.deployment.updateStrategy == "RollingUpdate":
+    rollingUpdate:
+      maxUnavailable: #@ data.values.deployment.rollingUpdate.maxUnavailable
+      maxSurge: #@ data.values.deployment.rollingUpdate.maxSurge
+    #@ end
+  #@ end
   selector:
     matchLabels:
       app: secretgen-controller
@@ -34,3 +45,11 @@ spec:
           capabilities:
             drop:
             - all
+      #@ if data.values.deployment.nodeSelector != None:
+      nodeSelector:
+        #@ for key in data.values.deployment.nodeSelector:
+        #@overlay/match missing_ok=True
+        #@yaml/text-templated-strings
+        (@= key @): #@ data.values.deployment.nodeSelector[key]
+        #@ end
+      #@ end
