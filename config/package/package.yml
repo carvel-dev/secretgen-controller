@@ -63,7 +63,6 @@ spec:
             image: #@ data.values.image
       template:
         - ytt:
-            ignoreUnknownComments: true
             paths:
               - 'config'
         - kbld:
