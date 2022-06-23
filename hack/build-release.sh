@@ -6,13 +6,18 @@ source ./hack/version-util.sh
 
 mkdir -p tmp/
 
-ytt -f config/release -f config-build -f config-deploy -f config-release -v secretgen_controller_version="$(get_sgctrl_ver)" | kbld --imgpkg-lock-output config/.imgpkg/images.yml -f- > ./tmp/release.yml
+export version="$(get_sgctrl_ver)"
 
-imgpkg push -b ghcr.io/vmware-tanzu/carvel-secretgen-controller-package-bundle:"$(get_sgctrl_ver)" -f config --lock-output ./bundle-image.yml
+yq eval '.metadata.annotations."secretgen-controller.carvel.dev/version" = env(version)' -i "config/package-bundle/contents/deployment.yml"
 
-ytt -f packaging/package.yml -f packaging/values.yml -v version="$(get_sgctrl_ver)" -v image="$(yq eval '.bundle.image' bundle-image.yml)" > ./tmp/package.yml
+ytt -f config/package-bundle/contents -f config/release -v dev.version="$version" | kbld --imgpkg-lock-output config/package-bundle/.imgpkg/images.yml -f- > ./tmp/release.yml
 
-cp packaging/metadata.yml ./tmp/metadata.yml
+imgpkg push -b ghcr.io/vmware-tanzu/carvel-secretgen-controller-package-bundle:"$version" -f config/package-bundle --lock-output ./bundle-image.yml
+
+ytt -f config/package/package.yml -f config/package/values.yml -v version="$version" -v image="$(yq eval '.bundle.image' bundle-image.yml)" > ./tmp/package.yml
+
+cp config/package/metadata.yml ./tmp/metadata.yml
+rm ./bundle-image.yml
 
 shasum -a 256 ./tmp/release*.yml
 

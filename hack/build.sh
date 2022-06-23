@@ -16,6 +16,6 @@ ls -la ./controller
 # compile tests, but do not run them: https://github.com/golang/go/issues/15513#issuecomment-839126426
 go test --exec=echo ./... >/dev/null
 
-ytt -f config/release -f config-build/ -f config-deploy >/dev/null
+ytt -f config/package-bundle/contents -f config/dev >/dev/null
 
 echo SUCCESS

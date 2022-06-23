@@ -10,3 +10,5 @@ dev:
   rapid_deploy: false
   #@schema/desc "Location of secretgen-controller image"
   image_repo: docker.io/k14s/secretgen-controller-test
+  #@schema/desc "Development version"
+  version: develop
