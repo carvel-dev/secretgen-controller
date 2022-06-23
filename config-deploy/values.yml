@@ -2,7 +2,11 @@
 ---
 #@overlay/match missing_ok=True
 #@overlay/match-child-defaults
+#@schema/desc "Configuration explicity for developing secretgen-controller"
 dev:
+  #@schema/desc "Whether to push images to the OCI registry or not"
   push_images: false
-  rapid_deploy: false
+  #@schema/desc "Whether to use the faster deployment type whilst developing (must have deployed to a cluster once fully first)"
+  rapid_deploy: true
+  #@schema/desc "Location of secretgen-controller image"
   image_repo: docker.io/k14s/secretgen-controller-test
