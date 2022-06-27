@@ -1,4 +1,0 @@
-#@data/values
----
-push_images: true
-image_repo: ghcr.io/vmware-tanzu/carvel-secretgen-controller

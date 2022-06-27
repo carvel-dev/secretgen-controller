@@ -13,4 +13,6 @@ function get_sgctrl_ver {
   echo "${1:-`get_latest_git_tag`}"
 }
 
-
+function get_sgctrl_ver_without_v {
+  git describe --tags | grep -Eo '[0-9]+\.[0-9]+\.[0-9]+(-alpha\.[0-9]+)?'
+}

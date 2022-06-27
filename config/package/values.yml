@@ -1,0 +1,10 @@
+#@data/values-schema
+---
+#@schema/desc "The name of secretgen-controller Package"
+name: secretgen-controller.carvel.dev
+#@schema/desc "The version of secretgen-controller Package"
+version: develop
+#@schema/desc "The image of secretgen-controller Package"
+image: ghcr.io/vmware-tanzu/carvel-secretgen-controller-package-bundle
+#@schema/desc "The generated openapi schema of secretgen-controller Package"
+openapi: ""
