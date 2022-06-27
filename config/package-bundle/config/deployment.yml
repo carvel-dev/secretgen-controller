@@ -7,7 +7,7 @@ metadata:
   name: secretgen-controller
   namespace: #@ data.values.namespace
   annotations:
-    secretgen-controller.carvel.dev/version: v0.8.0
+    secretgen-controller.carvel.dev/version: v0.0.0
 spec:
   #@ if/end data.values.deployment.updateStrategy != "":
   strategy:
@@ -42,7 +42,4 @@ spec:
             drop:
             - all
       #@ if/end data.values.deployment.nodeSelector != None:
-      nodeSelector:
-        #@ for/end key in data.values.deployment.nodeSelector:
-        #@yaml/text-templated-strings
-        (@= key @): #@ data.values.deployment.nodeSelector[key]
+      nodeSelector: #@ data.values.deployment.nodeSelector
