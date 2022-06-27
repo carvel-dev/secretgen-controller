@@ -42,4 +42,11 @@ spec:
             drop:
             - all
       #@ if/end data.values.deployment.nodeSelector != None:
+<<<<<<< HEAD:config/package-bundle/config/deployment.yml
       nodeSelector: #@ data.values.deployment.nodeSelector
+=======
+      nodeSelector:
+        #@ for/end key in data.values.deployment.nodeSelector:
+        #@yaml/text-templated-strings
+        (@= key @): #@ data.values.deployment.nodeSelector[key]
+>>>>>>> e8039a8c2929ad0942701c05722e674268891b6d:config/deployment.yml
