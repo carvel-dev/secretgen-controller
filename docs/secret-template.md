@@ -69,8 +69,8 @@ SecretTemplate CRD allows to template out a Secret from information on other API
 `spec` fields:
 
 - `serviceAccountName` (required; string) Name of the service account used to read the input resources. If not provided, only Secrets can be read on the `.spec.inputResources`.
-- `inputResources` (required; array of objects) Array of named Kubernetes API resources to read information off.
-- `template` (optional; subset of Secret API object) A template of the Secret to be created.
+- `inputResources` (required; array of objects) Array of named Kubernetes API resources to read information off.  The name of an input resource can dynamically reference previous input resources by a JSONPath expression, signified by an opening "$(" and a closing ")".
+- `template` (optional; subset of Secret API object) A template of the Secret to be created.  Any string value in the subset can reference information off a resource in `.spec.inputResources` using a JSONPath expression, signified by an opening "$(" and a closing ")".
 
 ### Further Example
 
