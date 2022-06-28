@@ -1,4 +1,4 @@
-### Secret Template
+### Secret Template Field
 
 By default generated secrets have predefined set of keys. In a lot of cases `Secret` consumers expect specific set of keys within `data`. To control customization of keys within a secret, you can configure use secret template.
 

@@ -5,7 +5,7 @@ Password CRD allows to generate alpha-numeric passwords of particular length.
 `spec` fields:
 
 - `length` (optional; default is 40) number of characters
-- [`secretTemplate`](secret-template.md)
+- [`secretTemplate`](secret-template-field.md)
 
 #### Secret Template
 
