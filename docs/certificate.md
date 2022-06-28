@@ -9,7 +9,7 @@
 - `alternativeNames` (array of strings; optional) specifies certificate's alternative names field (IPs or DNS names)
 - `extendedKeyUsage` (array of strings; optional) specifies certificate's extended key usage field (`client_auth` and `server_auth` are supported options)
 - `duration` (int64; optional) specifies number of days certificate will be valid from now. By default certificate expires in 365 days.
-- [`secretTemplate`](secret-template.md)
+- [`secretTemplate`](secret-template-field.md)
 
 3072-bit RSA key backs each certificate.
 
