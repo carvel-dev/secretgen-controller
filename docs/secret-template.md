@@ -2,9 +2,11 @@
 
 As of v0.9.0+, the `SecretTemplate` is now avaliable under the `secretgen.carvel.dev` API group.
 
-Secrets are a common method of encapsulating and inputing sensitive data into an API via reference, or to a process via volume mounting.  In order to make compatible Secrets for these use cases, it often requires imperatively reading of other resources (including other secrets) and imperatively creating the compatible secret using these resources' information.  `SecretTemplate` aims to provide a declarative way of doing this process.
+The `SecretTemplate` API allows new Secrets to be composed from data residing in existing Kubernetes Resources, including other Secrets.
 
-The CRD `SecretTemplate` provides a way of provides "input resources" (other resources on the API) and templating out a Secret using information found on these resources.  It will then pick up changes to these resources and update the templatde Secret as necessary.
+Secrets are a common method of encapsulating and inputing sensitive data into other Kubernetes Resource via a reference, or to a process via [volume mounting](https://kubernetes.io/docs/concepts/configuration/secret/#using-secrets-as-files-from-a-pod). However the required information may be contained in a number of other Kubernetes Resources or maybe in an incorrect format.
+
+The CRD `SecretTemplate` provides a way of defining "input resources" (other Kubernetes Resources) and allows the templating out of a new Secret using information found on these resources. It will continuously pick up changes to these resources and update the templated Secret as necessary.
 
 ### Example
 
@@ -45,17 +47,17 @@ spec:
       name: password
   #! the template that follows a subset of the Secret API
   template:
-    #! data is used for templating in data that *is* base64 encoded, most like Secrets.
+    #! data is used for templating in data that *is* base64 encoded, most likely Secrets.
     data:
       password: $(.password-secret.data.password)
       username: $(.username-secret.data.username)
 ```
 
-Above configuration results in a `helm-postgres` Secret created within `default` namespace:
+Above configuration results in a `pod-input` Secret created within `default` namespace:
 
 ```console
 Namespace  Name           Kind          Owner    Conds.  Rs  Ri  Age
-default    helm-postgres  Secret        cluster  -       ok  -   1d
+default    pod-input      Secret        cluster  -       ok  -   1d
 ```
 
 ### SecretTemplate
@@ -69,7 +71,7 @@ SecretTemplate CRD allows to template out a Secret from information on other API
 `spec` fields:
 
 - `serviceAccountName` (required; string) Name of the service account used to read the input resources. If not provided, only Secrets can be read on the `.spec.inputResources`.
-- `inputResources` (required; array of objects) Array of named Kubernetes API resources to read information off.  The name of an input resource can dynamically reference previous input resources by a JSONPath expression, signified by an opening "$(" and a closing ")".
+- `inputResources` (required; array of objects) Array of named Kubernetes API resources to read information off.  The name of an input resource can dynamically reference previous input resources by a JSONPath expression, signified by an opening "$(" and a closing ")". Input Resources are resolved in the order they are defined.
 - `template` (optional; subset of Secret API object) A template of the Secret to be created.  Any string value in the subset can reference information off a resource in `.spec.inputResources` using a JSONPath expression, signified by an opening "$(" and a closing ")".
 
 ### Further Example
@@ -100,9 +102,16 @@ spec:
     ref:
       apiVersion: v1
       kind: Secret
+      #! the name of an input resource can be determined by the data contained in a previous input resource
       name: $(.pod.spec.containers[?(@.name=="postgresql")].env[?(@.name=="POSTGRES_PASSWORD")].valueFrom.secretKeyRef.name)
   #! the template that follows a subset of the Secret API
   template:
+    #! annotation and label metadata properties support templating
+    metadata:
+      labels:
+        key1: $(.pod.metadata.name)
+      annotations:
+        key2: $(.pod.metadata.name)
     #! the type is immutable for now and can't be updated in subsequent reconciliations
     type: postgresql
     #! stringData is used for templating in data that is not base64 encoded
@@ -111,7 +120,7 @@ spec:
       database: $(.pod.spec.containers[0].env[?(@.name=="POSTGRES_DB")].value)
       host: $(.service.spec.clusterIP)
       username: $(.pod.spec.containers[0].env[?(@.name=="POSTGRES_USER")].value)
-    #! data is used for templating in data that *is* base64 encoded, most like Secrets.
+    #! data is used for templating in data that *is* base64 encoded, most likely Secrets.
     data:
       password: $(.secret.data.password)
 ```
