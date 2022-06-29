@@ -53,11 +53,11 @@ spec:
       username: $(.username-secret.data.username)
 ```
 
-Above configuration results in a `helm-postgres` Secret created within `default` namespace:
+Above configuration results in a `pod-input` Secret created within `default` namespace:
 
 ```console
 Namespace  Name           Kind          Owner    Conds.  Rs  Ri  Age
-default    helm-postgres  Secret        cluster  -       ok  -   1d
+default    pod-input      Secret        cluster  -       ok  -   1d
 ```
 
 ### SecretTemplate
