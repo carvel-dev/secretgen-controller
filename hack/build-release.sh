@@ -25,8 +25,8 @@ cp config/package/metadata.yml ./tmp/metadata.yml
 rm ./tmp/bundle-image.yml
 rm ./tmp/schema-openapi.yml
 
-shasum -a 256 ./tmp/release.yml
-shasum -a 256 ./tmp/package.yml
-shasum -a 256 ./tmp/metadata.yml
+shasum -a 256 ./tmp/release.yml | tee ./tmp/checksums.txt
+shasum -a 256 ./tmp/package.yml | tee -a ./tmp/checksums.txt
+shasum -a 256 ./tmp/metadata.yml | tee -a ./tmp/checksums.txt
 
 echo SUCCESS
