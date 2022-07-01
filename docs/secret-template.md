@@ -15,14 +15,14 @@ The CRD `SecretTemplate` provides a way of defining "input resources" (other Kub
 apiVersion: v1
 kind: Secret
 metadata:
-  name: password-secret
+  name: password
 data:
   password: dG9wU2VjcmV0Cg==
 ---
 apiVersion: v1
 kind: Secret
 metadata:
-  name: username-secret
+  name: username
 stringData:
   username: my-user
 
@@ -31,7 +31,7 @@ stringData:
 apiVersion: secretgen.carvel.dev/v1alpha1
 kind: SecretTemplate
 metadata:
-  name: pod-input
+  name: new-secret
 spec:
   #! list of resources to read information off
   inputResources:
@@ -53,11 +53,11 @@ spec:
       username: $(.username-secret.data.username)
 ```
 
-Above configuration results in a `pod-input` Secret created within `default` namespace:
+Above configuration results in a `new-secret` Secret created within `default` namespace:
 
 ```console
 Namespace  Name           Kind          Owner    Conds.  Rs  Ri  Age
-default    pod-input      Secret        cluster  -       ok  -   1d
+default    new-secret     Secret        cluster  -       ok  -   1d
 ```
 
 ### SecretTemplate
@@ -78,6 +78,7 @@ SecretTemplate CRD allows to template out a Secret from information on other API
 
 ```yaml
 #! reads the resources created by an instance of the bitnami helm chart https://github.com/bitnami/charts/tree/master/bitnami/postgresql/ and creates a binding secret https://github.com/servicebinding/spec
+#! example chart installed using the command `helm install my-release bitnami/postgresql`
 ---
 apiVersion: secretgen.carvel.dev/v1alpha1
 kind: SecretTemplate
@@ -92,12 +93,12 @@ spec:
     ref:
       apiVersion: v1
       kind: Pod
-      name: postgres-postgresql-0
+      name: my-release-postgresql-0
   - name: service
     ref:
       apiVersion: v1
       kind: Service
-      name: postgres-postgresql
+      name: my-release-postgresql
   - name: secret
     ref:
       apiVersion: v1
@@ -116,13 +117,50 @@ spec:
     type: postgresql
     #! stringData is used for templating in data that is not base64 encoded
     stringData:
-      port: $(.service.spec.ports[0].port)
-      database: $(.pod.spec.containers[0].env[?(@.name=="POSTGRES_DB")].value)
+      port: $(.service.spec.ports[?(@.name=="tcp-postgresql")].port)
+      database: postgres
       host: $(.service.spec.clusterIP)
-      username: $(.pod.spec.containers[0].env[?(@.name=="POSTGRES_USER")].value)
+      username: postgres
     #! data is used for templating in data that *is* base64 encoded, most likely Secrets.
     data:
-      password: $(.secret.data.password)
+      password: $(.secret.data.postgres-password)
+
+#! example RBAC required to allow SecretTemplate to read data from inputresources
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: helm-reader # service account used by SecretTemplate to read input resources, referred to by SecretTemplate
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: helm-reader
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  - services
+  - pods
+  verbs:
+  - get
+  - list
+  - watch
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: helm-reader
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: helm-reader
+subjects:
+- kind: ServiceAccount
+  name: helm-reader
 ```
 
 Above configuration results in a `helm-postgres` Secret created within `default` namespace:
