@@ -7,7 +7,7 @@ sources:
 - image: secretgen-controller
   path: .
   docker:
-    build:
+    buildx:
       #@ if data.values.dev.rapid_deploy:
       pull: false
       noCache: false
@@ -17,7 +17,10 @@ sources:
       #! Always rebuild image
       pull: true
       noCache: true
-      rawOptions: #@ ["--build-arg", "SGCTRL_VER="+data.values.dev.version]
+      rawOptions:
+      - #@ "--build-arg=SGCTRL_VER="+data.values.dev.version
+      #@ if/end data.values.dev.platform != "":
+      - #@ "--platform="+data.values.dev.platform
       #@ end
 
 #@ if/end data.values.dev.push_images:

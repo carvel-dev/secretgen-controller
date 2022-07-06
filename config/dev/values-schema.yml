@@ -12,3 +12,5 @@ dev:
   image_repo: docker.io/k14s/secretgen-controller-test
   #@schema/desc "Development version"
   version: develop
+  #@schema/desc "Comma separated list of supported architectures"
+  platform: ""
