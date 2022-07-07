@@ -72,7 +72,11 @@ SecretTemplate CRD allows to template out a Secret from information on other API
 
 - `serviceAccountName` (required; string) Name of the service account used to read the input resources. If not provided, only Secrets can be read on the `.spec.inputResources`.
 - `inputResources` (required; array of objects) Array of named Kubernetes API resources to read information off.  The name of an input resource can dynamically reference previous input resources by a JSONPath expression, signified by an opening "$(" and a closing ")". Input Resources are resolved in the order they are defined.
-- `template` (optional; subset of Secret API object) A template of the Secret to be created.  Any string value in the subset can reference information off a resource in `.spec.inputResources` using a JSONPath expression, signified by an opening "$(" and a closing ")".
+- `template` (optional; subset of Secret API object) A template of the Secret to be created.  Any string value in the subset can reference information off a resource in `.spec.inputResources` using a JSONPath expression, signified by an opening "$(" and a closing ")". A subset of JSONPath is supported. SecretTemplate uses the [Kubernetes JSONPath Library](https://github.com/kubernetes/client-go/tree/master/util/jsonpath). More documentation can be found [here](https://kubernetes.io/docs/reference/kubectl/jsonpath/). Some common examples of valid JSONPath expressions:
+  - `$(.secret.data.password)` - Reference a value through keys
+  - `$(.secret.data.my\.key)` - Reference the value of key `my.key` by escaping the `.`
+  - `$(.service.spec.ports[?(@.name=="tcp-postgresql")].port)` - Reference a particular port using a filter expression
+
 
 ### Further Example
 
