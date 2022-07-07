@@ -32,7 +32,7 @@ jobs:
         only: ytt, kapp, kbld
         ytt: v0.40.1
         kapp: v0.47.0
-        kbld: v0.33.0
+        kbld: v0.34.0
     - name: Run Tests
       run: |
         set -e -x

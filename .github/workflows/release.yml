@@ -26,7 +26,7 @@ jobs:
           only: ytt, kapp, kbld, imgpkg
           ytt: v0.40.1
           kapp: v0.47.0
-          kbld: v0.33.0
+          kbld: v0.34.0
           imgpkg: v0.29.0
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v2
