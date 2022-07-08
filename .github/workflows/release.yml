@@ -37,7 +37,7 @@ jobs:
           set -e -x
           minikube start --driver=docker --wait=all
           docker buildx create minikube --use --driver=kubernetes --bootstrap
-          ./hack/build-release.sh
+          ./hack/build-and-publish-release.sh
       - name: Create release draft and upload release yaml
         uses: softprops/action-gh-release@17cd0d34deddf848fc0e7d9be5202c148c270a0a
         with:
