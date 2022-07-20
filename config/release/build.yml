@@ -1,22 +1,23 @@
 #@ load("@ytt:data", "data")
 
+---
 apiVersion: kbld.k14s.io/v1alpha1
 kind: Sources
 sources:
 - image: secretgen-controller
   path: .
-  #@ if/end data.values.push_images:
   docker:
-    build:
+    buildx:
       #! Always rebuild image
       pull: true
       noCache: true
-      rawOptions: #@ ["--build-arg", "SGCTRL_VER="+data.values.secretgen_controller_version]
-
-#@ if/end data.values.push_images:
+      rawOptions:
+      - #@ "--build-arg=SGCTRL_VER="+data.values.dev.version
+      #@ if/end data.values.dev.platform != "":
+      - #@ "--platform="+data.values.dev.platform
 ---
 apiVersion: kbld.k14s.io/v1alpha1
 kind: ImageDestinations
 destinations:
 - image: secretgen-controller
-  newImage: #@ data.values.image_repo
+  newImage: #@ data.values.dev.image_repo

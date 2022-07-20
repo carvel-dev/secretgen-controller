@@ -1,0 +1,45 @@
+#@ load("@ytt:data", "data")
+#@ load("@ytt:assert", "assert")
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: secretgen-controller
+  namespace: #@ data.values.namespace
+  annotations:
+    secretgen-controller.carvel.dev/version: v0.0.0
+spec:
+  #@ if/end data.values.deployment.updateStrategy != "":
+  strategy:
+    type: #@ data.values.deployment.updateStrategy
+    #@ if/end data.values.deployment.updateStrategy == "RollingUpdate":
+    rollingUpdate:
+      maxUnavailable: #@ data.values.deployment.rollingUpdate.maxUnavailable
+      maxSurge: #@ data.values.deployment.rollingUpdate.maxSurge
+  selector:
+    matchLabels:
+      app: secretgen-controller
+  replicas: 1
+  revisionHistoryLimit: 0
+  template:
+    metadata:
+      labels:
+        app: secretgen-controller
+    spec:
+      serviceAccount: secretgen-controller-sa
+      containers:
+      - name: secretgen-controller
+        image: secretgen-controller
+        resources:
+          requests:
+            cpu: 120m
+            memory: 100Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          capabilities:
+            drop:
+            - all
+      #@ if/end data.values.deployment.nodeSelector != None:
+      nodeSelector: #@ data.values.deployment.nodeSelector

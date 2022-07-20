@@ -4,7 +4,7 @@ Please let us know in issues what kind of configurability is wanted.
 
 `spec` fields:
 
-- [`secretTemplate`](secret-template.md)
+- [`secretTemplate`](secret-template-field.md)
 
 #### Secret Template
 

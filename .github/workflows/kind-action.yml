@@ -37,14 +37,14 @@ jobs:
           only: ytt, kapp, kbld
           ytt: v0.40.1
           kapp: v0.47.0
-          kbld: v0.33.0
+          kbld: v0.34.0
       # Run benchmark with `go test -bench` and stores the output to a file
       - name: Install sg and run e2e tests on kind
         run: |
           set -e -x
           kubectl version --short
 
-          ytt -f config/ | kbld -f- > kbld.out 2> kbldmeta.out
+          ytt -f config/package-bundle/config -f config/dev | kbld -f- > kbld.out 2> kbldmeta.out
           cat kbldmeta.out | tail -n 1 | sed 's/.*final: secretgen-controller -> \(.*\)$/\1/p'  | tail -n 1 | xargs kind load docker-image --name kinder
           kapp deploy -a sg -f kbld.out -c -y
 
