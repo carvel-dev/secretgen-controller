@@ -52,7 +52,7 @@ jobs:
 
       - name: Run Package build
         run: |
-          ./../carvel-kapp-controller/cli/kctrl pkg release -y -v ${{ github.ref_name }} --debug
+          ./carvel-kapp-controller/cli/kctrl pkg release -y -v ${{ github.ref_name }} --debug
       
       - name: Create draft release with package and metadata
         uses: softprops/action-gh-release@17cd0d34deddf848fc0e7d9be5202c148c270a0a
