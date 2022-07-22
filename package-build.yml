@@ -1,0 +1,27 @@
+apiVersion: kctrl.carvel.dev/v1alpha1
+kind: PackageBuild
+metadata:
+  creationTimestamp: "2022-07-21T18:41:22Z"
+  name: sgc.carvel.dev
+spec:
+  release:
+  - resource: {}
+  template:
+    spec:
+      app:
+        spec:
+          deploy:
+          - kapp: {}
+          template:
+          - ytt:
+              paths:
+              - config/package-bundle/config
+              - config/release
+          - kbld: {}
+      export:
+      - imgpkgBundle:
+          image: ysethiya/testsgc
+          useKbldImagesLock: true
+        includePaths:
+        - config/package-bundle/config
+        - config/release

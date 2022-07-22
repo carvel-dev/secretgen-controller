@@ -5,8 +5,8 @@
 #@schema/desc "Configuration explicity for developing secretgen-controller"
 dev:
   #@schema/desc "Location of secretgen-controller image"
-  image_repo: ghcr.io/vmware-tanzu/carvel-secretgen-controller
+  image_repo: ysethiya/testscg
   #@schema/desc "Development version"
   version: develop
   #@schema/desc "Comma separated list of supported architectures"
-  platform: "linux/amd64,linux/arm64"
+  platform: "linux/amd64"
