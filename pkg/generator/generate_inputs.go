@@ -16,11 +16,13 @@ type GenerateInputs struct {
 }
 
 func (i GenerateInputs) Add(anns map[string]string) {
-	bs, err := json.Marshal(i.inputs)
-	if err != nil {
-		panic("Cannot marshal generate inputs")
+	if len(anns) > 0 {
+		bs, err := json.Marshal(i.inputs)
+		if err != nil {
+			panic("Cannot marshal generate inputs")
+		}
+		anns[GenerateInputsAnnKey] = string(bs)
 	}
-	anns[GenerateInputsAnnKey] = string(bs)
 }
 
 func (i GenerateInputs) IsChanged(anns map[string]string) bool {
