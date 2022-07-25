@@ -50,15 +50,14 @@ jobs:
         run: |
           ./hack/build.sh
 
-      - name: Run Package build
-        run: |
-          ./carvel-kapp-controller/cli/kctrl pkg release -y -v ${{ github.ref_name }} --debug
+      # - name: Run Package build
+      #   run: |
+      #     ./carvel-kapp-controller/cli/kctrl pkg release -y -v ${{ github.ref_name }} --debug
       
       - name: Create draft release with package and metadata
         uses: softprops/action-gh-release@17cd0d34deddf848fc0e7d9be5202c148c270a0a
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
-            ./carvel-artifacts/package.yml
-            ./carvel-artifacts/metadata.yml
+            ./carvel-kapp-controller/cli/hack/build.sh
           draft: true
