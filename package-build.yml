@@ -16,7 +16,7 @@ spec:
           - ytt:
               paths:
               - config/package-bundle/config
-              - config/release
+              - config/dev
           - kbld: {}
       export:
       - imgpkgBundle:
@@ -24,4 +24,4 @@ spec:
           useKbldImagesLock: true
         includePaths:
         - config/package-bundle/config
-        - config/release
+        - config/dev

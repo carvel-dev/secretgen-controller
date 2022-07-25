@@ -14,7 +14,7 @@ spec:
       - ytt:
           paths:
           - config/package-bundle/config
-          - config/release
+          - config/dev
       - kbld: {}
   valuesSchema:
     openAPIv3: null
