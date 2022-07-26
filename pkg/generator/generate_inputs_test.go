@@ -20,5 +20,5 @@ func TestAddSuccessfulWithDefaultAnnotation(t *testing.T) {
 		"secretgen.k14s.io/generate-inputs": "",
 	}
 	err := generator.GenerateInputs{}.Add(defaultAnnotations)
-	assert.Equal(t, err, nil)
+	assert.Equal(t, nil, err)
 }
