@@ -6,7 +6,6 @@ package generator
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 )
 
 const (
@@ -23,7 +22,6 @@ func (i GenerateInputs) Add(anns map[string]string) error {
 			"secretgen.k14s.io/generate-inputs": "",
 		}
 	}
-	fmt.Println(anns)
 	bs, err := json.Marshal(i.inputs)
 	if err != nil {
 		return errors.New("cannot marshal generate inputs")
