@@ -17,10 +17,8 @@ type GenerateInputs struct {
 }
 
 func (i GenerateInputs) Add(anns map[string]string) error {
-	if len(anns) == 0 {
-		anns = map[string]string{
-			"secretgen.k14s.io/generate-inputs": "",
-		}
+	if anns == nil {
+		return errors.New("internal inconsistency: called with annotations nil param")
 	}
 	bs, err := json.Marshal(i.inputs)
 	if err != nil {

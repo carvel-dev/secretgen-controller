@@ -116,6 +116,11 @@ func (r *CertificateReconciler) createSecret(ctx context.Context, params certPar
 
 	newSecret := secret.AsSecret()
 
+	if newSecret.Annotations == nil {
+		newSecret.Annotations = map[string]string{
+			"secretgen.k14s.io/generate-inputs": "",
+		}
+	}
 	err = GenerateInputs{params}.Add(newSecret.Annotations)
 	if err != nil {
 		return reconcile.Result{Requeue: true}, err

@@ -87,6 +87,9 @@ spec:
 		if len(secret.Data["key.pem"]) == 0 {
 			t.Fatalf("Failed to find app2-cert key.pem")
 		}
+		if len(secret.Annotations) == 0 {
+			t.Fatalf("Failed to find annotations")
+		}
 		// TODO more cert checking
 	})
 
