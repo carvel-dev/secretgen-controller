@@ -16,6 +16,8 @@ type GenerateInputs struct {
 	inputs interface{}
 }
 
+// Add adds the metadata annotations from the certificate to the secret annotations map,
+// specifically as JSON string in the GenerateInputsAnnKey key
 func (i GenerateInputs) Add(anns map[string]string) error {
 	if anns == nil {
 		return errors.New("internal inconsistency: called with annotations nil param")
