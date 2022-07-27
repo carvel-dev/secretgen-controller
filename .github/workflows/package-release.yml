@@ -59,6 +59,6 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
-            ./carvel-artifacts/packages/secretgen-controller.carvel.dev/package.yml
-            ./carvel-artifacts/packages/secretgen-controller.carvel.dev/metadata.yml
+            carvel-artifacts/packages/secretgen-controller.carvel.dev/metadata.yml
+            carvel-artifacts/packages/secretgen-controller.carvel.dev/package.yml
           draft: true
