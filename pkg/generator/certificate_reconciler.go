@@ -116,7 +116,13 @@ func (r *CertificateReconciler) createSecret(ctx context.Context, params certPar
 
 	newSecret := secret.AsSecret()
 
-	GenerateInputs{params}.Add(newSecret.Annotations)
+	if newSecret.Annotations == nil {
+		newSecret.Annotations = map[string]string{}
+	}
+	err = GenerateInputs{params}.Add(newSecret.Annotations)
+	if err != nil {
+		return reconcile.Result{Requeue: true}, err
+	}
 
 	_, err = r.coreClient.CoreV1().Secrets(newSecret.Namespace).Create(ctx, newSecret, metav1.CreateOptions{})
 	if err != nil {
