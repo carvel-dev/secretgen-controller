@@ -1,7 +1,6 @@
 apiVersion: kctrl.carvel.dev/v1alpha1
 kind: PackageBuild
 metadata:
-  creationTimestamp: "2022-07-21T18:41:22Z"
   name: secretgen-controller.carvel.dev
 spec:
   release:
@@ -22,7 +21,7 @@ spec:
               - config/release
       export:
       - imgpkgBundle:
-          image: ysethiya/testsgc
+          image: ghcr.io/vmware-tanzu/carvel-secretgen-controller
           useKbldImagesLock: true
         includePaths:
         - config/package-bundle/config
