@@ -1,0 +1,54 @@
+apiVersion: data.packaging.carvel.dev/v1alpha1
+kind: Package
+metadata:
+  name: secretgen-controller.carvel.dev.0.0.0
+spec:
+  refName: secretgen-controller.carvel.dev
+  releasedAt: null
+  template:
+    spec:
+      deploy:
+      - kapp: {}
+      fetch:
+      - git: {}
+      template:
+      - ytt:
+          paths:
+          - config/package-bundle/config
+          - config/release
+      - kbld:
+          paths:
+          - config/release
+  valuesSchema:
+    openAPIv3: null
+  version: 0.0.0
+
+---
+apiVersion: data.packaging.carvel.dev/v1alpha1
+kind: PackageMetadata
+metadata:
+  creationTimestamp: null
+  name: secretgen-controller.carvel.dev
+spec:
+  displayName: secretgen-controller
+  longDescription: secretgen-controller.carvel.dev
+  shortDescription: secretgen-controller.carvel.dev
+
+---
+apiVersion: packaging.carvel.dev/v1alpha1
+kind: PackageInstall
+metadata:
+  annotations:
+    kctrl.carvel.dev/local-fetch-0: .
+  creationTimestamp: null
+  name: secretgen-controller
+spec:
+  packageRef:
+    refName: secretgen-controller.carvel.dev
+    versionSelection:
+      constraints: 0.0.0
+  serviceAccountName: secretgen-controller-sa
+status:
+  conditions: null
+  friendlyDescription: ""
+  observedGeneration: 0

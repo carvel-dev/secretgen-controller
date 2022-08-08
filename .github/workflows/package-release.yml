@@ -1,4 +1,3 @@
-#release.yml
 name: sgc-release
 
 on:
@@ -62,3 +61,4 @@ jobs:
             carvel-artifacts/packages/secretgen-controller.carvel.dev/metadata.yml
             carvel-artifacts/packages/secretgen-controller.carvel.dev/package.yml
           draft: true
+          
