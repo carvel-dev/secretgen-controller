@@ -42,7 +42,7 @@ jobs:
         env:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
         with:
-          channel-id: C02MTA7F2G1
+          channel-id: C010XR15VHU
           slack-message: "${{ env.SUMMARY }}"
       - name: Send Failure notification
         if: failure()
@@ -50,7 +50,7 @@ jobs:
         env:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
         with:
-          channel-id: G01FTP43JMQ
+          channel-id: C010XR15VHU
           slack-message: "Trivy scan workflow [${{steps.latest-sha.outputs.tag}}] failed. Please check the latest github action run for trivy scanner."
   scan-develop-branch:
     runs-on: ubuntu-latest
@@ -114,7 +114,7 @@ jobs:
         env:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
         with:
-          channel-id: G01FTP43JMQ
+          channel-id: C010XR15VHU
           slack-message: "${{ env.SUMMARY }}"
       - name: Send Failure notification
         if: failure()
@@ -122,5 +122,5 @@ jobs:
         env:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
         with:
-          channel-id: G01FTP43JMQ
+          channel-id: C010XR15VHU
           slack-message: "Trivy scan workflow failed. Please check the latest github action run for trivy scanner."
