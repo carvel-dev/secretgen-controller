@@ -71,7 +71,7 @@ jobs:
           ./hack/build.sh
 
           # docker image
-          docker build -t docker.io/carvel/secretgen-controller:${{ github.sha }} .
+          docker buildx -t docker.io/carvel/secretgen-controller:${{ github.sha }} .
       - name: Install Trivy
         run: |
           brew install aquasecurity/trivy/trivy
