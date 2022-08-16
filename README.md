@@ -6,6 +6,7 @@
 - [Docs](docs/README.md) with topics about installation, config, etc.
 - Install: see [Install instructions](docs/install.md)
 - Status: Supported
+- Backlog: (See what we're up to)[https://github.com/orgs/vmware-tanzu/projects/16/views/1?filterQuery=repo%3A%22vmware-tanzu%2Fcarvel-secretgen-conroller%22].
 
 `secretgen-controller` provides CRDs to specify what secrets need to be on cluster (generated or not).
 
