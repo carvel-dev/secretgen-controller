@@ -103,7 +103,8 @@ jobs:
 
           vulnCountBinary=$(jq '[ .Results[].Vulnerabilities ] | length' trivy-results-binary.json)
           vulnCountImage=$(jq '[ .Results[].Vulnerabilities ] | length' trivy-results-image.json)
-          if [ $vulnCountImage -eq 0 && $vulnCountBinary -eq 0 ]; then
+          if [[ $vulnCountImage -eq 0 && $vulnCountBinary -eq 0 ]]
+          then
             summary="Trivy Scan has not found any new Security Issues"
           fi
 
