@@ -1,6 +1,6 @@
 module github.com/vmware-tanzu/carvel-secretgen-controller
 
-go 1.17
+go 1.18
 
 require (
 	github.com/cloudfoundry/bosh-utils v0.0.0-20191216173634-505d7f919144 // indirect
@@ -53,7 +53,7 @@ require (
 	github.com/modern-go/reflect2 v1.0.1 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/prometheus/client_golang v1.11.0 // indirect
+	github.com/prometheus/client_golang v1.11.1 // indirect
 	github.com/prometheus/client_model v0.2.0 // indirect
 	github.com/prometheus/common v0.26.0 // indirect
 	github.com/prometheus/procfs v0.6.0 // indirect
