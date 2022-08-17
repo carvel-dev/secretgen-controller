@@ -92,7 +92,7 @@ jobs:
           trivy image --format template --output trivy-results-image.sarif "docker.io/carvel/secretgen-controller:${{ github.sha }}"
           trivy image --format json --output trivy-results-image.json "docker.io/carvel/secretgen-controller:${{ github.sha }}"
       - name: Upload Trivy scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v1
+        uses: github/codeql-action/upload-sarif@v2
         with:
           sarif_file: '.'
       - name: Check for new Vulnerabilities
