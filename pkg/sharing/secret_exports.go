@@ -90,12 +90,12 @@ type SecretMatcher struct {
 // MatchedSecretsForImport filters secrets export cache by the given criteria.
 // Returned order (last in the array is most specific):
 //   - secret with highest weight? (default weight=0), or
-//     - secret within the same namespace
-//       - secret with specific namespace
-//       - secret with wildcard namespace match
-//     - secret within other namespaces
-//       - secret with specific namespace
-//       - secret with wildcard namespace match
+//   - secret within the same namespace
+//   - secret with specific namespace
+//   - secret with wildcard namespace match
+//   - secret within other namespaces
+//   - secret with specific namespace
+//   - secret with wildcard namespace match
 //     (in all cases fallback to secret namespace/name sort)
 func (se *SecretExports) MatchedSecretsForImport(matcher SecretMatcher, nsIsExcludedFromWildcard NamespaceWildcardExclusionCheck) []*corev1.Secret {
 	se.exportedSecretsLock.RLock()
