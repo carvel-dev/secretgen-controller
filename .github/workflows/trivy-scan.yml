@@ -62,9 +62,9 @@ jobs:
         with:
           fetch-depth: 0
       - name: Set up Go 1.x
-        uses: actions/setup-go@v1
+        uses: actions/setup-go@v3
         with:
-          go-version: "1.17"
+          go-version: "1.18.3"
       - name: Build the secretgen-controller artifacts
         run: |
           curl -L https://carvel.dev/install.sh | bash
@@ -92,7 +92,7 @@ jobs:
           trivy image --format template --output trivy-results-image.sarif "docker.io/carvel/secretgen-controller:${{ github.sha }}"
           trivy image --format json --output trivy-results-image.json "docker.io/carvel/secretgen-controller:${{ github.sha }}"
       - name: Upload Trivy scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v1
+        uses: github/codeql-action/upload-sarif@v2
         with:
           sarif_file: '.'
       - name: Check for new Vulnerabilities
@@ -103,7 +103,8 @@ jobs:
 
           vulnCountBinary=$(jq '[ .Results[].Vulnerabilities ] | length' trivy-results-binary.json)
           vulnCountImage=$(jq '[ .Results[].Vulnerabilities ] | length' trivy-results-image.json)
-          if [ $vulnCountImage -eq 0 && $vulnCountBinary -eq 0 ]; then
+          if [[ $vulnCountImage -eq 0 && $vulnCountBinary -eq 0 ]]
+          then
             summary="Trivy Scan has not found any new Security Issues"
           fi
 
