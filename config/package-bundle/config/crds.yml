@@ -219,7 +219,7 @@ spec:
                   data:
                     additionalProperties:
                       type: string
-                    description: 'Data key and value. Where key is the Secret Key and the value is a jsonpath surrounded by $( ). The fetched data MUST be base64 encoded. All InputResources are available via their identifying name. For example:   key1: $(.secretinput1.data.value1)   key2: $(.secretinput2.data.value2)'
+                    description: 'Data key and value. Where key is the Secret Key and the value is a jsonpath surrounded by $( ). The fetched data MUST be base64 encoded. All InputResources are available via their identifying name. For example: key1: $(.secretinput1.data.value1) key2: $(.secretinput2.data.value2)'
                     type: object
                   metadata:
                     description: Metadata contains metadata for the Secret
@@ -238,7 +238,7 @@ spec:
                   stringData:
                     additionalProperties:
                       type: string
-                    description: 'StringData key and value. Where key is the Secret Key and the value can contain a JSONPATH syntax surrounded by $( ). All InputResources are available via their identifying name. For example:   key1: static-text   key2: $(.input1.spec.value1)   key3: combined-$(.input2.status.value2)-$(.input2.status.value3)'
+                    description: 'StringData key and value. Where key is the Secret Key and the value can contain a JSONPATH syntax surrounded by $( ). All InputResources are available via their identifying name. For example: key1: static-text key2: $(.input1.spec.value1) key3: combined-$(.input2.status.value2)-$(.input2.status.value3)'
                     type: object
                   type:
                     description: Type is the type of Kubernetes Secret
@@ -279,6 +279,7 @@ spec:
                     description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names TODO: Add other useful fields. apiVersion, kind, uid?'
                     type: string
                 type: object
+                x-kubernetes-map-type: atomic
             type: object
         required:
         - spec
@@ -335,6 +336,7 @@ spec:
                     description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names TODO: Add other useful fields. apiVersion, kind, uid?'
                     type: string
                 type: object
+                x-kubernetes-map-type: atomic
               commonName:
                 type: string
               duration:

@@ -17,7 +17,7 @@ import (
 
 func TestSecretExports(t *testing.T) {
 	t.Run("matching", func(t *testing.T) {
-		se := sharing.NewSecretExports(discardLogger{})
+		se := sharing.NewSecretExports(logr.Discard())
 
 		// Namespace does not match
 		secret1 := &corev1.Secret{
@@ -177,7 +177,7 @@ func TestSecretExports(t *testing.T) {
 	})
 
 	t.Run("returns secrets in specific order (last secret is most preferred)", func(t *testing.T) {
-		se := sharing.NewSecretExports(discardLogger{})
+		se := sharing.NewSecretExports(logr.Discard())
 
 		// higher weight, but name comes earlier
 		se.Export(&sg2v1alpha1.SecretExport{
@@ -293,12 +293,3 @@ func TestSecretExports(t *testing.T) {
 		}, actualMetas)
 	})
 }
-
-type discardLogger struct{}
-
-func (discardLogger) Info(msg string, keysAndValues ...interface{})             {}
-func (discardLogger) Enabled() bool                                             { return true }
-func (discardLogger) Error(err error, msg string, keysAndValues ...interface{}) {}
-func (l discardLogger) V(level int) logr.InfoLogger                             { return l }
-func (l discardLogger) WithValues(keysAndValues ...interface{}) logr.Logger     { return l }
-func (l discardLogger) WithName(name string) logr.Logger                        { return l }

@@ -49,6 +49,7 @@ type fakeClockWaiter struct {
 	skipIfBlocked bool
 	destChan      chan time.Time
 	fired         bool
+	afterFunc     func()
 }
 
 // NewFakePassiveClock returns a new FakePassiveClock.
@@ -116,6 +117,25 @@ func (f *FakeClock) NewTimer(d time.Duration) clock.Timer {
 	return timer
 }
 
+// AfterFunc is the Fake version of time.AfterFunc(d, cb).
+func (f *FakeClock) AfterFunc(d time.Duration, cb func()) clock.Timer {
+	f.lock.Lock()
+	defer f.lock.Unlock()
+	stopTime := f.time.Add(d)
+	ch := make(chan time.Time, 1) // Don't block!
+
+	timer := &fakeTimer{
+		fakeClock: f,
+		waiter: fakeClockWaiter{
+			targetTime: stopTime,
+			destChan:   ch,
+			afterFunc:  cb,
+		},
+	}
+	f.waiters = append(f.waiters, &timer.waiter)
+	return timer
+}
+
 // Tick constructs a fake ticker, akin to time.Tick
 func (f *FakeClock) Tick(d time.Duration) <-chan time.Time {
 	if d <= 0 {
@@ -175,7 +195,6 @@ func (f *FakeClock) setTimeLocked(t time.Time) {
 	for i := range f.waiters {
 		w := f.waiters[i]
 		if !w.targetTime.After(t) {
-
 			if w.skipIfBlocked {
 				select {
 				case w.destChan <- t:
@@ -185,6 +204,10 @@ func (f *FakeClock) setTimeLocked(t time.Time) {
 			} else {
 				w.destChan <- t
 				w.fired = true
+			}
+
+			if w.afterFunc != nil {
+				w.afterFunc()
 			}
 
 			if w.stepInterval > 0 {
@@ -201,7 +224,7 @@ func (f *FakeClock) setTimeLocked(t time.Time) {
 	f.waiters = newWaiters
 }
 
-// HasWaiters returns true if After has been called on f but not yet satisfied (so you can
+// HasWaiters returns true if After or AfterFunc has been called on f but not yet satisfied (so you can
 // write race-free tests).
 func (f *FakeClock) HasWaiters() bool {
 	f.lock.RLock()
@@ -216,7 +239,8 @@ func (f *FakeClock) Sleep(d time.Duration) {
 
 // IntervalClock implements clock.PassiveClock, but each invocation of Now steps the clock forward the specified duration.
 // IntervalClock technically implements the other methods of clock.Clock, but each implementation is just a panic.
-// See SimpleIntervalClock for an alternative that only has the methods of PassiveClock.
+//
+// Deprecated: See SimpleIntervalClock for an alternative that only has the methods of PassiveClock.
 type IntervalClock struct {
 	Time     time.Time
 	Duration time.Duration
@@ -245,6 +269,12 @@ func (*IntervalClock) NewTimer(d time.Duration) clock.Timer {
 	panic("IntervalClock doesn't implement NewTimer")
 }
 
+// AfterFunc is unimplemented, will panic.
+// TODO: make interval clock use FakeClock so this can be implemented.
+func (*IntervalClock) AfterFunc(d time.Duration, f func()) clock.Timer {
+	panic("IntervalClock doesn't implement AfterFunc")
+}
+
 // Tick is unimplemented, will panic.
 // TODO: make interval clock use FakeClock so this can be implemented.
 func (*IntervalClock) Tick(d time.Duration) <-chan time.Time {
@@ -253,9 +283,9 @@ func (*IntervalClock) Tick(d time.Duration) <-chan time.Time {
 
 // NewTicker has no implementation yet and is omitted.
 // TODO: make interval clock use FakeClock so this can be implemented.
-//func (*IntervalClock) NewTicker(d time.Duration) clock.Ticker {
-//	panic("IntervalClock doesn't implement NewTicker")
-//}
+func (*IntervalClock) NewTicker(d time.Duration) clock.Ticker {
+	panic("IntervalClock doesn't implement NewTicker")
+}
 
 // Sleep is unimplemented, will panic.
 func (*IntervalClock) Sleep(d time.Duration) {
