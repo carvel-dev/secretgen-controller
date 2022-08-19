@@ -18,6 +18,7 @@ spec:
               - config/release
           - kbld:
               paths:
+              - '-'
               - config/release
       export:
       - imgpkgBundle:
