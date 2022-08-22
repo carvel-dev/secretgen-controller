@@ -5,6 +5,8 @@ metadata:
 spec:
   refName: secretgen-controller.carvel.dev
   releasedAt: null
+  licenses:
+  - Apache 2.0
   template:
     spec:
       deploy:
