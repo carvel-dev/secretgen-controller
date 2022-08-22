@@ -30,7 +30,7 @@ jobs:
 
           summary="Trivy scan has found new vulnerabilities in ${{steps.latest-sha.outputs.tag}} check https://github.com/${{github.repository}}/actions/runs/${{github.run_id}}"
 
-          vulnCount=$(jq '[ .Results[].Vulnerabilities ] | length' trivy-results-image-latest.json)
+          vulnCount=$(jq '[ .Results[]? | select(.Vulnerabilities) | .Vulnerabilities ] | length' trivy-results-image-latest.json)
           if [[ $vulnCount -eq 0 ]]; then
             summary="Trivy Scan has not found any new Security Issues in ${{steps.latest-sha.outputs.tag}}"
           fi
@@ -101,8 +101,8 @@ jobs:
 
           summary="Trivy scan has found new vulnerabilities - check https://github.com/vmware-tanzu/carvel-secretgen-controller/security/code-scanning for more"
 
-          vulnCountBinary=$(jq '[ .Results[].Vulnerabilities ] | length' trivy-results-binary.json)
-          vulnCountImage=$(jq '[ .Results[].Vulnerabilities ] | length' trivy-results-image.json)
+          vulnCountBinary=$(jq '[ .Results[]? | select(.Vulnerabilities) | .Vulnerabilities ] | length' trivy-results-binary.json)
+          vulnCountImage=$(jq '[ .Results[]? | select(.Vulnerabilities) | .Vulnerabilities ] | length' trivy-results-image.json)
           if [[ $vulnCountImage -eq 0 && $vulnCountBinary -eq 0 ]]
           then
             summary="Trivy Scan has not found any new Security Issues"
