@@ -12,7 +12,7 @@ $ kubectl apply -f https://github.com/vmware-tanzu/carvel-secretgen-controller/r
 
 ### Advanced
 
-`release.yml` is produced with [ytt](https://get-ytt.io) and [kbld](https://get-kbld.io) at the time of the release. You can use these tools yourself and customize kapp controller configuration if default one does not fit your needs.
+`release.yml` is produced with [ytt](https://get-ytt.io) and [kbld](https://get-kbld.io) at the time of the release. You can use these tools yourself and customize secretgen-controller configuration if default one does not fit your needs.
 
 Example:
 
