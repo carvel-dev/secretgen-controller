@@ -2,7 +2,7 @@
 
 As of v0.5.0+, SecretExport and SecretImport (prev known as SecretRequest) moved to `secretgen.carvel.dev` API group.
 
-Access to Secret is commonly scoped to its containing namespace (e.g. Pod can only reference Secrets within the same namespace). This constraint is important for maintaing "namespace" boundary.
+Access to Secret is commonly scoped to its containing namespace (e.g. Pod can only reference Secrets within the same namespace). This constraint is important for maintaining "namespace" boundary.
 
 In some cases an owner of a Secret may want to export it to other namespaces for consumption by other users/programs in the system. Currently there is no builtin way to do this in Kubernetes.
 
