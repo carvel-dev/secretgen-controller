@@ -16,7 +16,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v2
         with:
-          go-version: 1.18
+          go-version: 1.19
       - name: Install Carvel Tools
         uses: vmware-tanzu/carvel-setup-action@v1
         with:
@@ -26,7 +26,7 @@ jobs:
           kapp: v0.47.0
           kbld: v0.34.0
           imgpkg: v0.29.0
-          kctrl: v0.40.0
+          kctrl: v0.41.2
           vendir: v0.30.0
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v2
@@ -121,10 +121,13 @@ jobs:
       - name: Run PackageCR Validation Tests
         run: |
           set -e -x
+
           # deploy admin sa for secretgen-controller - enough permissions for SGC to be deployed properly
           kapp deploy -a rbac -f https://raw.githubusercontent.com/vmware-tanzu/carvel-kapp-controller/develop/examples/rbac/cluster-admin.yml -y
+          
           # Kapp-controller is needed for our PackageInstall
           kapp deploy -a kc -f https://github.com/vmware-tanzu/carvel-kapp-controller/releases/latest/download/release.yml -y
+          
           constraintVersion="${{ github.ref_name }}"
           cat << EOF > pkgi.yml
           ---
@@ -140,7 +143,10 @@ jobs:
               versionSelection:
                 constraints: "${constraintVersion:1}"
           EOF
+          
           kapp deploy -a sg -f carvel-artifacts/packages/secretgen-controller.carvel.dev/package.yml -f carvel-artifacts/packages/secretgen-controller.carvel.dev/metadata.yml -f pkgi.yml -y
+          
           export SECRETGEN_E2E_NAMESPACE=secretgen-test
+          
           ./hack/test-e2e.sh
 
