@@ -15,15 +15,14 @@ spec:
           - ytt:
               paths:
               - config/package-bundle/config
-              - config/release
+              - tmp/output-config.yml
           - kbld:
               paths:
               - '-'
-              - config/release
       export:
       - imgpkgBundle:
           image: ghcr.io/vmware-tanzu/carvel-secretgen-controller
           useKbldImagesLock: true
         includePaths:
         - config/package-bundle/config
-        - config/release
+        - tmp/output-config.yml

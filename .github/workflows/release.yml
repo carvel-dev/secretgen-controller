@@ -43,6 +43,7 @@ jobs:
       - name: Run Package build
         run: |
           constraintVersion="${{ github.ref_name }}"
+          ytt -f config/release > ./tmp/output-config.yml
           kctrl pkg release -y -v ${constraintVersion:1} --debug
       - name: Checksum
         run: |
@@ -129,22 +130,13 @@ jobs:
           kapp deploy -a kc -f https://github.com/vmware-tanzu/carvel-kapp-controller/releases/latest/download/release.yml -y
           
           constraintVersion="${{ github.ref_name }}"
-          cat << EOF > pkgi.yml
-          ---
-          apiVersion: packaging.carvel.dev/v1alpha1
-          kind: PackageInstall
-          metadata:
-            name: secretgen-controller
-          spec:
-            serviceAccountName: cluster-admin-sa
-            packageRef:
-              refName: secretgen-controller.carvel.dev
-              apiVersion: packaging.carvel.dev/v1alpha1
-              versionSelection:
-                constraints: "${constraintVersion:1}"
-          EOF
+        
+          kubectl create ns sg
+
+          kapp deploy -a sg -f carvel-artifacts/packages/secretgen-controller.carvel.dev/package.yml -f carvel-artifacts/packages/secretgen-controller.carvel.dev/metadata.yml -n sg -y
           
-          kapp deploy -a sg -f carvel-artifacts/packages/secretgen-controller.carvel.dev/package.yml -f carvel-artifacts/packages/secretgen-controller.carvel.dev/metadata.yml -f pkgi.yml -y
+          # installing pkg with kctrl
+          kctrl pkg install -p secretgen-controller.carvel.dev -i scg --version ${constraintVersion:1} -n sg
           
           export SECRETGEN_E2E_NAMESPACE=secretgen-test
           

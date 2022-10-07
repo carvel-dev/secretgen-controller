@@ -17,10 +17,8 @@ spec:
       - ytt:
           paths:
           - config/package-bundle/config
-          - config/release
-      - kbld:
-          paths:
-          - config/release
+          - tmp/output-config.yml
+      - kbld: {}
   valuesSchema:
     openAPIv3: null
   version: 0.0.0
