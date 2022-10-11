@@ -43,7 +43,7 @@ jobs:
       - name: Run Package build
         run: |
           constraintVersion="${{ github.ref_name }}"
-          ytt -f config/release > ./tmp/output-config.yml
+          ytt -f config/release > ./config/relase-config.yml
           kctrl pkg release -y -v ${constraintVersion:1} --debug
       - name: Checksum
         run: |

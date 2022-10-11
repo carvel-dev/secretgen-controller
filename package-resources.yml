@@ -17,7 +17,7 @@ spec:
       - ytt:
           paths:
           - config/package-bundle/config
-          - tmp/output-config.yml
+          - config/relase-config.yml
       - kbld: {}
   valuesSchema:
     openAPIv3: null

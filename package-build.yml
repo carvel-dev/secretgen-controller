@@ -15,14 +15,16 @@ spec:
           - ytt:
               paths:
               - config/package-bundle/config
-              - tmp/output-config.yml
+              - config/relase-config.yml
           - kbld:
               paths:
               - '-'
+              - .imgpkg/images.yml
       export:
       - imgpkgBundle:
           image: ghcr.io/vmware-tanzu/carvel-secretgen-controller
-          useKbldImagesLock: true
+          useKbldImagesLock: false
         includePaths:
         - config/package-bundle/config
-        - tmp/output-config.yml
+        - config/relase-config.yml
+        - .imgpkg/images.yml
