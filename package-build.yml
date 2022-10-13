@@ -15,7 +15,7 @@ spec:
           - ytt:
               paths:
               - config/package-bundle/config
-              - config/relase-config.yml
+              - config/release-config.yml
           - kbld:
               paths:
               - '-'
@@ -26,5 +26,5 @@ spec:
           useKbldImagesLock: false
         includePaths:
         - config/package-bundle/config
-        - config/relase-config.yml
+        - config/release-config.yml
         - .imgpkg/images.yml
