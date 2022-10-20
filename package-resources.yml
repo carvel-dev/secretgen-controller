@@ -1,0 +1,58 @@
+apiVersion: data.packaging.carvel.dev/v1alpha1
+kind: Package
+metadata:
+  name: secretgen-controller.carvel.dev.0.0.0
+spec:
+  refName: secretgen-controller.carvel.dev
+  releasedAt: null
+  licenses:
+  - Apache 2.0
+  template:
+    spec:
+      deploy:
+      - kapp: {}
+      fetch:
+      - git: {}
+      template:
+      - ytt:
+          paths:
+          - config/package-bundle/config
+          - config/release-config.yml
+      - kbld: {}
+  valuesSchema:
+    openAPIv3: null
+  version: 0.0.0
+
+---
+apiVersion: data.packaging.carvel.dev/v1alpha1
+kind: PackageMetadata
+metadata:
+  name: secretgen-controller.carvel.dev
+spec:
+  displayName: "secretgen-controller"
+  longDescription: "Provide CRDs to specify what secrets need to be on cluster (generated or not)."
+  shortDescription: "Secret generation and sharing"
+  providerName: carvel.dev
+  maintainers:
+    - name: Carvel team (see www.carvel.dev for team members)
+  categories:
+    - "package management"
+
+---
+apiVersion: packaging.carvel.dev/v1alpha1
+kind: PackageInstall
+metadata:
+  annotations:
+    kctrl.carvel.dev/local-fetch-0: .
+  creationTimestamp: null
+  name: secretgen-controller
+spec:
+  packageRef:
+    refName: secretgen-controller.carvel.dev
+    versionSelection:
+      constraints: 0.0.0
+  serviceAccountName: secretgen-controller-sa
+status:
+  conditions: null
+  friendlyDescription: ""
+  observedGeneration: 0

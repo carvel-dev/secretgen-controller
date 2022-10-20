@@ -1,0 +1,30 @@
+apiVersion: kctrl.carvel.dev/v1alpha1
+kind: PackageBuild
+metadata:
+  name: secretgen-controller.carvel.dev
+spec:
+  release:
+  - resource: {}
+  template:
+    spec:
+      app:
+        spec:
+          deploy:
+          - kapp: {}
+          template:
+          - ytt:
+              paths:
+              - config/package-bundle/config
+              - config/release-config.yml
+          - kbld:
+              paths:
+              - '-'
+              - .imgpkg/images.yml
+      export:
+      - imgpkgBundle:
+          image: ghcr.io/vmware-tanzu/carvel-secretgen-controller-package-bundle
+          useKbldImagesLock: false
+        includePaths:
+        - config/package-bundle/config
+        - config/release-config.yml
+        - .imgpkg/images.yml
