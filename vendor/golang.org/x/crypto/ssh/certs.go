@@ -251,7 +251,7 @@ type algorithmOpenSSHCertSigner struct {
 // private key is held by signer. It returns an error if the public key in cert
 // doesn't match the key used by signer.
 func NewCertSigner(cert *Certificate, signer Signer) (Signer, error) {
-	if bytes.Compare(cert.Key.Marshal(), signer.PublicKey().Marshal()) != 0 {
+	if !bytes.Equal(cert.Key.Marshal(), signer.PublicKey().Marshal()) {
 		return nil, errors.New("ssh: signer and cert have different public key")
 	}
 
@@ -460,6 +460,8 @@ func (c *Certificate) SignCert(rand io.Reader, authority Signer) error {
 
 // certKeyAlgoNames is a mapping from known certificate algorithm names to the
 // corresponding public key signature algorithm.
+//
+// This map must be kept in sync with the one in agent/client.go.
 var certKeyAlgoNames = map[string]string{
 	CertAlgoRSAv01:        KeyAlgoRSA,
 	CertAlgoRSASHA256v01:  KeyAlgoRSASHA256,
@@ -481,6 +483,17 @@ func underlyingAlgo(algo string) string {
 		return a
 	}
 	return algo
+}
+
+// certificateAlgo returns the certificate algorithms that uses the provided
+// underlying signature algorithm.
+func certificateAlgo(algo string) (certAlgo string, ok bool) {
+	for certName, algoName := range certKeyAlgoNames {
+		if algoName == algo {
+			return certName, true
+		}
+	}
+	return "", false
 }
 
 func (cert *Certificate) bytesForSigning() []byte {
@@ -526,13 +539,11 @@ func (c *Certificate) Marshal() []byte {
 
 // Type returns the certificate algorithm name. It is part of the PublicKey interface.
 func (c *Certificate) Type() string {
-	keyType := c.Key.Type()
-	for certName, keyName := range certKeyAlgoNames {
-		if keyName == keyType {
-			return certName
-		}
+	certName, ok := certificateAlgo(c.Key.Type())
+	if !ok {
+		panic("unknown certificate type for key type " + c.Key.Type())
 	}
-	panic("unknown certificate type for key type " + keyType)
+	return certName
 }
 
 // Verify verifies a signature against the certificate's public
