@@ -994,8 +994,9 @@ k8s.io/apimachinery v0.24.4/go.mod h1:82Bi4sCzVBdpYjyI4jY6aHX+YCUchUIrZrXKedjd2U
 k8s.io/apimachinery v0.24.7 h1:CYJ+iRJkNFWWdUz5XodHkA6Yk5nRTbudvvQDVGxtuqc=
 k8s.io/apimachinery v0.24.7/go.mod h1:WR5z9Lpw2mOAeDg20iSSrEBRQMY0p2YXVdYpUIgSr4o=
 k8s.io/apiserver v0.24.4/go.mod h1:mAuC3pZVc0IDXLx7lUHoisBOtBa1SobfLW/CI3klXQE=
-k8s.io/client-go v0.24.4 h1:hIAIJZIPyaw46AkxwyR0FRfM/pRxpUNTd3ysYu9vyRg=
 k8s.io/client-go v0.24.4/go.mod h1:+AxlPWw/H6f+EJhRSjIeALaJT4tbeB/8g9BNvXGPd0Y=
+k8s.io/client-go v0.24.7 h1:K4rTkxc94ctXfaDXfa5IflsflPYmguG/3zb3iJY4dQA=
+k8s.io/client-go v0.24.7/go.mod h1:UoQaKAGHRRE77THP0jGUehwqt5javBlv1AoKdpfz3JA=
 k8s.io/code-generator v0.24.4/go.mod h1:dpVhs00hTuTdTY6jvVxvTFCk6gSMrtfRydbhZwHI15w=
 k8s.io/code-generator v0.24.7 h1:YdYtSNdaf8Yqp75y520Eoa5DZPsOWWvsyYYSj/vGYUc=
 k8s.io/code-generator v0.24.7/go.mod h1:1B92gyaTHWnignKkQzbHIyV3hiyRlZ+prNqD6nbajPA=
