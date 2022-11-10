@@ -1,6 +1,6 @@
 FROM golang:1.17.1 AS deps
 
-ARG TARGETOS TARGETARCH SGCTRL_VER=development
+ARG SGCTRL_VER=development
 WORKDIR /workspace
 
 COPY . .
