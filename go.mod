@@ -10,7 +10,7 @@ require (
 	github.com/stretchr/testify v1.8.1
 	golang.org/x/tools v0.1.12 // indirect
 	k8s.io/api v0.22.4
-	k8s.io/apimachinery v0.22.4
+	k8s.io/apimachinery v0.22.15
 	k8s.io/client-go v0.22.4
 	k8s.io/code-generator v0.22.4
 	k8s.io/utils v0.0.0-20210819203725-bdf08cb9a70a
@@ -81,6 +81,6 @@ require (
 	k8s.io/gengo v0.0.0-20201214224949-b6c5ce23f027 // indirect
 	k8s.io/klog/v2 v2.9.0 // indirect
 	k8s.io/kube-openapi v0.0.0-20211109043538-20434351676c // indirect
-	sigs.k8s.io/structured-merge-diff/v4 v4.1.2 // indirect
+	sigs.k8s.io/structured-merge-diff/v4 v4.2.1 // indirect
 	sigs.k8s.io/yaml v1.2.0 // indirect
 )
