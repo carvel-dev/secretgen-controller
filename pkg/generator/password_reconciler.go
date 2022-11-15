@@ -5,9 +5,13 @@ package generator
 
 import (
 	"context"
+	"crypto/rand"
 	"fmt"
+	"math/big"
+	"strings"
 
-	cfgtypes "github.com/cloudfoundry/config-server/types"
+	mathrand "math/rand"
+
 	"github.com/go-logr/logr"
 	sgv1alpha1 "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/apis/secretgen/v1alpha1"
 	sgclient "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/client/clientset/versioned"
@@ -29,6 +33,12 @@ type PasswordReconciler struct {
 }
 
 var _ reconcile.Reconciler = &PasswordReconciler{}
+
+var (
+	lowerCharSet = "abcdefghijklmnopqrstuvwxyz"
+	upperCharSet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	digitSet     = "0123456789"
+)
 
 func NewPasswordReconciler(sgClient sgclient.Interface,
 	coreClient kubernetes.Interface, log logr.Logger) *PasswordReconciler {
@@ -115,37 +125,75 @@ func (r *PasswordReconciler) createSecret(ctx context.Context, password *sgv1alp
 	return reconcile.Result{}, nil
 }
 
-type passwordParams struct {
-	Length int `yaml:"length"`
+func (r *PasswordReconciler) generate(password *sgv1alpha1.Password) (string, error) {
+	passwordVal := r.GeneratePassword(&password.Spec)
+	return passwordVal, nil
 }
 
-func (r *PasswordReconciler) generate(password *sgv1alpha1.Password) (string, error) {
-	gen := cfgtypes.NewPasswordGenerator()
+// https://golangbyexample.com/generate-random-password-golang/
+func (r *PasswordReconciler) GeneratePassword(spec *sgv1alpha1.PasswordSpec) string {
 
-	genParams := passwordParams{Length: password.Spec.Length}
-	if genParams.Length == 0 {
-		genParams.Length = 40
+	var password strings.Builder
+
+	//Set symbol character
+	for i := 0; i < spec.Symbols; i++ {
+		value, _ := randomElement(spec.SymbolCharSet)
+		password.WriteString(value)
 	}
 
-	passwordVal, err := gen.Generate(genParams)
+	//Set digit
+	for i := 0; i < spec.Digits; i++ {
+		value, _ := randomElement(digitSet)
+		password.WriteString(value)
+	}
+
+	//Set uppercase
+	for i := 0; i < spec.UppercaseLetters; i++ {
+		value, _ := randomElement(upperCharSet)
+		password.WriteString(value)
+	}
+
+	//Set lowercase
+	for i := 0; i < spec.LowercaseLetters; i++ {
+		value, _ := randomElement(lowerCharSet)
+		password.WriteString(value)
+	}
+
+	var allCharSet = lowerCharSet + upperCharSet + digitSet
+
+	remainingLength := spec.Length - spec.Symbols - spec.Digits - spec.UppercaseLetters - spec.LowercaseLetters
+	for i := 0; i < remainingLength; i++ {
+		value, _ := randomElement(allCharSet)
+		password.WriteString(value)
+	}
+
+	inRune := []rune(password.String())
+	mathrand.Shuffle(len(inRune), func(i, j int) {
+		inRune[i], inRune[j] = inRune[j], inRune[i]
+	})
+
+	return string(inRune)
+}
+
+func randomElement(s string) (string, error) {
+	n, err := rand.Int(rand.Reader, big.NewInt(int64(len(s))))
 	if err != nil {
 		return "", err
 	}
-
-	return passwordVal.(string), nil
+	return string(s[n.Int64()]), nil
 }
 
 func (r *PasswordReconciler) updateStatus(ctx context.Context, password *sgv1alpha1.Password) error {
 	existingPassword, err := r.sgClient.SecretgenV1alpha1().Passwords(password.Namespace).Get(ctx, password.Name, metav1.GetOptions{})
 	if err != nil {
-		return fmt.Errorf("Fetching password: %s", err)
+		return fmt.Errorf("fetching password: %s", err)
 	}
 
 	existingPassword.Status = password.Status
 
 	_, err = r.sgClient.SecretgenV1alpha1().Passwords(existingPassword.Namespace).UpdateStatus(ctx, existingPassword, metav1.UpdateOptions{})
 	if err != nil {
-		return fmt.Errorf("Updating password status: %s", err)
+		return fmt.Errorf("updating password status: %s", err)
 	}
 
 	return nil
