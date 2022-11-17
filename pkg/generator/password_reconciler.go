@@ -10,8 +10,6 @@ import (
 	"math/big"
 	"strings"
 
-	mathrand "math/rand"
-
 	"github.com/go-logr/logr"
 	sgv1alpha1 "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/apis/secretgen/v1alpha1"
 	sgclient "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/client/clientset/versioned"
@@ -126,12 +124,11 @@ func (r *PasswordReconciler) createSecret(ctx context.Context, password *sgv1alp
 }
 
 func (r *PasswordReconciler) generate(password *sgv1alpha1.Password) (string, error) {
-	passwordVal := r.GeneratePassword(&password.Spec)
+	passwordVal := localGeneratePassword(&password.Spec)
 	return passwordVal, nil
 }
 
-// https://golangbyexample.com/generate-random-password-golang/
-func (r *PasswordReconciler) GeneratePassword(spec *sgv1alpha1.PasswordSpec) string {
+func localGeneratePassword(spec *sgv1alpha1.PasswordSpec) string {
 
 	var password strings.Builder
 
@@ -168,7 +165,7 @@ func (r *PasswordReconciler) GeneratePassword(spec *sgv1alpha1.PasswordSpec) str
 	}
 
 	inRune := []rune(password.String())
-	mathrand.Shuffle(len(inRune), func(i, j int) {
+	localCryptoShuffle(len(inRune), func(i, j int) {
 		inRune[i], inRune[j] = inRune[j], inRune[i]
 	})
 
@@ -181,6 +178,28 @@ func randomElement(s string) (string, error) {
 		return "", err
 	}
 	return string(s[n.Int64()]), nil
+}
+
+func localCryptoShuffle(n int, swap func(i, j int)) {
+	if n < 0 {
+		panic("invalid argument to Shuffle")
+	}
+
+	// Fisher-Yates shuffle: https://en.wikipedia.org/wiki/Fisher%E2%80%93Yates_shuffle
+	// Shuffle really ought not be called with n that doesn't fit in 32 bits.
+	// Not only will it take a very long time, but with 2³¹! possible permutations,
+	// there's no way that any PRNG can have a big enough internal state to
+	// generate even a minuscule percentage of the possible permutations.
+	// Nevertheless, the right API signature accepts an int n, so handle it as best we can.
+	i := n - 1
+	for ; i > 1<<31-1-1; i-- {
+		j, _ := rand.Int(rand.Reader, big.NewInt(int64(i+1)))
+		swap(i, int(j.Int64()))
+	}
+	for ; i > 0; i-- {
+		j, _ := rand.Int(rand.Reader, big.NewInt(int64(i+1)))
+		swap(i, int(j.Int64()))
+	}
 }
 
 func (r *PasswordReconciler) updateStatus(ctx context.Context, password *sgv1alpha1.Password) error {
