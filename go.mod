@@ -15,7 +15,7 @@ require (
 	k8s.io/code-generator v0.25.0
 	k8s.io/utils v0.0.0-20220812165043-ad590609e2e5
 	sigs.k8s.io/controller-runtime v0.13.1
-	sigs.k8s.io/controller-tools v0.9.2
+	sigs.k8s.io/controller-tools v0.10.0
 )
 
 require (
