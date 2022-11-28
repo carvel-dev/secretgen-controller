@@ -1,6 +1,9 @@
 // Copyright 2021 VMware, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
+// Package tracker allows "tracking" resources to monitor "tracked" resources.
+// All "tracking" resources can then be found for a given "tracked" resource.
+// Tracker is thread-safe.
 package tracker
 
 import (
