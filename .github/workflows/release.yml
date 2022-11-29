@@ -40,17 +40,20 @@ jobs:
           minikube start --driver=docker --wait=all
           docker buildx create minikube --use --driver=kubernetes --bootstrap
           ./hack/build-and-publish-release.sh
+          mkdir release
+          cp ./tmp/release.yml release/
       - name: Run Package build
         run: |
           constraintVersion="${{ github.ref_name }}"
           ytt -f config/release > ./config/release-config.yml
           kctrl pkg release -y -v ${constraintVersion:1} --debug
           mv carvel-artifacts/packages/secretgen-controller.carvel.dev/metadata.yml carvel-artifacts/packages/secretgen-controller.carvel.dev/package-metadata.yml
+          cp carvel-artifacts/packages/secretgen-controller.carvel.dev/* release/
       - name: Checksum
         run: |
-          shasum -a 256 ./tmp/release.yml | tee ./tmp/checksums.txt
-          shasum -a 256 carvel-artifacts/packages/secretgen-controller.carvel.dev/package.yml | tee -a ./tmp/checksums.txt
-          shasum -a 256 carvel-artifacts/packages/secretgen-controller.carvel.dev/package-metadata.yml | tee -a ./tmp/checksums.txt
+          pushd release
+          shasum -a 256 ./release.yml ./package.yml ./package-metadata.yml | tee ../tmp/checksums.txt
+          popd
       - name: Create release draft and upload release yaml
         uses: softprops/action-gh-release@17cd0d34deddf848fc0e7d9be5202c148c270a0a
         with:
@@ -58,9 +61,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           body_path: ./tmp/checksums.txt
           files: |
-            ./tmp/release.yml
-            carvel-artifacts/packages/secretgen-controller.carvel.dev/package.yml
-            carvel-artifacts/packages/secretgen-controller.carvel.dev/package-metadata.yml
+            ./release/*
           draft: true
       - name: Get uploaded release YAML checksum
         uses: actions/github-script@v6
@@ -104,9 +105,9 @@ jobs:
               }
             }
             console.log(checksums)
-            return `${checksums['release.yml']}  ./tmp/release.yml
-            ${checksums['package.yml']}  carvel-artifacts/packages/secretgen-controller.carvel.dev/package.yml
-            ${checksums['package-metadata.yml']}  carvel-artifacts/packages/secretgen-controller.carvel.dev/package-metadata.yml`
+            return `${checksums['release.yml']}  ./release.yml
+            ${checksums['package.yml']}  ./package.yml
+            ${checksums['package-metadata.yml']}  ./package-metadata.yml`
       
       - name: Verify uploaded artifacts
         if: startsWith(github.ref, 'refs/tags/')
