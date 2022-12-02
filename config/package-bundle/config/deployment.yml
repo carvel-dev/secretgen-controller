@@ -40,6 +40,8 @@ spec:
           runAsNonRoot: true
           capabilities:
             drop:
-            - all
+            - ALL
+          seccompProfile:
+            type: RuntimeDefault
       #@ if/end data.values.deployment.nodeSelector != None:
       nodeSelector: #@ data.values.deployment.nodeSelector
