@@ -11,7 +11,7 @@ require (
 	golang.org/x/tools v0.3.0 // indirect
 	k8s.io/api v0.26.0
 	k8s.io/apimachinery v0.26.0
-	k8s.io/client-go v0.25.4
+	k8s.io/client-go v0.26.0
 	k8s.io/code-generator v0.26.0
 	k8s.io/utils v0.0.0-20221107191617-1a15be271d1d
 	sigs.k8s.io/controller-runtime v0.13.1
@@ -19,7 +19,6 @@ require (
 )
 
 require (
-	cloud.google.com/go/compute v1.9.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
