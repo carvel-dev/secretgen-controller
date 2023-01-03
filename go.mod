@@ -3,8 +3,8 @@ module github.com/vmware-tanzu/carvel-secretgen-controller
 go 1.19
 
 require (
-	github.com/cloudfoundry/bosh-utils v0.0.345 // indirect
-	github.com/cloudfoundry/config-server v0.1.90
+	github.com/cloudfoundry/bosh-utils v0.0.347 // indirect
+	github.com/cloudfoundry/config-server v0.1.92
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-logr/logr v1.2.3
 	github.com/stretchr/testify v1.8.1
