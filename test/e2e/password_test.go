@@ -327,7 +327,7 @@ spec:
 		}
 
 		if len(secret.Data["val"]) != 3 {
-			t.Fatalf("Expect password lenght is 3, found %d", len(secret.Data["val"]))
+			t.Fatalf("Expect password length is 3, found %d", len(secret.Data["val"]))
 		}
 
 		symbolSet := "!$#%"
