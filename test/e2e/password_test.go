@@ -160,7 +160,7 @@ spec:
       valx2: $(value)$(value)
 `
 
-	name := "test-lenght-password-template"
+	name := "test-length-password-template"
 	cleanUp := func() {
 		kapp.RunWithOpts([]string{"delete", "-a", name}, RunOpts{AllowError: true})
 	}
