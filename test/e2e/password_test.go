@@ -191,7 +191,7 @@ spec:
 			t.Fatalf("Expect password length is 24, found %d", len(secret.Data["val"]))
 		}
 		if len(secret.Data["valx2"]) != 2*24 {
-			t.Fatalf("Expect valx2 password lenght is 48, found %d", len(secret.Data["valx2"]))
+			t.Fatalf("Expect valx2 password length is 48, found %d", len(secret.Data["valx2"]))
 		}
 	})
 
