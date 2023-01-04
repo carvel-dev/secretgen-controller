@@ -326,7 +326,7 @@ spec:
 			t.Fatalf("Wrong type")
 		}
 
-		if len(secret.Data["val"]) != 3 {
+		assert.Len(t, secret.Data["val"], 3, "Expect password length is 3, found %d", len(secret.Data["val"])")
 			t.Fatalf("Expect password length is 3, found %d", len(secret.Data["val"]))
 		}
 
