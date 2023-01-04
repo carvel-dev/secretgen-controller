@@ -260,7 +260,7 @@ spec:
 		}
 
 		if len(secret.Data["val"]) != 27 {
-			t.Fatalf("Expect password lenght is 27, found %d (value %s) ", len(secret.Data["val"]), secret.Data["val"])
+			t.Fatalf("Expect password length is 27, found %d (value %s) ", len(secret.Data["val"]), secret.Data["val"])
 		}
 	})
 
