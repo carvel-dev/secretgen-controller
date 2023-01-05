@@ -8,8 +8,15 @@ import (
 	"testing"
 
 	"github.com/ghodss/yaml"
+	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 )
+
+func assertOpaque(secret corev1.Secret, t *testing.T) {
+	if secret.Type != "Opaque" {
+		t.Fatalf("Expected Opaque, Wrong type %s", secret.Type)
+	}
+}
 
 func TestPassword(t *testing.T) {
 	env := BuildEnv(t)
@@ -113,9 +120,7 @@ spec:
 			t.Fatalf("Failed to unmarshal: %s", err)
 		}
 
-		if secret.Type != "Opaque" {
-			t.Fatalf("Wrong type")
-		}
+		assertOpaque(secret, t)
 		if string(secret.Data["static"]) != "value" {
 			t.Fatalf("Failed to find password")
 		}
@@ -183,16 +188,9 @@ spec:
 			t.Fatalf("Failed to unmarshal: %s", err)
 		}
 
-		if secret.Type != "Opaque" {
-			t.Fatalf("Wrong type")
-		}
-
-		if len(secret.Data["val"]) != 24 {
-			t.Fatalf("Expect password length is 24, found %d", len(secret.Data["val"]))
-		}
-		if len(secret.Data["valx2"]) != 2*24 {
-			t.Fatalf("Expect valx2 password length is 48, found %d", len(secret.Data["valx2"]))
-		}
+		assertOpaque(secret, t)
+		assert.Len(t, secret.Data["val"], 24, "Expect password length is 24, found %d", len(secret.Data["val"]))
+		assert.Len(t, secret.Data["valx2"], 2*24, "Expect password length is 48, found %d", len(secret.Data["valx2"]))
 	})
 
 	logger.Section("Delete", func() {
@@ -255,13 +253,8 @@ spec:
 			t.Fatalf("Failed to unmarshal: %s", err)
 		}
 
-		if secret.Type != "Opaque" {
-			t.Fatalf("Wrong type")
-		}
-
-		if len(secret.Data["val"]) != 27 {
-			t.Fatalf("Expect password length is 27, found %d (value %s) ", len(secret.Data["val"]), secret.Data["val"])
-		}
+		assertOpaque(secret, t)
+		assert.Len(t, secret.Data["val"], 27, "Expect password length is 27, found %d (value %s) ", len(secret.Data["val"]), secret.Data["val"])
 	})
 
 	logger.Section("Delete", func() {
@@ -322,13 +315,8 @@ spec:
 			t.Fatalf("Failed to unmarshal: %s", err)
 		}
 
-		if secret.Type != "Opaque" {
-			t.Fatalf("Wrong type")
-		}
-
+		assertOpaque(secret, t)
 		assert.Len(t, secret.Data["val"], 3, "Expect password length is 3, found %d", len(secret.Data["val"]))
-			t.Fatalf("Expect password length is 3, found %d", len(secret.Data["val"]))
-		}
 
 		symbolSet := "!$#%"
 		split := strings.Split(string(secret.Data["val"]), "")
