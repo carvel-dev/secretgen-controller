@@ -21,7 +21,7 @@ spec:
               - .imgpkg/images.yml
       export:
       - imgpkgBundle:
-          image: docker.io/ysethiya/carvel-secretgen-controller-package-bundle
+          image: ghcr.io/vmware-tanzu/carvel-secretgen-controller-package-bundle
           useKbldImagesLock: false
         includePaths:
         - config/package-bundle/config
