@@ -32,12 +32,6 @@ type PasswordReconciler struct {
 
 var _ reconcile.Reconciler = &PasswordReconciler{}
 
-var (
-	lowerCharSet = "abcdefghijklmnopqrstuvwxyz"
-	upperCharSet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-	digitSet     = "0123456789"
-)
-
 func NewPasswordReconciler(sgClient sgclient.Interface,
 	coreClient kubernetes.Interface, log logr.Logger) *PasswordReconciler {
 	return &PasswordReconciler{sgClient, coreClient, log}
@@ -124,12 +118,13 @@ func (r *PasswordReconciler) createSecret(ctx context.Context, password *sgv1alp
 }
 
 func (r *PasswordReconciler) generate(password *sgv1alpha1.Password) (string, error) {
-	return localGeneratePassword(&password.Spec)
-}
-
-func localGeneratePassword(spec *sgv1alpha1.PasswordSpec) (string, error) {
-
-	var password strings.Builder
+	const (
+		lowerCharSet = "abcdefghijklmnopqrstuvwxyz"
+		upperCharSet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+		digitSet     = "0123456789"
+	)
+	spec := password.Spec
+	var generatedPassword strings.Builder
 
 	//Set symbol character
 	for i := 0; i < spec.Symbols; i++ {
@@ -137,7 +132,7 @@ func localGeneratePassword(spec *sgv1alpha1.PasswordSpec) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		password.WriteString(value)
+		generatedPassword.WriteString(value)
 	}
 
 	//Set digit
@@ -146,7 +141,7 @@ func localGeneratePassword(spec *sgv1alpha1.PasswordSpec) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		password.WriteString(value)
+		generatedPassword.WriteString(value)
 	}
 
 	//Set uppercase
@@ -155,7 +150,7 @@ func localGeneratePassword(spec *sgv1alpha1.PasswordSpec) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		password.WriteString(value)
+		generatedPassword.WriteString(value)
 	}
 
 	//Set lowercase
@@ -164,7 +159,7 @@ func localGeneratePassword(spec *sgv1alpha1.PasswordSpec) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		password.WriteString(value)
+		generatedPassword.WriteString(value)
 	}
 
 	var allCharSet = lowerCharSet + upperCharSet + digitSet
@@ -175,10 +170,10 @@ func localGeneratePassword(spec *sgv1alpha1.PasswordSpec) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		password.WriteString(value)
+		generatedPassword.WriteString(value)
 	}
 
-	inRune := []rune(password.String())
+	inRune := []rune(generatedPassword.String())
 	localCryptoShuffle(len(inRune), func(i, j int) {
 		inRune[i], inRune[j] = inRune[j], inRune[i]
 	})
