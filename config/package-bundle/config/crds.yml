@@ -436,7 +436,14 @@ spec:
             type: object
           spec:
             properties:
+              digits:
+                default: 0
+                type: integer
               length:
+                default: 40
+                type: integer
+              lowercaseLetters:
+                default: 0
                 type: integer
               secretTemplate:
                 properties:
@@ -458,6 +465,15 @@ spec:
                   type:
                     type: string
                 type: object
+              symbolCharSet:
+                default: '!@#$%&*;.:'
+                type: string
+              symbols:
+                default: 0
+                type: integer
+              uppercaseLetters:
+                default: 0
+                type: integer
             type: object
           status:
             properties:

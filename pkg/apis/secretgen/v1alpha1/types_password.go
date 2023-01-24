@@ -47,7 +47,28 @@ type PasswordList struct {
 
 type PasswordSpec struct {
 	// +optional
+	// +kubebuilder:default:=40
 	Length int `json:"length"`
+
+	// +optional
+	// +kubebuilder:default:=0
+	Digits int `json:"digits"`
+
+	// +optional
+	// +kubebuilder:default:=0
+	Symbols int `json:"symbols"`
+
+	// +optional
+	// +kubebuilder:default:=0
+	UppercaseLetters int `json:"uppercaseLetters"`
+
+	// +optional
+	// +kubebuilder:default:=0
+	LowercaseLetters int `json:"lowercaseLetters"`
+
+	// +optional
+	// +kubebuilder:default:="!@#$%&*;.:"
+	SymbolCharSet string `json:"symbolCharSet"`
 
 	// +optional
 	SecretTemplate *SecretTemplate `json:"secretTemplate,omitempty"`

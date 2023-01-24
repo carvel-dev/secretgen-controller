@@ -5,9 +5,11 @@ package generator
 
 import (
 	"context"
+	"crypto/rand"
 	"fmt"
+	"math/big"
+	"strings"
 
-	cfgtypes "github.com/cloudfoundry/config-server/types"
 	"github.com/go-logr/logr"
 	sgv1alpha1 "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/apis/secretgen/v1alpha1"
 	sgclient "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/client/clientset/versioned"
@@ -115,37 +117,111 @@ func (r *PasswordReconciler) createSecret(ctx context.Context, password *sgv1alp
 	return reconcile.Result{}, nil
 }
 
-type passwordParams struct {
-	Length int `yaml:"length"`
-}
-
 func (r *PasswordReconciler) generate(password *sgv1alpha1.Password) (string, error) {
-	gen := cfgtypes.NewPasswordGenerator()
+	const (
+		lowerCharSet = "abcdefghijklmnopqrstuvwxyz"
+		upperCharSet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+		digitSet     = "0123456789"
+	)
+	spec := password.Spec
+	var generatedPassword strings.Builder
 
-	genParams := passwordParams{Length: password.Spec.Length}
-	if genParams.Length == 0 {
-		genParams.Length = 40
+	//Set symbol character
+	for i := 0; i < spec.Symbols; i++ {
+		value, err := randomElement(spec.SymbolCharSet)
+		if err != nil {
+			return "", err
+		}
+		generatedPassword.WriteString(value)
 	}
 
-	passwordVal, err := gen.Generate(genParams)
+	//Set digit
+	for i := 0; i < spec.Digits; i++ {
+		value, err := randomElement(digitSet)
+		if err != nil {
+			return "", err
+		}
+		generatedPassword.WriteString(value)
+	}
+
+	//Set uppercase
+	for i := 0; i < spec.UppercaseLetters; i++ {
+		value, err := randomElement(upperCharSet)
+		if err != nil {
+			return "", err
+		}
+		generatedPassword.WriteString(value)
+	}
+
+	//Set lowercase
+	for i := 0; i < spec.LowercaseLetters; i++ {
+		value, err := randomElement(lowerCharSet)
+		if err != nil {
+			return "", err
+		}
+		generatedPassword.WriteString(value)
+	}
+
+	var allCharSet = lowerCharSet + upperCharSet + digitSet
+
+	remainingLength := spec.Length - spec.Symbols - spec.Digits - spec.UppercaseLetters - spec.LowercaseLetters
+	for i := 0; i < remainingLength; i++ {
+		value, err := randomElement(allCharSet)
+		if err != nil {
+			return "", err
+		}
+		generatedPassword.WriteString(value)
+	}
+
+	inRune := []rune(generatedPassword.String())
+	localCryptoShuffle(len(inRune), func(i, j int) {
+		inRune[i], inRune[j] = inRune[j], inRune[i]
+	})
+
+	return string(inRune), nil
+}
+
+func randomElement(s string) (string, error) {
+	n, err := rand.Int(rand.Reader, big.NewInt(int64(len(s))))
 	if err != nil {
 		return "", err
 	}
+	return string(s[n.Int64()]), nil
+}
 
-	return passwordVal.(string), nil
+func localCryptoShuffle(n int, swap func(i, j int)) {
+	if n < 0 {
+		panic("invalid argument to Shuffle")
+	}
+
+	// Fisher-Yates shuffle: https://en.wikipedia.org/wiki/Fisher%E2%80%93Yates_shuffle
+	// Shuffle really ought not be called with n that doesn't fit in 32 bits.
+	// Not only will it take a very long time, but with 2³¹! possible permutations,
+	// there's no way that any PRNG can have a big enough internal state to
+	// generate even a minuscule percentage of the possible permutations.
+	// Nevertheless, the right API signature accepts an int n, so handle it as best we can.
+	i := n - 1
+	for ; i > 1<<31-1-1; i-- {
+		j, _ := rand.Int(rand.Reader, big.NewInt(int64(i+1)))
+		swap(i, int(j.Int64()))
+	}
+	for ; i > 0; i-- {
+		j, _ := rand.Int(rand.Reader, big.NewInt(int64(i+1)))
+		swap(i, int(j.Int64()))
+	}
 }
 
 func (r *PasswordReconciler) updateStatus(ctx context.Context, password *sgv1alpha1.Password) error {
 	existingPassword, err := r.sgClient.SecretgenV1alpha1().Passwords(password.Namespace).Get(ctx, password.Name, metav1.GetOptions{})
 	if err != nil {
-		return fmt.Errorf("Fetching password: %s", err)
+		return fmt.Errorf("fetching password: %s", err)
 	}
 
 	existingPassword.Status = password.Status
 
 	_, err = r.sgClient.SecretgenV1alpha1().Passwords(existingPassword.Namespace).UpdateStatus(ctx, existingPassword, metav1.UpdateOptions{})
 	if err != nil {
-		return fmt.Errorf("Updating password status: %s", err)
+		return fmt.Errorf("updating password status: %s", err)
 	}
 
 	return nil
