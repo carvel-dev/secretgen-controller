@@ -126,36 +126,36 @@ func (r *PasswordReconciler) generate(password *sgv1alpha1.Password) (string, er
 	spec := password.Spec
 	var generatedPassword strings.Builder
 
-	//Set symbol character
+	// Set symbol character
 	for i := 0; i < spec.Symbols; i++ {
-		value, err := randomElement(spec.SymbolCharSet)
+		value, err := r.randomElement(spec.SymbolCharSet)
 		if err != nil {
 			return "", err
 		}
 		generatedPassword.WriteString(value)
 	}
 
-	//Set digit
+	// Set digit
 	for i := 0; i < spec.Digits; i++ {
-		value, err := randomElement(digitSet)
+		value, err := r.randomElement(digitSet)
 		if err != nil {
 			return "", err
 		}
 		generatedPassword.WriteString(value)
 	}
 
-	//Set uppercase
+	// Set uppercase
 	for i := 0; i < spec.UppercaseLetters; i++ {
-		value, err := randomElement(upperCharSet)
+		value, err := r.randomElement(upperCharSet)
 		if err != nil {
 			return "", err
 		}
 		generatedPassword.WriteString(value)
 	}
 
-	//Set lowercase
+	// Set lowercase
 	for i := 0; i < spec.LowercaseLetters; i++ {
-		value, err := randomElement(lowerCharSet)
+		value, err := r.randomElement(lowerCharSet)
 		if err != nil {
 			return "", err
 		}
@@ -166,7 +166,7 @@ func (r *PasswordReconciler) generate(password *sgv1alpha1.Password) (string, er
 
 	remainingLength := spec.Length - spec.Symbols - spec.Digits - spec.UppercaseLetters - spec.LowercaseLetters
 	for i := 0; i < remainingLength; i++ {
-		value, err := randomElement(allCharSet)
+		value, err := r.randomElement(allCharSet)
 		if err != nil {
 			return "", err
 		}
@@ -174,22 +174,25 @@ func (r *PasswordReconciler) generate(password *sgv1alpha1.Password) (string, er
 	}
 
 	inRune := []rune(generatedPassword.String())
-	localCryptoShuffle(len(inRune), func(i, j int) {
+	err := r.localCryptoShuffle(len(inRune), func(i, j int) {
 		inRune[i], inRune[j] = inRune[j], inRune[i]
 	})
+	if err != nil {
+		return "", err
+	}
 
 	return string(inRune), nil
 }
 
-func randomElement(s string) (string, error) {
+func (*PasswordReconciler) randomElement(s string) (string, error) {
 	n, err := rand.Int(rand.Reader, big.NewInt(int64(len(s))))
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("Getting rand int: %s", err)
 	}
 	return string(s[n.Int64()]), nil
 }
 
-func localCryptoShuffle(n int, swap func(i, j int)) {
+func (*PasswordReconciler) localCryptoShuffle(n int, swap func(i, j int)) error {
 	if n < 0 {
 		panic("invalid argument to Shuffle")
 	}
@@ -202,26 +205,33 @@ func localCryptoShuffle(n int, swap func(i, j int)) {
 	// Nevertheless, the right API signature accepts an int n, so handle it as best we can.
 	i := n - 1
 	for ; i > 1<<31-1-1; i-- {
-		j, _ := rand.Int(rand.Reader, big.NewInt(int64(i+1)))
+		j, err := rand.Int(rand.Reader, big.NewInt(int64(i+1)))
+		if err != nil {
+			return fmt.Errorf("Getting rand int: %s", err)
+		}
 		swap(i, int(j.Int64()))
 	}
 	for ; i > 0; i-- {
-		j, _ := rand.Int(rand.Reader, big.NewInt(int64(i+1)))
+		j, err := rand.Int(rand.Reader, big.NewInt(int64(i+1)))
+		if err != nil {
+			return fmt.Errorf("Getting rand int: %s", err)
+		}
 		swap(i, int(j.Int64()))
 	}
+	return nil
 }
 
 func (r *PasswordReconciler) updateStatus(ctx context.Context, password *sgv1alpha1.Password) error {
 	existingPassword, err := r.sgClient.SecretgenV1alpha1().Passwords(password.Namespace).Get(ctx, password.Name, metav1.GetOptions{})
 	if err != nil {
-		return fmt.Errorf("fetching password: %s", err)
+		return fmt.Errorf("Fetching password: %s", err)
 	}
 
 	existingPassword.Status = password.Status
 
 	_, err = r.sgClient.SecretgenV1alpha1().Passwords(existingPassword.Namespace).UpdateStatus(ctx, existingPassword, metav1.UpdateOptions{})
 	if err != nil {
-		return fmt.Errorf("updating password status: %s", err)
+		return fmt.Errorf("Updating password status: %s", err)
 	}
 
 	return nil
