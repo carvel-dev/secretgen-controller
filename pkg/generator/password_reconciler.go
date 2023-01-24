@@ -124,35 +124,46 @@ func (r *PasswordReconciler) createSecret(ctx context.Context, password *sgv1alp
 }
 
 func (r *PasswordReconciler) generate(password *sgv1alpha1.Password) (string, error) {
-	passwordVal := localGeneratePassword(&password.Spec)
-	return passwordVal, nil
+	return localGeneratePassword(&password.Spec)
 }
 
-func localGeneratePassword(spec *sgv1alpha1.PasswordSpec) string {
+func localGeneratePassword(spec *sgv1alpha1.PasswordSpec) (string, error) {
 
 	var password strings.Builder
 
 	//Set symbol character
 	for i := 0; i < spec.Symbols; i++ {
-		value, _ := randomElement(spec.SymbolCharSet)
+		value, err := randomElement(spec.SymbolCharSet)
+		if err != nil {
+			return "", err
+		}
 		password.WriteString(value)
 	}
 
 	//Set digit
 	for i := 0; i < spec.Digits; i++ {
-		value, _ := randomElement(digitSet)
+		value, err := randomElement(digitSet)
+		if err != nil {
+			return "", err
+		}
 		password.WriteString(value)
 	}
 
 	//Set uppercase
 	for i := 0; i < spec.UppercaseLetters; i++ {
-		value, _ := randomElement(upperCharSet)
+		value, err := randomElement(upperCharSet)
+		if err != nil {
+			return "", err
+		}
 		password.WriteString(value)
 	}
 
 	//Set lowercase
 	for i := 0; i < spec.LowercaseLetters; i++ {
-		value, _ := randomElement(lowerCharSet)
+		value, err := randomElement(lowerCharSet)
+		if err != nil {
+			return "", err
+		}
 		password.WriteString(value)
 	}
 
@@ -160,7 +171,10 @@ func localGeneratePassword(spec *sgv1alpha1.PasswordSpec) string {
 
 	remainingLength := spec.Length - spec.Symbols - spec.Digits - spec.UppercaseLetters - spec.LowercaseLetters
 	for i := 0; i < remainingLength; i++ {
-		value, _ := randomElement(allCharSet)
+		value, err := randomElement(allCharSet)
+		if err != nil {
+			return "", err
+		}
 		password.WriteString(value)
 	}
 
@@ -169,7 +183,7 @@ func localGeneratePassword(spec *sgv1alpha1.PasswordSpec) string {
 		inRune[i], inRune[j] = inRune[j], inRune[i]
 	})
 
-	return string(inRune)
+	return string(inRune), nil
 }
 
 func randomElement(s string) (string, error) {
