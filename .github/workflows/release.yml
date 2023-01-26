@@ -18,7 +18,7 @@ jobs:
         with:
           go-version: 1.19.5
       - name: Install Carvel Tools
-        uses: vmware-tanzu/carvel-setup-action@v1
+        uses: carvel-dev/carvel-setup-action@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           only: ytt, kapp, kbld, imgpkg, kctrl, vendir
@@ -125,10 +125,10 @@ jobs:
           set -e -x
 
           # deploy admin sa for secretgen-controller - enough permissions for SGC to be deployed properly
-          kapp deploy -a rbac -f https://raw.githubusercontent.com/vmware-tanzu/carvel-kapp-controller/develop/examples/rbac/cluster-admin.yml -y
+          kapp deploy -a rbac -f https://raw.githubusercontent.com/carvel-dev/kapp-controller/develop/examples/rbac/cluster-admin.yml -y
           
           # Kapp-controller is needed for our PackageInstall
-          kapp deploy -a kc -f https://github.com/vmware-tanzu/carvel-kapp-controller/releases/latest/download/release.yml -y
+          kapp deploy -a kc -f https://github.com/carvel-dev/kapp-controller/releases/latest/download/release.yml -y
           
           constraintVersion="${{ github.ref_name }}"
         

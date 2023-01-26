@@ -6,11 +6,11 @@ You can use `kubectl` (or another tool) to deploy YAML examples below. We've cho
 
 - Start by [installing](install.md) secretgen-controller onto cluster
 
-- Install [examples/passwords.yml](https://github.com/vmware-tanzu/carvel-secretgen-controller/blob/master/examples/passwords.yml). It tells secretgen-controller to generate three passwords.
+- Install [examples/passwords.yml](https://github.com/carvel-dev/secretgen-controller/blob/develop/examples/passwords.yml). It tells secretgen-controller to generate three passwords.
 
 ```bash
-$ kapp deploy -a passwords -f https://raw.githubusercontent.com/vmware-tanzu/carvel-secretgen-controller/master/examples/passwords.yml
-# or... kubectl apply -f https://raw.githubusercontent.com/vmware-tanzu/carvel-secretgen-controller/master/examples/passwords.yml
+$ kapp deploy -a passwords -f https://raw.githubusercontent.com/carvel-dev/secretgen-controller/develop/examples/passwords.yml
+# or... kubectl apply -f https://raw.githubusercontent.com/carvel-dev/secretgen-controller/develop/examples/passwords.yml
 
 Target cluster 'https://x.x.x.x' (nodes: gke-dk-jan-9-default-pool-a218b1c9-55sl, 3+)
 
