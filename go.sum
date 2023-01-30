@@ -58,8 +58,8 @@ github.com/chzyer/test v0.0.0-20180213035817-a1ea475d72b1/go.mod h1:Q3SI9o4m/ZMn
 github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDkc90ppPyw=
 github.com/cloudfoundry/bosh-utils v0.0.350 h1:gjfOJ4Y+MepXHlAUhbpdTRwda6hg+nzorXWYoReJ7pU=
 github.com/cloudfoundry/bosh-utils v0.0.350/go.mod h1:YPo2MrW7d7TbCt6KQhLwTn/TirehIBVydnBM04vvgZo=
-github.com/cloudfoundry/config-server v0.1.99 h1:oO6kSKCMO7xWnSh6u+Gk7lydS8xrcowIIzLYWR1ijME=
-github.com/cloudfoundry/config-server v0.1.99/go.mod h1:5sn3M9Zp1jRftjuRs1qVGv3LYSAtvroZiskCdgqyexM=
+github.com/cloudfoundry/config-server v0.1.100 h1:U8iuNXKGrvknKpsh/zWylzR/do4wFs7vUGdUmiTuCPw=
+github.com/cloudfoundry/config-server v0.1.100/go.mod h1:5sn3M9Zp1jRftjuRs1qVGv3LYSAtvroZiskCdgqyexM=
 github.com/cncf/udpa/go v0.0.0-20191209042840-269d4d468f6f/go.mod h1:M8M6+tZqaGXZJjfX53e64911xZQV5JYwmTeXPW+k8Sc=
 github.com/cncf/udpa/go v0.0.0-20201120205902-5459f2c99403/go.mod h1:WmhPx2Nbnhtbo57+VJT5O0JRkEi1Wbu0z5j0R8u5Hbk=
 github.com/cncf/xds/go v0.0.0-20210312221358-fbca930ec8ed/go.mod h1:eXthEFrGJvWHgFFCl3hGmgk+/aYT6PnTQLykKQRLhEs=
