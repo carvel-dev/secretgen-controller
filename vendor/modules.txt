@@ -7,7 +7,7 @@ github.com/cespare/xxhash/v2
 # github.com/cloudfoundry/bosh-utils v0.0.350
 ## explicit; go 1.19
 github.com/cloudfoundry/bosh-utils/errors
-# github.com/cloudfoundry/config-server v0.1.99
+# github.com/cloudfoundry/config-server v0.1.100
 ## explicit; go 1.19
 github.com/cloudfoundry/config-server/types
 # github.com/davecgh/go-spew v1.1.1
