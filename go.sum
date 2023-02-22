@@ -56,10 +56,10 @@ github.com/chzyer/logex v1.1.10/go.mod h1:+Ywpsq7O8HXn0nuIou7OrIPyXbp3wmkHB+jjWR
 github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e/go.mod h1:nSuG5e5PlCu98SY8svDHJxuZscDgtXS6KTTbou5AhLI=
 github.com/chzyer/test v0.0.0-20180213035817-a1ea475d72b1/go.mod h1:Q3SI9o4m/ZMnBNeIyt5eFwwo7qiLfzFZmjNmxjkiQlU=
 github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDkc90ppPyw=
-github.com/cloudfoundry/bosh-utils v0.0.352 h1:XFCSNe6P5ScB+sfS3haPUn2HfWnh9bR9IZfVzZoK2YM=
-github.com/cloudfoundry/bosh-utils v0.0.352/go.mod h1:/P8Uw6rmFp7fMehXGdXIDU/urFC/vAxAjfvaHnFfjGE=
-github.com/cloudfoundry/config-server v0.1.102 h1:G8AiUBgctTS76EslPwS8eBD1qzxOx4D2KbjbKHo3IIU=
-github.com/cloudfoundry/config-server v0.1.102/go.mod h1:JWuEHmJ64NmCi9lylsXONWY/ia0Th5zr6ZWVH09Xd74=
+github.com/cloudfoundry/bosh-utils v0.0.354 h1:LZwzvgiH361M8AsF0oRlzSiRlHwPTtbsC5xJYAs3n5A=
+github.com/cloudfoundry/bosh-utils v0.0.354/go.mod h1:oNWd/33pH6Z/pPoBuGm59usyJe7IUk0gYIms2JY/ZuE=
+github.com/cloudfoundry/config-server v0.1.103 h1:rk8h4dzhKkcfOA/rVpZmmChOZUcfEOCzuD/ZuZ42x/g=
+github.com/cloudfoundry/config-server v0.1.103/go.mod h1:2pwaMLvfgBCGrBtdzA6iemIRIZqY1ie8S/Xf40kUdPk=
 github.com/cncf/udpa/go v0.0.0-20191209042840-269d4d468f6f/go.mod h1:M8M6+tZqaGXZJjfX53e64911xZQV5JYwmTeXPW+k8Sc=
 github.com/cncf/udpa/go v0.0.0-20201120205902-5459f2c99403/go.mod h1:WmhPx2Nbnhtbo57+VJT5O0JRkEi1Wbu0z5j0R8u5Hbk=
 github.com/cncf/xds/go v0.0.0-20210312221358-fbca930ec8ed/go.mod h1:eXthEFrGJvWHgFFCl3hGmgk+/aYT6PnTQLykKQRLhEs=
