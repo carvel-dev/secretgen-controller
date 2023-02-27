@@ -7,10 +7,10 @@ github.com/beorn7/perks/quantile
 # github.com/cespare/xxhash/v2 v2.1.2
 ## explicit; go 1.11
 github.com/cespare/xxhash/v2
-# github.com/cloudfoundry/bosh-utils v0.0.354
+# github.com/cloudfoundry/bosh-utils v0.0.355
 ## explicit; go 1.20
 github.com/cloudfoundry/bosh-utils/errors
-# github.com/cloudfoundry/config-server v0.1.103
+# github.com/cloudfoundry/config-server v0.1.104
 ## explicit; go 1.20
 github.com/cloudfoundry/config-server/types
 # github.com/davecgh/go-spew v1.1.1
@@ -186,7 +186,7 @@ golang.org/x/crypto/ssh/internal/bcrypt_pbkdf
 golang.org/x/mod/internal/lazyregexp
 golang.org/x/mod/module
 golang.org/x/mod/semver
-# golang.org/x/net v0.6.0
+# golang.org/x/net v0.7.0
 ## explicit; go 1.17
 golang.org/x/net/context
 golang.org/x/net/context/ctxhttp
