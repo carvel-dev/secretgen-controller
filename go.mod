@@ -7,7 +7,7 @@ require (
 	github.com/cloudfoundry/config-server v0.1.104
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-logr/logr v1.2.3
-	github.com/stretchr/testify v1.8.1
+	github.com/stretchr/testify v1.8.2
 	golang.org/x/tools v0.6.0 // indirect
 	k8s.io/api v0.24.10
 	k8s.io/apimachinery v0.24.11
