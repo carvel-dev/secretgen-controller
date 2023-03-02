@@ -15,7 +15,7 @@ updates:
       interval: "daily"
     target-branch: "v0.13.x"
     labels:
-      - "v0.11.x"
+      - "v0.13.x"
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-major", "version-update:semver-minor"]
