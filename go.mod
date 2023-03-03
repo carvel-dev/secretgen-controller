@@ -1,6 +1,6 @@
 module github.com/vmware-tanzu/carvel-secretgen-controller
 
-go 1.19
+go 1.20
 
 require (
 	github.com/cloudfoundry/bosh-utils v0.0.354 // indirect
