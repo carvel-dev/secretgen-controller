@@ -18,7 +18,7 @@ jobs:
         with:
           go-version: 1.19.5
       - name: Install Carvel Tools
-        uses: carvel-dev/carvel-setup-action@v1
+        uses: carvel-dev/setup-action@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           only: ytt, kapp, kbld, imgpkg, kctrl, vendir
