@@ -14,7 +14,7 @@ yq eval '.metadata.annotations."secretgen-controller.carvel.dev/version" = env(v
 
 ytt -f config/package-bundle/config -f config/release -v dev.version="$version_without_v_prefix" | kbld --imgpkg-lock-output config/package-bundle/.imgpkg/images.yml -f- > ./tmp/release.yml
 
-imgpkg push -b ghcr.io/vmware-tanzu/carvel-secretgen-controller-package-bundle:"$version" -f config/package-bundle --lock-output ./tmp/bundle-image.yml
+imgpkg push -b ghcr.io/carvel-dev/carvel-secretgen-controller-package-bundle:"$version" -f config/package-bundle --lock-output ./tmp/bundle-image.yml
 
 # generate openapi schema for package
 ytt -f config/package-bundle/config --data-values-schema-inspect -o openapi-v3 > ./tmp/schema-openapi.yml
