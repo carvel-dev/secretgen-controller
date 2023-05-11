@@ -45,7 +45,7 @@ type SecretExportSpec struct {
 	// +optional
 	ToNamespaces []string `json:"toNamespaces,omitempty"`
 	// +optional
-	ToNamespaceLabels map[string]string `json:"toNamespaceLabels,omitempty"`
+	ToNamespaceAnnotations map[string]string `json:"toNamespaceAnnotations,omitempty"`
 }
 
 type SecretExportStatus struct {
