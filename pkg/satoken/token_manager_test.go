@@ -243,7 +243,7 @@ type fakeTokenGetter struct {
 	err     error
 }
 
-func (ftg *fakeTokenGetter) getToken(ctx context.Context, name, namespace string, tr *authenticationv1.TokenRequest) (*authenticationv1.TokenRequest, error) {
+func (ftg *fakeTokenGetter) getToken(_ context.Context, _, _ string, _ *authenticationv1.TokenRequest) (*authenticationv1.TokenRequest, error) {
 	ftg.count++
 	return ftg.request, ftg.err
 }
@@ -254,7 +254,7 @@ type fakeTokenReviewer struct {
 	err    error
 }
 
-func (ftr *fakeTokenReviewer) reviewToken(ctx context.Context, tr *authenticationv1.TokenReview) (*authenticationv1.TokenReview, error) {
+func (ftr *fakeTokenReviewer) reviewToken(_ context.Context, _ *authenticationv1.TokenReview) (*authenticationv1.TokenReview, error) {
 	ftr.count++
 	return ftr.review, ftr.err
 }
