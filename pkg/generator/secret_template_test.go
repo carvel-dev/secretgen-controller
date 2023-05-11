@@ -822,6 +822,6 @@ type fakeClientLoader struct {
 	client client.Client
 }
 
-func (f *fakeClientLoader) Client(ctx context.Context, saName, saNamespace string) (client.Client, error) {
+func (f *fakeClientLoader) Client(_ context.Context, _, _ string) (client.Client, error) {
 	return f.client, nil
 }
