@@ -44,6 +44,8 @@ type SecretExportSpec struct {
 	ToNamespace string `json:"toNamespace,omitempty"`
 	// +optional
 	ToNamespaces []string `json:"toNamespaces,omitempty"`
+	// +optional
+	ToNamespaceLabels map[string]string `json:"toNamespaceLabels,omitempty"`
 }
 
 type SecretExportStatus struct {
@@ -62,6 +64,10 @@ func (e SecretExport) StaticToNamespaces() []string {
 		result = append(result, e.Spec.ToNamespace)
 	}
 	return result
+}
+
+func (e SecretExport) StaticToNamespaceLabels() map[string]string {
+	return e.Spec.ToNamespaceLabels
 }
 
 func (e SecretExport) Validate() error {

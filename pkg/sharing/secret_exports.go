@@ -156,6 +156,8 @@ func (es exportedSecret) Secret() *corev1.Secret {
 }
 
 func (es exportedSecret) Matches(matcher SecretMatcher, nsIsExcludedFromWildcard NamespaceWildcardExclusionCheck, log logr.Logger) bool {
+	// TODO add match by namespace label
+
 	if matcher.Subject != "" {
 		// TODO we currently do not match by subject
 		log.Info("Warning: Matcher has empty subject and will never match any secret")
