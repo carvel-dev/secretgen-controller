@@ -48,7 +48,7 @@ type enqueueDueToNamespaceChange struct {
 }
 
 // Create doesn't do anything
-func (e *enqueueDueToNamespaceChange) Create(evt event.CreateEvent, q workqueue.RateLimitingInterface) {
+func (e *enqueueDueToNamespaceChange) Create(_ event.CreateEvent, _ workqueue.RateLimitingInterface) {
 }
 
 // Update checks whether the exclusion annotation has been added or removed and then queues the secrets in that namespace
@@ -63,11 +63,11 @@ func (e *enqueueDueToNamespaceChange) Update(evt event.UpdateEvent, q workqueue.
 }
 
 // Delete doesn't do anything
-func (e *enqueueDueToNamespaceChange) Delete(evt event.DeleteEvent, q workqueue.RateLimitingInterface) {
+func (e *enqueueDueToNamespaceChange) Delete(_ event.DeleteEvent, _ workqueue.RateLimitingInterface) {
 }
 
 // Generic doesn't do anything
-func (e *enqueueDueToNamespaceChange) Generic(evt event.GenericEvent, q workqueue.RateLimitingInterface) {
+func (e *enqueueDueToNamespaceChange) Generic(_ event.GenericEvent, _ workqueue.RateLimitingInterface) {
 }
 
 func (e *enqueueDueToNamespaceChange) mapAndEnqueue(q workqueue.RateLimitingInterface, object client.Object) {
