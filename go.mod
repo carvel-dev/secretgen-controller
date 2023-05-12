@@ -6,7 +6,7 @@ require (
 	github.com/cloudfoundry/bosh-utils v0.0.355 // indirect
 	github.com/cloudfoundry/config-server v0.1.104
 	github.com/ghodss/yaml v1.0.0
-	github.com/go-logr/logr v1.2.3
+	github.com/go-logr/logr v1.2.4
 	github.com/stretchr/testify v1.8.2
 	golang.org/x/tools v0.6.0 // indirect
 	k8s.io/api v0.25.9
