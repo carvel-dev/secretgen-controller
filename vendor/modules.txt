@@ -4,10 +4,10 @@ github.com/beorn7/perks/quantile
 # github.com/cespare/xxhash/v2 v2.1.2
 ## explicit; go 1.11
 github.com/cespare/xxhash/v2
-# github.com/cloudfoundry/bosh-utils v0.0.362
+# github.com/cloudfoundry/bosh-utils v0.0.363
 ## explicit; go 1.20
 github.com/cloudfoundry/bosh-utils/errors
-# github.com/cloudfoundry/config-server v0.1.118
+# github.com/cloudfoundry/config-server v0.1.119
 ## explicit; go 1.20
 github.com/cloudfoundry/config-server/types
 # github.com/davecgh/go-spew v1.1.1
@@ -32,7 +32,7 @@ github.com/fsnotify/fsnotify
 # github.com/ghodss/yaml v1.0.0
 ## explicit
 github.com/ghodss/yaml
-# github.com/go-logr/logr v1.2.3
+# github.com/go-logr/logr v1.2.4
 ## explicit; go 1.16
 github.com/go-logr/logr
 # github.com/go-logr/zapr v1.2.3
@@ -171,7 +171,7 @@ go.uber.org/zap/internal/bufferpool
 go.uber.org/zap/internal/color
 go.uber.org/zap/internal/exit
 go.uber.org/zap/zapcore
-# golang.org/x/crypto v0.8.0
+# golang.org/x/crypto v0.9.0
 ## explicit; go 1.17
 golang.org/x/crypto/blowfish
 golang.org/x/crypto/chacha20
@@ -187,7 +187,7 @@ golang.org/x/crypto/ssh/internal/bcrypt_pbkdf
 golang.org/x/mod/internal/lazyregexp
 golang.org/x/mod/module
 golang.org/x/mod/semver
-# golang.org/x/net v0.9.0
+# golang.org/x/net v0.10.0
 ## explicit; go 1.17
 golang.org/x/net/context
 golang.org/x/net/context/ctxhttp
@@ -207,7 +207,7 @@ golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/plan9
 golang.org/x/sys/unix
 golang.org/x/sys/windows
-# golang.org/x/term v0.7.0
+# golang.org/x/term v0.8.0
 ## explicit; go 1.17
 golang.org/x/term
 # golang.org/x/text v0.9.0
@@ -219,7 +219,7 @@ golang.org/x/text/unicode/norm
 # golang.org/x/time v0.3.0
 ## explicit
 golang.org/x/time/rate
-# golang.org/x/tools v0.8.0
+# golang.org/x/tools v0.9.1
 ## explicit; go 1.18
 golang.org/x/tools/go/ast/astutil
 golang.org/x/tools/go/gcexportdata
