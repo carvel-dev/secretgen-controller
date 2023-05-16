@@ -10,10 +10,10 @@ require (
 	github.com/stretchr/testify v1.8.2
 	golang.org/x/tools v0.8.0 // indirect
 	k8s.io/api v0.26.2
-	k8s.io/apimachinery v0.26.2
+	k8s.io/apimachinery v0.27.1
 	k8s.io/client-go v0.26.2
 	k8s.io/code-generator v0.27.1
-	k8s.io/utils v0.0.0-20221128185143-99ec85e7a448
+	k8s.io/utils v0.0.0-20230209194617-a36077c30491
 	sigs.k8s.io/controller-runtime v0.14.6
 	sigs.k8s.io/controller-tools v0.11.3
 )
