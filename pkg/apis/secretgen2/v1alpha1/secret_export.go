@@ -66,10 +66,6 @@ func (e SecretExport) StaticToNamespaces() []string {
 	return result
 }
 
-func (e SecretExport) StaticToNamespaceLabels() map[string]string {
-	return e.Spec.ToNamespaceLabels
-}
-
 func (e SecretExport) Validate() error {
 	var errs []error
 

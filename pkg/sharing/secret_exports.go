@@ -156,13 +156,13 @@ func (es exportedSecret) Secret() *corev1.Secret {
 }
 
 func (es exportedSecret) Matches(matcher SecretMatcher, nsIsExcludedFromWildcard NamespaceWildcardExclusionCheck, log logr.Logger) bool {
-	// TODO add match by namespace label
 
 	if matcher.Subject != "" {
 		// TODO we currently do not match by subject
 		log.Info("Warning: Matcher has empty subject and will never match any secret")
 		return false
 	}
+
 	if len(matcher.SecretType) > 0 {
 		if matcher.SecretType != es.secret.Type {
 			return false
@@ -173,7 +173,11 @@ func (es exportedSecret) Matches(matcher SecretMatcher, nsIsExcludedFromWildcard
 			return false
 		}
 	}
-	if len(matcher.FromNamespace) > 0 {
+
+	if len(es.export.Spec.ToNamespaceAnnotations) > 0 {
+		// TODO compare es.export.Spec.ToNamespaceAnnotations with Namespace
+		// get Namespace
+	} else if len(matcher.FromNamespace) > 0 {
 		if matcher.FromNamespace != es.secret.Namespace {
 			return false
 		}
