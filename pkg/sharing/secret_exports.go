@@ -81,6 +81,8 @@ type SecretMatcher struct {
 	FromName      string
 	FromNamespace string
 
+	FromNamespaceAnnotations map[string]string
+
 	ToNamespace string
 
 	Subject    string
@@ -174,12 +176,18 @@ func (es exportedSecret) Matches(matcher SecretMatcher, nsIsExcludedFromWildcard
 		}
 	}
 
-	if len(es.export.Spec.ToNamespaceAnnotations) > 0 {
-		// TODO compare es.export.Spec.ToNamespaceAnnotations with Namespace
-		// get Namespace
-	} else if len(matcher.FromNamespace) > 0 {
+	if len(matcher.FromNamespace) > 0 {
 		if matcher.FromNamespace != es.secret.Namespace {
 			return false
+		}
+	}
+
+	nsAnnotations := es.export.StaticToNamespacesAnnotations()
+	if len(nsAnnotations) > 0 {
+		for _, nsAnnotation := range nsAnnotations {
+			if matcher.FromNamespaceAnnotations[nsAnnotation.Key] == nsAnnotation.Value {
+				return true
+			}
 		}
 	}
 	if !es.matchesNamespace(matcher.ToNamespace, nsIsExcludedFromWildcard) {

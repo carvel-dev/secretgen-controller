@@ -45,13 +45,20 @@ type SecretExportSpec struct {
 	// +optional
 	ToNamespaces []string `json:"toNamespaces,omitempty"`
 	// +optional
-	ToNamespaceAnnotations map[string]string `json:"toNamespaceAnnotations,omitempty"`
+	ToNamespaceAnnotation map[string]string `json:"toNamespaceAnnotation,omitempty"`
+	// +optional
+	ToNamespaceAnnotations map[string][]string `json:"toNamespaceAnnotations,omitempty"`
 }
 
 type SecretExportStatus struct {
 	sgv1alpha1.GenericStatus `json:",inline"`
 	// +optional
 	ObservedSecretResourceVersion string `json:"observedSecretResourceVersion,omitempty"`
+}
+
+type SecretExportAnnotation struct {
+	Key   string
+	Value string
 }
 
 const (
@@ -66,13 +73,33 @@ func (e SecretExport) StaticToNamespaces() []string {
 	return result
 }
 
+func (e SecretExport) StaticToNamespacesAnnotations() []*SecretExportAnnotation {
+	var result []*SecretExportAnnotation
+	for k, v := range e.Spec.ToNamespaceAnnotation {
+		result = append(result, &SecretExportAnnotation{
+			Key:   k,
+			Value: v,
+		})
+	}
+	for k, v := range e.Spec.ToNamespaceAnnotations {
+		for _, value := range v {
+			result = append(result, &SecretExportAnnotation{
+				Key:   k,
+				Value: value,
+			})
+		}
+	}
+	return result
+}
+
 func (e SecretExport) Validate() error {
 	var errs []error
 
 	toNses := e.StaticToNamespaces()
+	toNsesA := e.StaticToNamespacesAnnotations()
 
-	if len(toNses) == 0 {
-		errs = append(errs, fmt.Errorf("Expected to have at least one non-empty to namespace"))
+	if len(toNses) == 0 && len(toNsesA) == 0 {
+		errs = append(errs, fmt.Errorf("Expected to have at least one non-empty to namespace or to namespace annotation"))
 	}
 	for _, ns := range toNses {
 		if len(ns) == 0 {

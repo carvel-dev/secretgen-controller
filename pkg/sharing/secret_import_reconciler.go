@@ -180,10 +180,22 @@ func (r *SecretImportReconciler) reconcile(
 
 	log.Info("Reconciling")
 
+	nsName := secretImport.Namespace
+	query := types.NamespacedName{
+		Name: nsName,
+	}
+	namespace := corev1.Namespace{}
+	err = r.client.Get(ctx, query, &namespace)
+	var fromNamespaceAnnotations map[string]string
+	if err == nil {
+		fromNamespaceAnnotations = namespace.GetAnnotations()
+	}
+
 	matcher := SecretMatcher{
-		FromName:      secretImport.Name,
-		FromNamespace: secretImport.Spec.FromNamespace,
-		ToNamespace:   secretImport.Namespace,
+		FromName:                 secretImport.Name,
+		FromNamespace:            secretImport.Spec.FromNamespace,
+		FromNamespaceAnnotations: fromNamespaceAnnotations,
+		ToNamespace:              secretImport.Namespace,
 	}
 
 	nscheck := makeNamespaceWildcardExclusionCheck(ctx, r.client, log)

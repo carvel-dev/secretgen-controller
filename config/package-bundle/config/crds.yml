@@ -40,6 +40,12 @@ spec:
                 items:
                   type: string
                 type: array
+              toNamespaceAnnotation:
+                type: object
+                additionalProperties: true
+              toNamespaceAnnotations:
+                type: object
+                additionalProperties: true
             type: object
           status:
             properties:
