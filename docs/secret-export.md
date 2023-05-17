@@ -20,6 +20,13 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: user2
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: user3
+  annotations:
+    field.cattle.io/projectId: "cluster1:project1"
 
 #! generate user-password secret upon creation
 ---
@@ -29,7 +36,7 @@ metadata:
   name: user-password
   namespace: user1
 
-#! offer user-password to user2 namespace
+#! offer user-password to user2 namespace and namespace with specified annotations (in this case user3)
 ---
 apiVersion: secretgen.carvel.dev/v1alpha1
 kind: SecretExport
@@ -38,6 +45,9 @@ metadata:
   namespace: user1
 spec:
   toNamespace: user2
+  toNamespaceAnnotations:
+    field.cattle.io/projectId: 
+    - "cluster1:project1"
 
 #! allow user-password to be created in user2 namespace
 ---
@@ -48,6 +58,17 @@ metadata:
   namespace: user2
 spec:
   fromNamespace: user1
+
+#! allow user-password to be created in namespace user3
+---
+apiVersion: secretgen.carvel.dev/v1alpha1
+kind: SecretImport
+metadata:
+  name: user-password
+  namespace: user3
+spec:
+  fromNamespace: user1
+
 ```
 
 Above configuration results in a `user-password` Secret created within `user2` namespace:
@@ -75,6 +96,8 @@ SecretExport CRD allows to "offer" secrets for export.
 
 - `toNamespace` (optional; string) Destination namespace for offer. Use `*` to indicate all namespaces.
 - `toNamespaces` (optional; array of strings) List of destination namespaces for offer.
+- `toNamespaceAnnotation` (optional; annotation map with single string value) List of destination namespaces annotations key/value for offer.
+- `toNamespaceAnnotations` (optional; annotation map with array of strings value) List of destination namespaces annotations key/values for offer.
 
 ### SecretImport
 
