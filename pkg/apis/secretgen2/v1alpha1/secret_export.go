@@ -56,6 +56,7 @@ type SecretExportStatus struct {
 	ObservedSecretResourceVersion string `json:"observedSecretResourceVersion,omitempty"`
 }
 
+// Annotation key and value pair matching a namespace
 type SecretExportAnnotation struct {
 	Key   string
 	Value string
@@ -73,6 +74,7 @@ func (e SecretExport) StaticToNamespaces() []string {
 	return result
 }
 
+// Aggregate ToNamespaceAnnotation and ToNamespaceAnnotations as a single slice
 func (e SecretExport) StaticToNamespacesAnnotations() []*SecretExportAnnotation {
 	var result []*SecretExportAnnotation
 	for k, v := range e.Spec.ToNamespaceAnnotation {
