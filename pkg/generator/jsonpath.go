@@ -13,8 +13,8 @@ import (
 
 const (
 	openPrefix    = "$"
-	openBracket   = "("
-	closeBracket  = ")"
+	open          = "("
+	close         = ")"
 	jsonPathOpen  = "{"
 	jsonPathClose = "}"
 )
@@ -46,14 +46,14 @@ func (p JSONPath) ToK8sJSONPath() string {
 
 	for i := 0; i < len(newPath); i++ {
 		switch string(newPath[i]) {
-		case openBracket:
+		case open:
 			openPositions = openPositions.push(i)
-		case closeBracket:
+		case close:
 			d := openPositions.peek()
 			if d > 0 && string(newPath[d-1]) == openPrefix {
-				newPath = replace(newPath, d-1, openPrefix+openBracket, jsonPathOpen)
+				newPath = replace(newPath, d-1, openPrefix+open, jsonPathOpen)
 				i = i - 1 //Removed a character, fix i
-				newPath = replace(newPath, i, closeBracket, jsonPathClose)
+				newPath = replace(newPath, i, close, jsonPathClose)
 			}
 
 			openPositions = openPositions.pop()
