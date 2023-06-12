@@ -1,4 +1,4 @@
-FROM --platform=$BUILDPLATFORM golang:1.20.3 AS deps
+FROM --platform=$BUILDPLATFORM golang:1.20.5 AS deps
 
 ARG TARGETOS TARGETARCH SGCTRL_VER=development
 WORKDIR /workspace
