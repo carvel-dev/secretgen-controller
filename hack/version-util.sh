@@ -1,4 +1,4 @@
-# source this file in a script to call these functions
+# source this file in a script to call these functions.
 
 # We extract version information from git tags
 # the implicit contract is that our git tags will be in ~semver (three-part) format and prefaced with the letter 'v'.
