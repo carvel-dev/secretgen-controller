@@ -83,9 +83,13 @@ jobs:
             const url = require('url');
             const https = require('https');
             checksums = {}
+            var releaseMatched = false;
+            var assetsFound = false;
             for (const r of releases["data"]) {
               if (r.draft && `refs/tags/${r.tag_name}` == "${{ github.ref }}") {
+                releaseMatched = true;
                 for (const asset of r.assets) {
+                  assetsFound = true;
                   var release_asset = await github.rest.repos.getReleaseAsset({ headers: {accept: `application/octet-stream`}, accept: `application/octet-stream`, owner: owner, repo: repo, asset_id: asset.id });
                   const hash = crypto.createHash('sha256');
                   let http_promise = new Promise((resolve, reject) => {
@@ -100,10 +104,22 @@ jobs:
                     });
                   });
                   await http_promise;
+                  http_promise.then(
+                    (result) => {
+                        console.log(checksums);
+                    },
+                    (error) => {
+                        console.log("Encountered an Error for " + asset.name + " asset: " + error); // Log an error
+                    });
                 }
               }
             }
-            console.log(checksums)
+            if (!releaseMatched) {
+              console.log("No release matched")
+            }
+            if (!assetsFound) {
+              console.log("No assets found for " + "${{ github.ref }}" + " release")
+            }
             return `${checksums['release.yml']}  ./release.yml
             ${checksums['package.yml']}  ./package.yml
             ${checksums['package-metadata.yml']}  ./package-metadata.yml`
