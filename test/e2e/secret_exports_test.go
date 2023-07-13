@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/ghodss/yaml"
-	corev1 "k8s.io/api/core/v1"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 )
 
 func TestExportSuccessful(t *testing.T) {
@@ -37,9 +37,94 @@ metadata:
   name: sg-test3
 ---
 apiVersion: v1
+kind: Namespace
+metadata:
+  name: sg-test4
+  annotations:
+    field.cattle.io/projectId: "cluster1:project1"
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: sg-test5
+  annotations:
+    field.cattle.io/projectId: "cluster2:project3"
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: sg-test6
+  annotations:
+    field.cattle.io/projectId: "whatever:whatever"
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: sg-test7
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: sg-test8
+  annotations:
+    one: "1"
+    two: "2"
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: sg-test8-unmatched
+  annotations:
+    one: "1"
+---
+apiVersion: v1
 kind: Secret
 metadata:
   name: secret
+  namespace: sg-test1
+type: Opaque
+stringData:
+  key1: val1
+  key2: val2
+  key3: val3
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: secret-test5
+  namespace: sg-test1
+type: Opaque
+stringData:
+  key1: val1
+  key2: val2
+  key3: val3
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: secret-test6
+  namespace: sg-test1
+type: Opaque
+stringData:
+  key1: val1
+  key2: val2
+  key3: val3
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: secret-test7
+  namespace: sg-test1
+type: Opaque
+stringData:
+  key1: val1
+  key2: val2
+  key3: val3
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: secret-test8
   namespace: sg-test1
 type: Opaque
 stringData:
@@ -56,6 +141,59 @@ spec:
   toNamespaces:
   - sg-test2
   - sg-test3
+  dangerousToNamespacesSelector:
+  - key: "metadata.annotations['field\\.cattle\\.io/projectId']"
+    operator: In
+    values:
+    - "cluster1:project1"
+---
+apiVersion: secretgen.carvel.dev/v1alpha1
+kind: SecretExport
+metadata:
+  name: secret-test5
+  namespace: sg-test1
+spec:
+  dangerousToNamespacesSelector:
+  - key: "metadata.annotations['field\\.cattle\\.io/projectId']"
+    operator: NotIn
+    values:
+    - "cluster1:project1"
+---
+apiVersion: secretgen.carvel.dev/v1alpha1
+kind: SecretExport
+metadata:
+  name: secret-test6
+  namespace: sg-test1
+spec:
+  dangerousToNamespacesSelector:
+  - key: "metadata.annotations['field\\.cattle\\.io/projectId']"
+    operator: Exists
+---
+apiVersion: secretgen.carvel.dev/v1alpha1
+kind: SecretExport
+metadata:
+  name: secret-test7
+  namespace: sg-test1
+spec:
+  dangerousToNamespacesSelector:
+  - key: "metadata.annotations['field\\.cattle\\.io/projectId']"
+    operator: DoesNotExist
+---
+apiVersion: secretgen.carvel.dev/v1alpha1
+kind: SecretExport
+metadata:
+  name: secret-test8
+  namespace: sg-test1
+spec:
+  dangerousToNamespacesSelector:
+  - key: "metadata.annotations.one"
+    operator: In
+    values:
+    - "1"
+  - key: "metadata.annotations.two"
+    operator: In
+    values:
+    - "2"
 ---
 apiVersion: secretgen.carvel.dev/v1alpha1
 kind: SecretImport
@@ -70,6 +208,54 @@ kind: SecretImport
 metadata:
   name: secret
   namespace: sg-test3
+spec:
+  fromNamespace: sg-test1
+---
+apiVersion: secretgen.carvel.dev/v1alpha1
+kind: SecretImport
+metadata:
+  name: secret
+  namespace: sg-test4
+spec:
+  fromNamespace: sg-test1
+---
+apiVersion: secretgen.carvel.dev/v1alpha1
+kind: SecretImport
+metadata:
+  name: secret-test5
+  namespace: sg-test5
+spec:
+  fromNamespace: sg-test1
+---
+apiVersion: secretgen.carvel.dev/v1alpha1
+kind: SecretImport
+metadata:
+  name: secret-test6
+  namespace: sg-test6
+spec:
+  fromNamespace: sg-test1
+---
+apiVersion: secretgen.carvel.dev/v1alpha1
+kind: SecretImport
+metadata:
+  name: secret-test7
+  namespace: sg-test7
+spec:
+  fromNamespace: sg-test1
+---
+apiVersion: secretgen.carvel.dev/v1alpha1
+kind: SecretImport
+metadata:
+  name: secret-test8
+  namespace: sg-test8
+spec:
+  fromNamespace: sg-test1
+---
+apiVersion: secretgen.carvel.dev/v1alpha1
+kind: SecretImport
+metadata:
+  name: secret-test8
+  namespace: sg-test8-unmatched
 spec:
   fromNamespace: sg-test1
 `
@@ -87,6 +273,50 @@ stringData:
                # key2 deleted
   key3: val3   # keep
   key4: val4   # new
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: secret-test5
+  namespace: sg-test1
+type: Opaque
+stringData:
+  key1: val1.1
+  key3: val3
+  key4: val4
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: secret-test6
+  namespace: sg-test1
+type: Opaque
+stringData:
+  key1: val1.1
+  key3: val3
+  key4: val4
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: secret-test7
+  namespace: sg-test1
+type: Opaque
+stringData:
+  key1: val1.1
+  key3: val3
+  key4: val4
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: secret-test8
+  namespace: sg-test1
+type: Opaque
+stringData:
+  key1: val1.1
+  key3: val3
+  key4: val4
 `
 
 	name := "test-export-successful"
@@ -97,14 +327,29 @@ stringData:
 	cleanUp()
 	defer cleanUp()
 
+	getSecretName := func(ns string) string {
+		switch ns {
+		case "sg-test5":
+			return "secret-test5"
+		case "sg-test6":
+			return "secret-test6"
+		case "sg-test7":
+			return "secret-test7"
+		case "sg-test8":
+			return "secret-test8"
+		default:
+			return "secret"
+		}
+	}
+
 	logger.Section("Deploy", func() {
 		kapp.RunWithOpts([]string{"deploy", "-f", "-", "-a", name},
 			RunOpts{StdinReader: strings.NewReader(yaml1)})
 	})
 
 	logger.Section("Check imported secrets were created", func() {
-		for _, ns := range []string{"sg-test2", "sg-test3"} {
-			out := waitForSecretInNs(t, kubectl, ns, "secret")
+		for _, ns := range []string{"sg-test2", "sg-test3", "sg-test4", "sg-test5", "sg-test6", "sg-test7", "sg-test8"} {
+			out := waitForSecretInNs(t, kubectl, ns, getSecretName(ns))
 
 			var secret corev1.Secret
 
@@ -127,6 +372,15 @@ stringData:
 		}
 	})
 
+	logger.Section("Check secrets should not be created", func() {
+		for _, ns := range []string{"sg-test8-unmatched"} {
+			notInNs := waitForSecretNotInNs(kubectl, ns, getSecretName(ns))
+			if !notInNs {
+				t.Fatalf("Secret should not be created in ns: %s", ns)
+			}
+		}
+	})
+
 	logger.Section("Update secret", func() {
 		kapp.RunWithOpts([]string{"deploy", "-f", "-", "-a", name, "-p"},
 			RunOpts{StdinReader: strings.NewReader(yaml2)})
@@ -136,8 +390,8 @@ stringData:
 		// TODO proper waiting
 		time.Sleep(5 * time.Second)
 
-		for _, ns := range []string{"sg-test2", "sg-test3"} {
-			out := waitForSecretInNs(t, kubectl, ns, "secret")
+		for _, ns := range []string{"sg-test2", "sg-test3", "sg-test4", "sg-test5", "sg-test6", "sg-test7", "sg-test8"} {
+			out := waitForSecretInNs(t, kubectl, ns, getSecretName(ns))
 
 			var secret corev1.Secret
 
@@ -161,14 +415,16 @@ stringData:
 	})
 
 	logger.Section("Delete export to see exported secrets deleted", func() {
-		kubectl.RunWithOpts([]string{"delete", "secretexport.secretgen.carvel.dev", "secret", "-n", "sg-test1"},
-			RunOpts{NoNamespace: true})
+		for _, secretName := range []string{"secret", "secret-test5", "secret-test6", "secret-test7", "secret-test8"} {
+			kubectl.RunWithOpts([]string{"delete", "secretexport.secretgen.carvel.dev", secretName, "-n", "sg-test1"},
+				RunOpts{NoNamespace: true})
+		}
 
 		// TODO proper waiting
 		time.Sleep(5 * time.Second)
 
-		for _, ns := range []string{"sg-test2", "sg-test3"} {
-			_, err := kubectl.RunWithOpts([]string{"get", "secret", "secret", "-n", ns},
+		for _, ns := range []string{"sg-test2", "sg-test3", "sg-test4", "sg-test5", "sg-test6", "sg-test7", "sg-test8"} {
+			_, err := kubectl.RunWithOpts([]string{"get", "secret", getSecretName(ns), "-n", ns},
 				RunOpts{AllowError: true, NoNamespace: true})
 			require.Error(t, err)
 

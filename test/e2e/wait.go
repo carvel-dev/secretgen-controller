@@ -40,6 +40,28 @@ func waitForSecretInNs(t *testing.T, kubectl Kubectl, nsName, name string) strin
 	panic("Unreachable")
 }
 
+func waitForSecretNotInNs(kubectl Kubectl, nsName, name string) bool {
+	var lastErr error
+
+	args := []string{"get", "secret", name, "-o", "yaml"}
+	noNs := false
+
+	if len(nsName) > 0 {
+		args = append(args, []string{"-n", nsName}...)
+		noNs = true
+	}
+
+	for i := 0; i < 30; i++ {
+		_, lastErr = kubectl.RunWithOpts(args, RunOpts{AllowError: true, NoNamespace: noNs})
+		if lastErr == nil {
+			return false
+		}
+		time.Sleep(time.Second)
+	}
+
+	return true
+}
+
 func waitUntilSecretInNsPopulated(t *testing.T, kubectl Kubectl, nsName, name string, checkFun func(*corev1.Secret) bool) string {
 	var secret corev1.Secret
 

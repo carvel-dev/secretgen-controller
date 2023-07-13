@@ -69,7 +69,7 @@ func secretImportFor(sourceSecret corev1.Secret) sg2v1alpha1.SecretImport {
 
 func importReconcilers(objects ...runtime.Object) (secretExportReconciler *sharing.SecretExportReconciler, secretImportReconciler *sharing.SecretImportReconciler, k8sClient client.Client) {
 	k8sClient = fakeClient.NewFakeClient(objects...)
-	secretExports := sharing.NewSecretExportsWarmedUp(sharing.NewSecretExports(testLogr))
+	secretExports := sharing.NewSecretExportsWarmedUp(sharing.NewSecretExports(k8sClient, testLogr))
 	secretExportReconciler = sharing.NewSecretExportReconciler(k8sClient, secretExports, testLogr)
 	secretExports.WarmUpFunc = secretExportReconciler.WarmUp
 	secretImportReconciler = sharing.NewSecretImportReconciler(k8sClient, secretExports, testLogr)

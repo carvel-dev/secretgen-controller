@@ -220,7 +220,7 @@ func Test_SecretReconciler_updatesStatus(t *testing.T) {
 }
 func placeholderReconcilers(objects ...runtime.Object) (secretExportReconciler *sharing.SecretExportReconciler, secretReconciler *sharing.SecretReconciler, k8sClient client.Client) {
 	k8sClient = fakeClient.NewFakeClient(objects...)
-	secretExports := sharing.NewSecretExportsWarmedUp(sharing.NewSecretExports(testLogr))
+	secretExports := sharing.NewSecretExportsWarmedUp(sharing.NewSecretExports(k8sClient, testLogr))
 	secretExportReconciler = sharing.NewSecretExportReconciler(k8sClient, secretExports, testLogr)
 	secretExports.WarmUpFunc = secretExportReconciler.WarmUp
 	secretReconciler = sharing.NewSecretReconciler(k8sClient, secretExports, testLogr)

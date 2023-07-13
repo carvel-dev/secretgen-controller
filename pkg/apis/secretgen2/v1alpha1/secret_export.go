@@ -39,11 +39,31 @@ type SecretExportList struct {
 	Items []SecretExport `json:"items"`
 }
 
+// SelectorOperator is a part of SelectorMatchField
+type SelectorOperator string
+
+// SelectorOperator values
+const (
+	SelectorOperatorIn           SelectorOperator = "In"
+	SelectorOperatorNotIn                         = "NotIn"
+	SelectorOperatorExists                        = "Exists"
+	SelectorOperatorDoesNotExist                  = "DoesNotExist"
+)
+
+// SelectorMatchField is a selector field to match against namespace definition
+type SelectorMatchField struct {
+	Key      string           `json:"key,omitempty"`
+	Operator SelectorOperator `json:"operator,omitempty"`
+	Values   []string         `json:"values,omitempty"`
+}
+
 type SecretExportSpec struct {
 	// +optional
 	ToNamespace string `json:"toNamespace,omitempty"`
 	// +optional
 	ToNamespaces []string `json:"toNamespaces,omitempty"`
+	// +optional
+	ToNamespacesSelector []SelectorMatchField `json:"dangerousToNamespacesSelector,omitempty"`
 }
 
 type SecretExportStatus struct {
@@ -68,13 +88,26 @@ func (e SecretExport) Validate() error {
 	var errs []error
 
 	toNses := e.StaticToNamespaces()
+	toSmf := e.Spec.ToNamespacesSelector
 
-	if len(toNses) == 0 {
-		errs = append(errs, fmt.Errorf("Expected to have at least one non-empty to namespace"))
+	if len(toNses) == 0 && len(toSmf) == 0 {
+		errs = append(errs, fmt.Errorf("Expected to have at least one non-empty to namespace or to namespace annotation"))
 	}
 	for _, ns := range toNses {
 		if len(ns) == 0 {
 			errs = append(errs, fmt.Errorf("Expected to namespace to be non-empty"))
+		}
+	}
+	for _, s := range toSmf {
+		switch s.Operator {
+		case SelectorOperatorIn, SelectorOperatorNotIn:
+			if len(s.Values) == 0 {
+				errs = append(errs, fmt.Errorf("Values must be specified when `operator` is 'In' or 'NotIn'"))
+			}
+		case SelectorOperatorExists, SelectorOperatorDoesNotExist:
+			if len(s.Values) > 0 {
+				errs = append(errs, fmt.Errorf("Values may not be specified when `operator` is 'Exists' or 'DoesNotExist'"))
+			}
 		}
 	}
 
