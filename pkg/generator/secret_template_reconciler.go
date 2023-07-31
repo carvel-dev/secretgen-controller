@@ -6,6 +6,7 @@ package generator
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -283,7 +284,12 @@ func evaluateTemplate(template *sg2v1alpha1.JSONPathTemplate, values map[string]
 	}
 
 	// Template Secret StringData
-	stringData, err := evaluate(template.StringData, values)
+	decodedValues, err := decodeSecrets(values)
+	if err != nil {
+		return corev1.Secret{}, fmt.Errorf("decoding secrets: %w", err)
+	}
+
+	stringData, err := evaluate(template.StringData, decodedValues)
 	if err != nil {
 		return corev1.Secret{}, fmt.Errorf("templating stringData: %w", err)
 	}
@@ -348,4 +354,35 @@ func evaluateBytes(mapping map[string]string, values map[string]interface{}) (ma
 	}
 
 	return evaluatedMapping, nil
+}
+
+func decodeSecrets(values map[string]interface{}) (map[string]interface{}, error) {
+	decodedValues := make(map[string]interface{})
+	for valueKey, value := range values {
+		jsonData, err := json.Marshal(value)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal values into JSON: %w", err)
+		}
+
+		obj := &unstructured.Unstructured{}
+		if err := json.Unmarshal(jsonData, obj); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal JSON into Unstructured object: %w", err)
+		}
+
+		if obj.GetKind() == "Secret" {
+			data, _, _ := unstructured.NestedStringMap(obj.Object, "data")
+			for dataKey, encodedValue := range data {
+				decodedValue, err := base64.StdEncoding.DecodeString(string(encodedValue))
+				if err != nil {
+					return nil, fmt.Errorf("failed decoding base64 from a Secret: %w", err)
+				}
+				unstructured.SetNestedStringMap(obj.Object, map[string]string{dataKey: string(decodedValue)}, "data")
+			}
+			decodedValues[valueKey] = obj.Object
+		} else {
+			decodedValues[valueKey] = value
+		}
+	}
+
+	return decodedValues, nil
 }
