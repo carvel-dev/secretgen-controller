@@ -6,7 +6,7 @@
 
 # git tag version extraction adapted from https://github.com/carvel-dev/imgpkg/blob/develop/hack/build-binaries.sh
 function get_latest_git_tag {
-  git describe --tags | grep -Eo 'v[0-9]+\.[0-9]+\.[0-9]+(-alpha\.[0-9]+)?'
+  git tag -l | grep -Eo 'v[0-9]+\.[0-9]+\.[0-9]+(-alpha\.[0-9]+)?' | sort -V | tail -1
 }
 
 function get_sgctrl_ver {
@@ -14,5 +14,5 @@ function get_sgctrl_ver {
 }
 
 function get_sgctrl_ver_without_v {
-  git describe --tags | grep -Eo '[0-9]+\.[0-9]+\.[0-9]+(-alpha\.[0-9]+)?'
+  git tag -l | grep -Eo '[0-9]+\.[0-9]+\.[0-9]+(-alpha\.[0-9]+)?' | sort -V | tail -1
 }
