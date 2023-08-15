@@ -40,30 +40,6 @@ spec:
                 items:
                   type: string
                 type: array
-              dangerousToNamespacesSelector:
-                type: array
-                items:
-                  properties:
-                    key:
-                      type: string
-                      description: Property to target the resource for the match. It supports dot notation.
-                    operator:
-                      type: string
-                      description: Type of comparison.
-                      enum:
-                      - In
-                      - NotIn
-                      - Exists
-                      - DoesNotExist
-                    values:
-                      description: Values to match on the resource key using the comparison operator.
-                      type: array
-                      items:
-                        type: string
-                  type: object
-                  required:
-                  - key
-                  - operator
             type: object
           status:
             properties:
