@@ -30,9 +30,9 @@ jobs:
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         only: ytt, kapp, kbld
-        ytt: v0.40.1
-        kapp: v0.47.0
-        kbld: v0.34.0
+        ytt: v0.45.4
+        kapp: v0.58.0
+        kbld: v0.37.5
     - name: Run Tests
       run: |
         set -e -x
