@@ -88,7 +88,7 @@ func main() {
 
 	{
 		secretExports := sharing.NewSecretExportsWarmedUp(
-			sharing.NewSecretExports(mgr.GetClient(), log.WithName("secretexports")))
+			sharing.NewSecretExports(log.WithName("secretexports")))
 
 		secretExportReconciler := sharing.NewSecretExportReconciler(
 			mgr.GetClient(), secretExports, log.WithName("secexp"))
