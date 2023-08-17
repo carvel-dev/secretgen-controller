@@ -281,8 +281,7 @@ func (ce *CheckedEntry) AddCore(ent Entry, core Core) *CheckedEntry {
 // Should sets this CheckedEntry's CheckWriteAction, which controls whether a
 // Core will panic or fatal after writing this log entry. Like AddCore, it's
 // safe to call on nil CheckedEntry references.
-//
-// Deprecated: Use [CheckedEntry.After] instead.
+// Deprecated: Use After(ent Entry, after CheckWriteHook) instead.
 func (ce *CheckedEntry) Should(ent Entry, should CheckWriteAction) *CheckedEntry {
 	return ce.After(ent, should)
 }
