@@ -16,18 +16,18 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v2
         with:
-          go-version: 1.20.5
+          go-version: 1.20.7
       - name: Install Carvel Tools
         uses: vmware-tanzu/carvel-setup-action@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           only: ytt, kapp, kbld, imgpkg, kctrl, vendir
-          ytt: v0.40.1
-          kapp: v0.47.0
-          kbld: v0.34.0
-          imgpkg: v0.29.0
-          kctrl: v0.41.2
-          vendir: v0.30.0
+          ytt: v0.45.4
+          kapp: v0.58.0
+          kbld: v0.37.5
+          imgpkg: v0.37.3
+          kctrl: v0.46.2
+          vendir: v0.34.4
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v2
         with:
