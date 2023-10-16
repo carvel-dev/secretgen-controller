@@ -13,10 +13,10 @@ jobs:
         id: latest-sha
         run: |
           # Get the latest released docker image sha
-          curl -sL https://api.github.com/repos/carvel-dev/secretgen-controller/releases/latest | jq -r '.assets[].browser_download_url' | wget -i -
+          curl -sL https://api.github.com/repos/vmware-tanzu/carvel-secretgen-controller/releases/latest | jq -r '.assets[].browser_download_url' | wget -i -
 
           echo ::set-output name=image::$(yq eval '.spec.template.spec.containers[0].image' release.yml -N -j | jq 'select(. != null)' -r)
-          echo ::set-output name=tag::$(curl -sL https://api.github.com/repos/carvel-dev/secretgen-controller/releases/latest | jq -r '.tag_name')
+          echo ::set-output name=tag::$(curl -sL https://api.github.com/repos/vmware-tanzu/carvel-secretgen-controller/releases/latest | jq -r '.tag_name')
       - name: Install Trivy
         run: |
           # https://aquasecurity.github.io/trivy/v0.18.3/installation/
@@ -109,7 +109,7 @@ jobs:
         run: |
           set -o pipefail
 
-          summary="Trivy scan has found new vulnerabilities - check https://github.com/carvel-dev/secretgen-controller/security/code-scanning for more"
+          summary="Trivy scan has found new vulnerabilities - check https://github.com/vmware-tanzu/carvel-secretgen-controller/security/code-scanning for more"
 
           vulnCountBinary=$(jq '[ .Results[]? | select(.Vulnerabilities) | .Vulnerabilities ] | length' trivy-results-binary.json)
           vulnCountImage=$(jq '[ .Results[]? | select(.Vulnerabilities) | .Vulnerabilities ] | length' trivy-results-image.json)
