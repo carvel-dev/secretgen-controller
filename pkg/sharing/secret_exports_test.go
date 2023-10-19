@@ -13,12 +13,12 @@ import (
 	"github.com/vmware-tanzu/carvel-secretgen-controller/pkg/sharing"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	fakeClient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 func TestSecretExports(t *testing.T) {
-
 	t.Run("matching", func(t *testing.T) {
+		se := sharing.NewSecretExports(logr.Discard())
+
 		// Namespace does not match
 		secret1 := &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{Name: "secret1", Namespace: "ns1"},
@@ -31,6 +31,7 @@ func TestSecretExports(t *testing.T) {
 				ToNamespace: "wrong-ns",
 			},
 		}
+		se.Export(export1, secret1)
 
 		// Secret type does not match
 		secret2 := &corev1.Secret{
@@ -44,12 +45,6 @@ func TestSecretExports(t *testing.T) {
 				ToNamespace: "dst-ns",
 			},
 		}
-
-		k8sClient := fakeClient.NewFakeClient(secret1, secret2, export1, export2)
-		se := sharing.NewSecretExports(k8sClient, logr.Discard())
-
-		se.Export(export1, secret1)
-
 		se.Export(export2, secret2)
 
 		nsCheck := func(string) bool { return false }
@@ -182,13 +177,10 @@ func TestSecretExports(t *testing.T) {
 	})
 
 	t.Run("returns secrets in specific order (last secret is most preferred)", func(t *testing.T) {
+		se := sharing.NewSecretExports(logr.Discard())
 
 		// higher weight, but name comes earlier
-		secret1 := &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{Name: "secret1-highest-weight", Namespace: "ns1"},
-			Type:       "Opaque",
-		}
-		export1 := &sg2v1alpha1.SecretExport{
+		se.Export(&sg2v1alpha1.SecretExport{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "secret1-highest-weight",
 				Namespace: "ns1",
@@ -197,14 +189,13 @@ func TestSecretExports(t *testing.T) {
 				},
 			},
 			Spec: sg2v1alpha1.SecretExportSpec{ToNamespace: "*"},
-		}
+		}, &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{Name: "secret1-highest-weight", Namespace: "ns1"},
+			Type:       "Opaque",
+		})
 
 		// higher weight, but name comes later
-		secret2 := &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{Name: "secret1a-highest-weight", Namespace: "ns1"},
-			Type:       "Opaque",
-		}
-		export2 := &sg2v1alpha1.SecretExport{
+		se.Export(&sg2v1alpha1.SecretExport{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "secret1a-highest-weight",
 				Namespace: "ns1",
@@ -213,13 +204,12 @@ func TestSecretExports(t *testing.T) {
 				},
 			},
 			Spec: sg2v1alpha1.SecretExportSpec{ToNamespace: "*"},
-		}
-
-		secret3 := &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{Name: "secret2-low-weight", Namespace: "ns1"},
+		}, &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{Name: "secret1a-highest-weight", Namespace: "ns1"},
 			Type:       "Opaque",
-		}
-		export3 := &sg2v1alpha1.SecretExport{
+		})
+
+		se.Export(&sg2v1alpha1.SecretExport{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "secret2-low-weight",
 				Namespace: "ns1",
@@ -228,76 +218,58 @@ func TestSecretExports(t *testing.T) {
 				},
 			},
 			Spec: sg2v1alpha1.SecretExportSpec{ToNamespace: "*"},
-		}
+		}, &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{Name: "secret2-low-weight", Namespace: "ns1"},
+			Type:       "Opaque",
+		})
 
 		// Wildcard ns match
-		secret4 := &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{Name: "secret3-diff-ns-wildcard-ns", Namespace: "ns1"},
-			Type:       "Opaque",
-		}
-		export4 := &sg2v1alpha1.SecretExport{
+		se.Export(&sg2v1alpha1.SecretExport{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "secret3-diff-ns-wildcard-ns",
 				Namespace: "ns1",
 			},
 			Spec: sg2v1alpha1.SecretExportSpec{ToNamespace: "*"},
-		}
+		}, &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{Name: "secret3-diff-ns-wildcard-ns", Namespace: "ns1"},
+			Type:       "Opaque",
+		})
 
 		// Specific ns match (even though there is a wildcard as well)
-		secret5 := &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{Name: "secret4-diff-ns-specific-ns", Namespace: "ns1"},
-			Type:       "Opaque",
-		}
-		export5 := &sg2v1alpha1.SecretExport{
+		se.Export(&sg2v1alpha1.SecretExport{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "secret4-diff-ns-specific-ns",
 				Namespace: "ns1",
 			},
 			Spec: sg2v1alpha1.SecretExportSpec{ToNamespace: "dst-ns", ToNamespaces: []string{"*"}},
-		}
-
-		k8sClient := fakeClient.NewFakeClient(secret1, secret2, export1, export2)
-		se := sharing.NewSecretExports(k8sClient, logr.Discard())
+		}, &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{Name: "secret4-diff-ns-specific-ns", Namespace: "ns1"},
+			Type:       "Opaque",
+		})
 
 		// Wildcard ns match in same namespace
-		secret6 := &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{Name: "secret5-same-ns-wildcard-ns", Namespace: "dst-ns"},
-			Type:       "Opaque",
-		}
-		export6 := &sg2v1alpha1.SecretExport{
+		se.Export(&sg2v1alpha1.SecretExport{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "secret5-same-ns-wildcard-ns",
 				Namespace: "dst-ns",
 			},
 			Spec: sg2v1alpha1.SecretExportSpec{ToNamespace: "*"},
-		}
+		}, &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{Name: "secret5-same-ns-wildcard-ns", Namespace: "dst-ns"},
+			Type:       "Opaque",
+		})
 
 		// Specific ns match (even though there is a wildcard as well)
-		secret7 := &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{Name: "secret6-same-ns-specific-ns", Namespace: "dst-ns"},
-			Type:       "Opaque",
-		}
-		export7 := &sg2v1alpha1.SecretExport{
+		se.Export(&sg2v1alpha1.SecretExport{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "secret6-same-ns-specific-ns",
 				Namespace: "dst-ns",
 			},
 			Spec: sg2v1alpha1.SecretExportSpec{ToNamespace: "dst-ns", ToNamespaces: []string{"*"}},
-		}
-
-		se.Export(export1, secret1)
-
-		se.Export(export2, secret2)
-
-		se.Export(export3, secret3)
-
-		se.Export(export4, secret4)
-
-		se.Export(export5, secret5)
-
-		se.Export(export6, secret6)
-
-		se.Export(export7, secret7)
+		}, &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{Name: "secret6-same-ns-specific-ns", Namespace: "dst-ns"},
+			Type:       "Opaque",
+		})
 
 		result := se.MatchedSecretsForImport(sharing.SecretMatcher{
 			ToNamespace: "dst-ns",
