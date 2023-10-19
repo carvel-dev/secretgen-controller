@@ -29,8 +29,8 @@ func (InputPaths) Help() *markers.DefinitionHelp {
 	return &markers.DefinitionHelp{
 		Category: "",
 		DetailedHelp: markers.DetailedHelp{
-			Summary: "represents paths and go-style path patterns to use as package roots. ",
-			Details: "Multiple paths can be specified using \"{path1, path2, path3}\".",
+			Summary: "represents paths and go-style path patterns to use as package roots.",
+			Details: "",
 		},
 		FieldHelp: map[string]markers.DetailedHelp{},
 	}

@@ -16,9 +16,9 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v2
         with:
-          go-version: 1.21.1
+          go-version: 1.20.7
       - name: Install Carvel Tools
-        uses: carvel-dev/setup-action@v1
+        uses: vmware-tanzu/carvel-setup-action@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           only: ytt, kapp, kbld, imgpkg, kctrl, vendir
@@ -40,19 +40,6 @@ jobs:
           minikube start --driver=docker --wait=all
           docker buildx create minikube --use --driver=kubernetes --bootstrap
           ./hack/build-and-publish-release.sh
-          mkdir release
-          cp ./tmp/release.yml release/
-      - name: Run Package build
-        run: |
-          constraintVersion="${{ github.ref_name }}"
-          kctrl pkg release -y -v ${constraintVersion:1} --debug
-          mv carvel-artifacts/packages/secretgen-controller.carvel.dev/metadata.yml carvel-artifacts/packages/secretgen-controller.carvel.dev/package-metadata.yml
-          cp carvel-artifacts/packages/secretgen-controller.carvel.dev/* release/
-      - name: Checksum
-        run: |
-          pushd release
-          shasum -a 256 ./release.yml ./package.yml ./package-metadata.yml | tee ../tmp/checksums.txt
-          popd
       - name: Create release draft and upload release yaml
         uses: softprops/action-gh-release@17cd0d34deddf848fc0e7d9be5202c148c270a0a
         with:
@@ -60,7 +47,9 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           body_path: ./tmp/checksums.txt
           files: |
-            ./release/*
+            ./tmp/release.yml
+            ./tmp/package.yml
+            ./tmp/package-metadata.yml
           draft: true
       - name: Get uploaded release YAML checksum
         uses: actions/github-script@v6
@@ -83,13 +72,9 @@ jobs:
             const url = require('url');
             const https = require('https');
             checksums = {}
-            var releaseMatched = false;
-            var assetsFound = false;
             for (const r of releases["data"]) {
               if (r.draft && `refs/tags/${r.tag_name}` == "${{ github.ref }}") {
-                releaseMatched = true;
                 for (const asset of r.assets) {
-                  assetsFound = true;
                   var release_asset = await github.rest.repos.getReleaseAsset({ headers: {accept: `application/octet-stream`}, accept: `application/octet-stream`, owner: owner, repo: repo, asset_id: asset.id });
                   const hash = crypto.createHash('sha256');
                   let http_promise = new Promise((resolve, reject) => {
@@ -104,26 +89,13 @@ jobs:
                     });
                   });
                   await http_promise;
-                  http_promise.then(
-                    (result) => {
-                        console.log(checksums);
-                    },
-                    (error) => {
-                        console.log("Encountered an Error for " + asset.name + " asset: " + error); // Log an error
-                    });
                 }
               }
             }
-            if (!releaseMatched) {
-              console.log("No release matched")
-            }
-            if (!assetsFound) {
-              console.log("No assets found for " + "${{ github.ref }}" + " release")
-            }
-            return `${checksums['release.yml']}  ./release.yml
-            ${checksums['package.yml']}  ./package.yml
-            ${checksums['package-metadata.yml']}  ./package-metadata.yml`
-      
+            console.log(checksums)
+            return `${checksums['release.yml']}  ./tmp/release.yml
+            ${checksums['package.yml']}  ./tmp/package.yml
+            ${checksums['package-metadata.yml']}  ./tmp/package-metadata.yml`
       - name: Verify uploaded artifacts
         if: startsWith(github.ref, 'refs/tags/')
         env:
@@ -135,27 +107,34 @@ jobs:
           ${{steps.get-checksums-from-draft-release.outputs.result}}
           EOF
           )
-      
       - name: Run PackageCR Validation Tests
         run: |
           set -e -x
 
           # deploy admin sa for secretgen-controller - enough permissions for SGC to be deployed properly
-          kapp deploy -a rbac -f https://raw.githubusercontent.com/carvel-dev/kapp-controller/develop/examples/rbac/cluster-admin.yml -y
-          
+          kapp deploy -a rbac -f https://raw.githubusercontent.com/vmware-tanzu/carvel-kapp-controller/develop/examples/rbac/cluster-admin.yml -y
+
           # Kapp-controller is needed for our PackageInstall
-          kapp deploy -a kc -f https://github.com/carvel-dev/kapp-controller/releases/latest/download/release.yml -y
-          
+          kapp deploy -a kc -f https://github.com/vmware-tanzu/carvel-kapp-controller/releases/latest/download/release.yml -y
+
           constraintVersion="${{ github.ref_name }}"
-        
-          kubectl create ns sg
+          cat << EOF > pkgi.yml
+          ---
+          apiVersion: packaging.carvel.dev/v1alpha1
+          kind: PackageInstall
+          metadata:
+            name: secretgen-controller
+          spec:
+            serviceAccountName: cluster-admin-sa
+            packageRef:
+              refName: secretgen-controller.carvel.dev
+              apiVersion: packaging.carvel.dev/v1alpha1
+              versionSelection:
+                constraints: "${constraintVersion:1}"
+          EOF
 
-          kapp deploy -a sg -f carvel-artifacts/packages/secretgen-controller.carvel.dev/package.yml -f carvel-artifacts/packages/secretgen-controller.carvel.dev/package-metadata.yml -n sg -y
-          
-          # installing pkg with kctrl
-          kctrl pkg install -p secretgen-controller.carvel.dev -i scg --version ${constraintVersion:1} -n sg
-          
+          kapp deploy -a sg -f ./tmp/package.yml -f ./tmp/package-metadata.yml -f pkgi.yml -y
+
           export SECRETGEN_E2E_NAMESPACE=secretgen-test
-          
-          ./hack/test-e2e.sh
 
+          ./hack/test-e2e.sh

@@ -61,9 +61,8 @@ func NewDelegatingClient(in NewDelegatingClientInput) (Client, error) {
 			uncachedGVKs:      uncachedGVKs,
 			cacheUnstructured: in.CacheUnstructured,
 		},
-		Writer:                       in.Client,
-		StatusClient:                 in.Client,
-		SubResourceClientConstructor: in.Client,
+		Writer:       in.Client,
+		StatusClient: in.Client,
 	}, nil
 }
 
@@ -71,7 +70,6 @@ type delegatingClient struct {
 	Reader
 	Writer
 	StatusClient
-	SubResourceClientConstructor
 
 	scheme *runtime.Scheme
 	mapper meta.RESTMapper
@@ -123,13 +121,13 @@ func (d *delegatingReader) shouldBypassCache(obj runtime.Object) (bool, error) {
 }
 
 // Get retrieves an obj for a given object key from the Kubernetes Cluster.
-func (d *delegatingReader) Get(ctx context.Context, key ObjectKey, obj Object, opts ...GetOption) error {
+func (d *delegatingReader) Get(ctx context.Context, key ObjectKey, obj Object) error {
 	if isUncached, err := d.shouldBypassCache(obj); err != nil {
 		return err
 	} else if isUncached {
-		return d.ClientReader.Get(ctx, key, obj, opts...)
+		return d.ClientReader.Get(ctx, key, obj)
 	}
-	return d.CacheReader.Get(ctx, key, obj, opts...)
+	return d.CacheReader.Get(ctx, key, obj)
 }
 
 // List retrieves list of objects for a given namespace and list options.

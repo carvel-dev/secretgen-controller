@@ -20,13 +20,6 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: user2
----
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: user3
-  annotations:
-    field.cattle.io/projectId: "cluster1:project1"
 
 #! generate user-password secret upon creation
 ---
@@ -36,7 +29,7 @@ metadata:
   name: user-password
   namespace: user1
 
-#! offer user-password to user2 namespace and namespace with specified annotations (in this case user3)
+#! offer user-password to user2 namespace
 ---
 apiVersion: secretgen.carvel.dev/v1alpha1
 kind: SecretExport
@@ -45,10 +38,6 @@ metadata:
   namespace: user1
 spec:
   toNamespace: user2
-  dangerousToNamespacesSelector:
-    - key: "metadata.annotations['field\\.cattle\\.io/projectId']"
-      operator: In
-      value: "cluster1:project1"
 
 #! allow user-password to be created in user2 namespace
 ---
@@ -59,17 +48,6 @@ metadata:
   namespace: user2
 spec:
   fromNamespace: user1
-
-#! allow user-password to be created in namespace user3
----
-apiVersion: secretgen.carvel.dev/v1alpha1
-kind: SecretImport
-metadata:
-  name: user-password
-  namespace: user3
-spec:
-  fromNamespace: user1
-
 ```
 
 Above configuration results in a `user-password` Secret created within `user2` namespace:
@@ -97,16 +75,6 @@ SecretExport CRD allows to "offer" secrets for export.
 
 - `toNamespace` (optional; string) Destination namespace for offer. Use `*` to indicate all namespaces.
 - `toNamespaces` (optional; array of strings) List of destination namespaces for offer.
-- `dangerousToNamespacesSelector` (optional; array of selector objects) List of matchers for destination namespaces. If multiple expressions are specified, all those expressions must evaluate to true for the selector to match a namespace. The selector object is composed as follows:
-  - `key` (required; string) Property to target on the resource for the match. Based on kubernetes JSONPath syntax.
-  - `operator` (required; enum string) Type of comparison. Must be one of `In`, `NotIn`, `Exists`, `DoesNotExist`.
-    Operator explanations:
-    - In: Label's value must match one of the specified values.
-    - NotIn: Label's value must not match any of the specified values.
-    - Exists: Namespace must include a label with the specified key (the value isn't relevant). When using this operator, the values field should not be specified.
-    - DoesNotExist: Namespace must not include a label with the specified key. The values property must not be specified.
-
-  - `values` (optional; array if string) Values to match on the resource key using the comparison operator.
 
 ### SecretImport
 

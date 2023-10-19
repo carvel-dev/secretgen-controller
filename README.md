@@ -1,14 +1,12 @@
 ![logo](docs/CarvelLogo.png)
 
-[![OpenSSF Best Practices](https://bestpractices.coreinfrastructure.org/projects/7746/badge)](https://bestpractices.coreinfrastructure.org/projects/7746)
-
 # secretgen-controller
 
 - Slack: [#carvel in Kubernetes slack](https://slack.kubernetes.io)
 - [Docs](docs/README.md) with topics about installation, config, etc.
 - Install: see [Install instructions](docs/install.md)
 - Status: Supported
-- Backlog: [See what we're up to](https://github.com/orgs/carvel-dev/projects/1/views/1?filterQuery=repo%3A%22carvel-dev%2Fsecretgen-controller%22).
+- Backlog: [See what we're up to](https://github.com/orgs/vmware-tanzu/projects/16/views/1?filterQuery=repo%3A%22vmware-tanzu%2Fcarvel-secretgen-conroller%22).
 
 `secretgen-controller` provides CRDs to specify what secrets need to be on cluster (generated or not).
 
@@ -27,4 +25,4 @@ Please join us during our online community meetings. Details can be found on our
 
 You can chat with us on Kubernetes Slack in the #carvel channel and follow us on Twitter at @carvel_dev.
 
-Check out which organizations are using and contributing to Carvel: [Adopter's list](https://github.com/carvel-dev/carvel/blob/develop/ADOPTERS.md)
+Check out which organizations are using and contributing to Carvel: [Adopter's list](https://github.com/vmware-tanzu/carvel/blob/master/ADOPTERS.md)
