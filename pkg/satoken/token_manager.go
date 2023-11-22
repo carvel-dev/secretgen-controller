@@ -15,8 +15,8 @@ import (
 	"sync"
 	"time"
 
+	"carvel.dev/secretgen-controller/pkg/generator"
 	"github.com/go-logr/logr"
-	"github.com/vmware-tanzu/carvel-secretgen-controller/pkg/generator"
 	authenticationv1 "k8s.io/api/authentication/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"

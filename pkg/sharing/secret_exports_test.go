@@ -7,10 +7,10 @@ import (
 	"fmt"
 	"testing"
 
+	sg2v1alpha1 "carvel.dev/secretgen-controller/pkg/apis/secretgen2/v1alpha1"
+	"carvel.dev/secretgen-controller/pkg/sharing"
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/require"
-	sg2v1alpha1 "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/apis/secretgen2/v1alpha1"
-	"github.com/vmware-tanzu/carvel-secretgen-controller/pkg/sharing"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	fakeClient "sigs.k8s.io/controller-runtime/pkg/client/fake"

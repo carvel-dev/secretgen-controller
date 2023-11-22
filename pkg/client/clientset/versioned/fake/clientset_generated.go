@@ -3,9 +3,9 @@
 package fake
 
 import (
-	clientset "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/client/clientset/versioned"
-	secretgenv1alpha1 "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/client/clientset/versioned/typed/secretgen/v1alpha1"
-	fakesecretgenv1alpha1 "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/client/clientset/versioned/typed/secretgen/v1alpha1/fake"
+	clientset "carvel.dev/secretgen-controller/pkg/client/clientset/versioned"
+	secretgenv1alpha1 "carvel.dev/secretgen-controller/pkg/client/clientset/versioned/typed/secretgen/v1alpha1"
+	fakesecretgenv1alpha1 "carvel.dev/secretgen-controller/pkg/client/clientset/versioned/typed/secretgen/v1alpha1/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"

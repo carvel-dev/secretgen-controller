@@ -5,7 +5,7 @@ package versioned
 import (
 	"fmt"
 
-	secretgenv1alpha1 "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/client/clientset/versioned/typed/secretgen/v1alpha1"
+	secretgenv1alpha1 "carvel.dev/secretgen-controller/pkg/client/clientset/versioned/typed/secretgen/v1alpha1"
 	discovery "k8s.io/client-go/discovery"
 	rest "k8s.io/client-go/rest"
 	flowcontrol "k8s.io/client-go/util/flowcontrol"

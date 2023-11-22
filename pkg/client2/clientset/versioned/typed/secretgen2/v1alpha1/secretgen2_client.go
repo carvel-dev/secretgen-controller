@@ -3,8 +3,8 @@
 package v1alpha1
 
 import (
-	v1alpha1 "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/apis/secretgen2/v1alpha1"
-	"github.com/vmware-tanzu/carvel-secretgen-controller/pkg/client2/clientset/versioned/scheme"
+	v1alpha1 "carvel.dev/secretgen-controller/pkg/apis/secretgen2/v1alpha1"
+	"carvel.dev/secretgen-controller/pkg/client2/clientset/versioned/scheme"
 	rest "k8s.io/client-go/rest"
 )
 

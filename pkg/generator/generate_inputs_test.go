@@ -7,8 +7,8 @@ import (
 	"errors"
 	"testing"
 
+	"carvel.dev/secretgen-controller/pkg/generator"
 	"github.com/stretchr/testify/assert"
-	"github.com/vmware-tanzu/carvel-secretgen-controller/pkg/generator"
 )
 
 func TestAddFailsWithEmptyAnnotations(t *testing.T) {

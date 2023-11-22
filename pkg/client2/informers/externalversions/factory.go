@@ -7,9 +7,9 @@ import (
 	sync "sync"
 	time "time"
 
-	versioned "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/client2/clientset/versioned"
-	internalinterfaces "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/client2/informers/externalversions/internalinterfaces"
-	secretgen2 "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/client2/informers/externalversions/secretgen2"
+	versioned "carvel.dev/secretgen-controller/pkg/client2/clientset/versioned"
+	internalinterfaces "carvel.dev/secretgen-controller/pkg/client2/informers/externalversions/internalinterfaces"
+	secretgen2 "carvel.dev/secretgen-controller/pkg/client2/informers/externalversions/secretgen2"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"

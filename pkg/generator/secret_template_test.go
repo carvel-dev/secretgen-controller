@@ -8,12 +8,12 @@ import (
 	"testing"
 	"time"
 
+	sgv1alpha1 "carvel.dev/secretgen-controller/pkg/apis/secretgen/v1alpha1"
+	sg2v1alpha1 "carvel.dev/secretgen-controller/pkg/apis/secretgen2/v1alpha1"
+	"carvel.dev/secretgen-controller/pkg/client2/clientset/versioned/scheme"
+	"carvel.dev/secretgen-controller/pkg/tracker"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	sgv1alpha1 "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/apis/secretgen/v1alpha1"
-	sg2v1alpha1 "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/apis/secretgen2/v1alpha1"
-	"github.com/vmware-tanzu/carvel-secretgen-controller/pkg/client2/clientset/versioned/scheme"
-	"github.com/vmware-tanzu/carvel-secretgen-controller/pkg/tracker"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -22,7 +22,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"github.com/vmware-tanzu/carvel-secretgen-controller/pkg/generator"
+	"carvel.dev/secretgen-controller/pkg/generator"
 )
 
 func Test_SecretTemplate(t *testing.T) {

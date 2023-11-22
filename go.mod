@@ -1,4 +1,4 @@
-module github.com/vmware-tanzu/carvel-secretgen-controller
+module carvel.dev/secretgen-controller
 
 go 1.21
 
