@@ -37,12 +37,14 @@ var (
 	// Version of secretgen-controller is set via ldflags at build-time from most recent git tag
 	Version = "develop"
 
-	log           = logf.Log.WithName("sg")
-	ctrlNamespace = ""
+	log                = logf.Log.WithName("sg")
+	ctrlNamespace      = ""
+	metricsBindAddress = ""
 )
 
 func main() {
 	flag.StringVar(&ctrlNamespace, "namespace", "", "Namespace to watch")
+	flag.StringVar(&metricsBindAddress, "metrics-bind-address", ":8080", "Address for metrics server. If 0, then metrics server doesnt listen on any port.")
 	flag.Parse()
 
 	logf.SetLogger(zap.New(zap.UseDevMode(false)))
@@ -56,7 +58,7 @@ func main() {
 	sgv1alpha1.AddToScheme(scheme.Scheme)
 	sg2v1alpha1.AddToScheme(scheme.Scheme)
 
-	mgr, err := manager.New(restConfig, manager.Options{Namespace: ctrlNamespace})
+	mgr, err := manager.New(restConfig, manager.Options{Namespace: ctrlNamespace, MetricsBindAddress: metricsBindAddress})
 	exitIfErr(entryLog, "unable to set up controller manager", err)
 
 	entryLog.Info("setting up controllers")
