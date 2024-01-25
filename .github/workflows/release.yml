@@ -8,6 +8,10 @@ on:
 jobs:
   draft-release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+      id-token: write
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -17,6 +21,8 @@ jobs:
         uses: actions/setup-go@v2
         with:
           go-version: 1.21.3
+      - name: Set up Cosign
+        uses: sigstore/cosign-installer@v3
       - name: Install Carvel Tools
         uses: carvel-dev/setup-action@v1
         with:
@@ -42,23 +48,133 @@ jobs:
           ./hack/build-and-publish-release.sh
           mkdir release
           cp ./tmp/release.yml release/
+      - name: Sign secretgen-controller OCI image
+        run: |
+          image_url=`yq e '.spec.template.spec.containers[] | select(.name == "secretgen-controller") | .image' release/release.yml`
+          cosign sign --yes "$image_url"
+      - name: Verify signature on secretgen-controller OCI image
+        run: |
+          image_url=`yq e '.spec.template.spec.containers[] | select(.name == "secretgen-controller") | .image' release/release.yml`
+          cosign verify \
+            $image_url \
+            --certificate-identity-regexp=https://github.com/${{ github.repository_owner }} \
+            --certificate-oidc-issuer=https://token.actions.githubusercontent.com
       - name: Run Package build
         run: |
           constraintVersion="${{ github.ref_name }}"
           kctrl pkg release -y -v ${constraintVersion:1} --debug
           mv carvel-artifacts/packages/secretgen-controller.carvel.dev/metadata.yml carvel-artifacts/packages/secretgen-controller.carvel.dev/package-metadata.yml
           cp carvel-artifacts/packages/secretgen-controller.carvel.dev/* release/
-      - name: Checksum
+      - name: Sign secretgen-controller-package-bundle OCI image
+        run: |
+          image_url=`yq e '.spec.template.spec.fetch[0].imgpkgBundle.image' release/package.yml`
+          cosign sign --yes "$image_url"
+      
+      - name: Verify signature on secretgen-controller-package-bundle OCI image
+        run: |
+          image_url=`yq e '.spec.template.spec.fetch[0].imgpkgBundle.image' release/package.yml`
+          cosign verify \
+            $image_url \
+            --certificate-identity-regexp=https://github.com/${{ github.repository_owner }} \
+            --certificate-oidc-issuer=https://token.actions.githubusercontent.com
+
+      - name: Updating release notes
+        run: |
+          RELEASE_TAG=$(git describe --tags --abbrev=0)
+          SGC_CONTROLLER_IMAGE=$(yq e '.spec.template.spec.containers[] | select(.name == "secretgen-controller") | .image' release/release.yml)
+          SGC_CONTROLLER_PACKAGE_BUNDLE_IMAGE=$(yq e '.spec.template.spec.fetch[0].imgpkgBundle.image' release/package.yml)
+          RELEASE_NOTES="
+          <details>
+          <summary><h2>Installation and signature verification</h2></summary>
+          
+          ## Verify checksums file signature
+
+          Install cosign on your system https://docs.sigstore.dev/system_config/installation/
+
+          The checksums file provided within the artifacts attached to this release is signed using [Cosign](https://docs.sigstore.dev/cosign/overview/) with GitHub OIDC. To validate the signature of this file, run the following commands:
+
+          \`\`\`shell
+          # Download the checksums file, certificate, and signature
+          curl -LO https://github.com/${{ github.repository_owner }}/${{ github.event.repository.name }}/releases/download/$RELEASE_TAG/checksums.txt
+          curl -LO https://github.com/${{ github.repository_owner }}/${{ github.event.repository.name }}/releases/download/$RELEASE_TAG/checksums.txt.pem
+          curl -LO https://github.com/${{ github.repository_owner }}/${{ github.event.repository.name }}/releases/download/$RELEASE_TAG/checksums.txt.sig
+
+          ### Verify the checksums file
+          cosign verify-blob checksums.txt \
+          --certificate checksums.txt.pem \
+          --signature checksums.txt.sig \
+          --certificate-identity-regexp=https://github.com/${{ github.repository_owner }} \
+          --certificate-oidc-issuer=https://token.actions.githubusercontent.com 
+          \`\`\`
+
+          ## Installation of secretgen-controller
+
+          secretgen-controller can be installed by using kapp 
+          \`\`\`shell
+          kapp deploy -a sg -f https://github.com/carvel-dev/secretgen-controller/releases/$RELEASE_TAG/download/release.yml
+          \`\`\`
+
+          or by using kubectl
+          \`\`\`shell
+          kubectl deploy -f https://github.com/carvel-dev/secretgen-controller/releases/$RELEASE_TAG/download/release.yml
+          \`\`\`
+
+          ### Container Images
+
+          secretgen-controller and secretgen-controller-package-bundle images are available in Github Container Registry.
+
+          ### OCI Image URLs
+
+          - $SGC_CONTROLLER_IMAGE
+          - $SGC_CONTROLLER_PACKAGE_BUNDLE_IMAGE
+
+          ### Verify container image signature
+
+          The container images are signed using [Cosign](https://docs.sigstore.dev/cosign/overview/) with GitHub OIDC. To validate the signature of OCI images, run the following commands:
+          \`\`\`shell
+          # Verifying secretgen-controller image
+          cosign verify $SGC_CONTROLLER_IMAGE \
+          --certificate-identity-regexp=https://github.com/${{ github.repository_owner }} \
+          --certificate-oidc-issuer=https://token.actions.githubusercontent.com \
+          -o text
+
+          # Verifying secretgen-controller-package-bundle image
+          cosign verify $SGC_CONTROLLER_PACKAGE_BUNDLE_IMAGE \
+          --certificate-identity-regexp=https://github.com/${{ github.repository_owner }} \
+          --certificate-oidc-issuer=https://token.actions.githubusercontent.com \
+          -o text
+          \`\`\`
+          
+          </summary>
+          </details>
+          "
+          echo "$RELEASE_NOTES" > ./tmp/release_notes.txt
+
+      - name: Create checksum and add it to release notes
         run: |
           pushd release
           shasum -a 256 ./release.yml ./package.yml ./package-metadata.yml | tee ../tmp/checksums.txt
           popd
+          cat ./tmp/checksums.txt | tee -a ./tmp/release_notes.txt
+          cp ./tmp/checksums.txt release/checksums.txt
+        
+      - name: Sign checksums.txt
+        run: |
+            cosign sign-blob --yes ./tmp/checksums.txt --output-certificate release/checksums.txt.pem  --output-signature release/checksums.txt.sig
+      - name: Verify checksums signature
+        run: |
+          cosign verify-blob \
+          --cert release/checksums.txt.pem \
+          --signature release/checksums.txt.sig \
+          --certificate-identity-regexp=https://github.com/${{ github.repository_owner }} \
+          --certificate-oidc-issuer=https://token.actions.githubusercontent.com ./tmp/checksums.txt
+
       - name: Create release draft and upload release yaml
         uses: softprops/action-gh-release@17cd0d34deddf848fc0e7d9be5202c148c270a0a
         with:
           name: ${{ github.ref_name }}
           token: ${{ secrets.GITHUB_TOKEN }}
-          body_path: ./tmp/checksums.txt
+          body_path: ./tmp/release_notes.txt
           files: |
             ./release/*
           draft: true
@@ -135,7 +251,7 @@ jobs:
           ${{steps.get-checksums-from-draft-release.outputs.result}}
           EOF
           )
-      
+
       - name: Run PackageCR Validation Tests
         run: |
           set -e -x
@@ -158,4 +274,3 @@ jobs:
           export SECRETGEN_E2E_NAMESPACE=secretgen-test
           
           ./hack/test-e2e.sh
-
