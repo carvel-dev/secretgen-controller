@@ -6,9 +6,9 @@ package generator_test
 import (
 	"testing"
 
+	"carvel.dev/secretgen-controller/pkg/generator"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/vmware-tanzu/carvel-secretgen-controller/pkg/generator"
 )
 
 func Test_SecretTemplate_EvaluateWith(t *testing.T) {

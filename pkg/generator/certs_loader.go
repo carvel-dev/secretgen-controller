@@ -9,8 +9,8 @@ import (
 	"encoding/pem"
 	"fmt"
 
+	sgv1alpha1 "carvel.dev/secretgen-controller/pkg/apis/secretgen/v1alpha1"
 	cfgtypes "github.com/cloudfoundry/config-server/types"
-	sgv1alpha1 "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/apis/secretgen/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 )
 

@@ -173,7 +173,7 @@ metadata:
   annotations:
     kbld.k14s.io/images: |
       - Metas:
-        - Path: /Users/jkimmel/code/go/src/github.com/vmware-tanzu/carvel-secretgen-controller
+        - Path: /Users/jkimmel/code/go/src/carvel.dev/secretgen-controller
           Type: local
         - Dirty: false
           RemoteURL: git@github.com:vmware-tanzu/carvel-secretgen-controller.git

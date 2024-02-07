@@ -6,7 +6,7 @@ package expansion_test
 import (
 	"testing"
 
-	"github.com/vmware-tanzu/carvel-secretgen-controller/pkg/expansion"
+	"carvel.dev/secretgen-controller/pkg/expansion"
 )
 
 func TestMapReference(t *testing.T) {

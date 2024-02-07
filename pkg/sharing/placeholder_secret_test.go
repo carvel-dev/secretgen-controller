@@ -8,9 +8,9 @@ import (
 	"encoding/json"
 	"testing"
 
+	"carvel.dev/secretgen-controller/pkg/sharing"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/vmware-tanzu/carvel-secretgen-controller/pkg/sharing"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"

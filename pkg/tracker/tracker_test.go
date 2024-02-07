@@ -6,8 +6,8 @@ package tracker_test
 import (
 	"testing"
 
+	"carvel.dev/secretgen-controller/pkg/tracker"
 	"github.com/stretchr/testify/assert"
-	"github.com/vmware-tanzu/carvel-secretgen-controller/pkg/tracker"
 	"k8s.io/apimachinery/pkg/types"
 )
 

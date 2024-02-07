@@ -3,7 +3,7 @@
 package v1alpha1
 
 import (
-	internalinterfaces "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/client2/informers/externalversions/internalinterfaces"
+	internalinterfaces "carvel.dev/secretgen-controller/pkg/client2/informers/externalversions/internalinterfaces"
 )
 
 // Interface provides access to all the informers in this group version.

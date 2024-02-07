@@ -4,8 +4,8 @@
 package reconciler
 
 import (
-	sgv1alpha1 "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/apis/secretgen/v1alpha1"
-	"github.com/vmware-tanzu/carvel-secretgen-controller/pkg/expansion"
+	sgv1alpha1 "carvel.dev/secretgen-controller/pkg/apis/secretgen/v1alpha1"
+	"carvel.dev/secretgen-controller/pkg/expansion"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"

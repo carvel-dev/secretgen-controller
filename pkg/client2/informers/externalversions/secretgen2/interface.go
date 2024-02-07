@@ -3,8 +3,8 @@
 package secretgen2
 
 import (
-	internalinterfaces "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/client2/informers/externalversions/internalinterfaces"
-	v1alpha1 "github.com/vmware-tanzu/carvel-secretgen-controller/pkg/client2/informers/externalversions/secretgen2/v1alpha1"
+	internalinterfaces "carvel.dev/secretgen-controller/pkg/client2/informers/externalversions/internalinterfaces"
+	v1alpha1 "carvel.dev/secretgen-controller/pkg/client2/informers/externalversions/secretgen2/v1alpha1"
 )
 
 // Interface provides access to each of this group's versions.
