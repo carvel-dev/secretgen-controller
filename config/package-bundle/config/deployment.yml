@@ -41,5 +41,7 @@ spec:
           capabilities:
             drop:
             - ALL
+          seccompProfile:
+            type: RuntimeDefault
       #@ if/end data.values.deployment.nodeSelector != None:
       nodeSelector: #@ data.values.deployment.nodeSelector
