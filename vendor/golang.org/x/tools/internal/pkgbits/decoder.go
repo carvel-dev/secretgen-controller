@@ -6,6 +6,7 @@ package pkgbits
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"go/constant"
 	"go/token"
@@ -20,7 +21,7 @@ import (
 // export data.
 type PkgDecoder struct {
 	// version is the file format version.
-	version uint32
+	version Version
 
 	// sync indicates whether the file uses sync markers.
 	sync bool
@@ -52,6 +53,8 @@ type PkgDecoder struct {
 	// For example, section K's end positions start at elemEndsEnds[K-1]
 	// (or 0, if K==0) and end at elemEndsEnds[K].
 	elemEndsEnds [numRelocs]uint32
+
+	scratchRelocEnt []RelocEnt
 }
 
 // PkgPath returns the package path for the package
@@ -65,8 +68,6 @@ func (pr *PkgDecoder) SyncMarkers() bool { return pr.sync }
 // NewPkgDecoder returns a PkgDecoder initialized to read the Unified
 // IR export data from input. pkgPath is the package path for the
 // compilation unit that produced the export data.
-//
-// TODO(mdempsky): Remove pkgPath parameter; unneeded since CL 391014.
 func NewPkgDecoder(pkgPath, input string) PkgDecoder {
 	pr := PkgDecoder{
 		pkgPath: pkgPath,
@@ -77,14 +78,15 @@ func NewPkgDecoder(pkgPath, input string) PkgDecoder {
 
 	r := strings.NewReader(input)
 
-	assert(binary.Read(r, binary.LittleEndian, &pr.version) == nil)
+	var ver uint32
+	assert(binary.Read(r, binary.LittleEndian, &ver) == nil)
+	pr.version = Version(ver)
 
-	switch pr.version {
-	default:
-		panic(fmt.Errorf("unsupported version: %v", pr.version))
-	case 0:
-		// no flags
-	case 1:
+	if pr.version >= numVersions {
+		panic(fmt.Errorf("cannot decode %q, export data version %d is greater than maximum supported version %d", pkgPath, pr.version, numVersions-1))
+	}
+
+	if pr.version.Has(Flags) {
 		var flags uint32
 		assert(binary.Read(r, binary.LittleEndian, &flags) == nil)
 		pr.sync = flags&flagSyncMarkers != 0
@@ -99,7 +101,9 @@ func NewPkgDecoder(pkgPath, input string) PkgDecoder {
 	assert(err == nil)
 
 	pr.elemData = input[pos:]
-	assert(len(pr.elemData)-8 == int(pr.elemEnds[len(pr.elemEnds)-1]))
+
+	const fingerprintSize = 8
+	assert(len(pr.elemData)-fingerprintSize == int(pr.elemEnds[len(pr.elemEnds)-1]))
 
 	return pr
 }
@@ -133,7 +137,7 @@ func (pr *PkgDecoder) AbsIdx(k RelocKind, idx Index) int {
 		absIdx += int(pr.elemEndsEnds[k-1])
 	}
 	if absIdx >= int(pr.elemEndsEnds[k]) {
-		errorf("%v:%v is out of bounds; %v", k, idx, pr.elemEndsEnds)
+		panicf("%v:%v is out of bounds; %v", k, idx, pr.elemEndsEnds)
 	}
 	return absIdx
 }
@@ -165,6 +169,21 @@ func (pr *PkgDecoder) NewDecoder(k RelocKind, idx Index, marker SyncMarker) Deco
 	return r
 }
 
+// TempDecoder returns a Decoder for the given (section, index) pair,
+// and decodes the given SyncMarker from the element bitstream.
+// If possible the Decoder should be RetireDecoder'd when it is no longer
+// needed, this will avoid heap allocations.
+func (pr *PkgDecoder) TempDecoder(k RelocKind, idx Index, marker SyncMarker) Decoder {
+	r := pr.TempDecoderRaw(k, idx)
+	r.Sync(marker)
+	return r
+}
+
+func (pr *PkgDecoder) RetireDecoder(d *Decoder) {
+	pr.scratchRelocEnt = d.Relocs
+	d.Relocs = nil
+}
+
 // NewDecoderRaw returns a Decoder for the given (section, index) pair.
 //
 // Most callers should use NewDecoder instead.
@@ -175,11 +194,33 @@ func (pr *PkgDecoder) NewDecoderRaw(k RelocKind, idx Index) Decoder {
 		Idx:    idx,
 	}
 
-	// TODO(mdempsky) r.data.Reset(...) after #44505 is resolved.
-	r.Data = *strings.NewReader(pr.DataIdx(k, idx))
-
+	r.Data.Reset(pr.DataIdx(k, idx))
 	r.Sync(SyncRelocs)
 	r.Relocs = make([]RelocEnt, r.Len())
+	for i := range r.Relocs {
+		r.Sync(SyncReloc)
+		r.Relocs[i] = RelocEnt{RelocKind(r.Len()), Index(r.Len())}
+	}
+
+	return r
+}
+
+func (pr *PkgDecoder) TempDecoderRaw(k RelocKind, idx Index) Decoder {
+	r := Decoder{
+		common: pr,
+		k:      k,
+		Idx:    idx,
+	}
+
+	r.Data.Reset(pr.DataIdx(k, idx))
+	r.Sync(SyncRelocs)
+	l := r.Len()
+	if cap(pr.scratchRelocEnt) >= l {
+		r.Relocs = pr.scratchRelocEnt[:l]
+		pr.scratchRelocEnt = nil
+	} else {
+		r.Relocs = make([]RelocEnt, l)
+	}
 	for i := range r.Relocs {
 		r.Sync(SyncReloc)
 		r.Relocs[i] = RelocEnt{RelocKind(r.Len()), Index(r.Len())}
@@ -202,15 +243,43 @@ type Decoder struct {
 
 func (r *Decoder) checkErr(err error) {
 	if err != nil {
-		errorf("unexpected decoding error: %w", err)
+		panicf("unexpected decoding error: %w", err)
 	}
 }
 
 func (r *Decoder) rawUvarint() uint64 {
-	x, err := binary.ReadUvarint(&r.Data)
+	x, err := readUvarint(&r.Data)
 	r.checkErr(err)
 	return x
 }
+
+// readUvarint is a type-specialized copy of encoding/binary.ReadUvarint.
+// This avoids the interface conversion and thus has better escape properties,
+// which flows up the stack.
+func readUvarint(r *strings.Reader) (uint64, error) {
+	var x uint64
+	var s uint
+	for i := 0; i < binary.MaxVarintLen64; i++ {
+		b, err := r.ReadByte()
+		if err != nil {
+			if i > 0 && err == io.EOF {
+				err = io.ErrUnexpectedEOF
+			}
+			return x, err
+		}
+		if b < 0x80 {
+			if i == binary.MaxVarintLen64-1 && b > 1 {
+				return x, overflow
+			}
+			return x | uint64(b)<<s, nil
+		}
+		x |= uint64(b&0x7f) << s
+		s += 7
+	}
+	return x, overflow
+}
+
+var overflow = errors.New("pkgbits: readUvarint overflows a 64-bit integer")
 
 func (r *Decoder) rawVarint() int64 {
 	ux := r.rawUvarint()
@@ -303,7 +372,7 @@ func (r *Decoder) Int64() int64 {
 	return r.rawVarint()
 }
 
-// Int64 decodes and returns a uint64 value from the element bitstream.
+// Uint64 decodes and returns a uint64 value from the element bitstream.
 func (r *Decoder) Uint64() uint64 {
 	r.Sync(SyncUint64)
 	return r.rawUvarint()
@@ -410,8 +479,12 @@ func (r *Decoder) bigFloat() *big.Float {
 // PeekPkgPath returns the package path for the specified package
 // index.
 func (pr *PkgDecoder) PeekPkgPath(idx Index) string {
-	r := pr.NewDecoder(RelocPkg, idx, SyncPkgDef)
-	path := r.String()
+	var path string
+	{
+		r := pr.TempDecoder(RelocPkg, idx, SyncPkgDef)
+		path = r.String()
+		pr.RetireDecoder(&r)
+	}
 	if path == "" {
 		path = pr.pkgPath
 	}
@@ -421,14 +494,26 @@ func (pr *PkgDecoder) PeekPkgPath(idx Index) string {
 // PeekObj returns the package path, object name, and CodeObj for the
 // specified object index.
 func (pr *PkgDecoder) PeekObj(idx Index) (string, string, CodeObj) {
-	r := pr.NewDecoder(RelocName, idx, SyncObject1)
-	r.Sync(SyncSym)
-	r.Sync(SyncPkg)
-	path := pr.PeekPkgPath(r.Reloc(RelocPkg))
-	name := r.String()
+	var ridx Index
+	var name string
+	var rcode int
+	{
+		r := pr.TempDecoder(RelocName, idx, SyncObject1)
+		r.Sync(SyncSym)
+		r.Sync(SyncPkg)
+		ridx = r.Reloc(RelocPkg)
+		name = r.String()
+		rcode = r.Code(SyncCodeObj)
+		pr.RetireDecoder(&r)
+	}
+
+	path := pr.PeekPkgPath(ridx)
 	assert(name != "")
 
-	tag := CodeObj(r.Code(SyncCodeObj))
+	tag := CodeObj(rcode)
 
 	return path, name, tag
 }
+
+// Version reports the version of the bitstream.
+func (w *Decoder) Version() Version { return w.common.version }

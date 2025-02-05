@@ -4,16 +4,15 @@
 
 // Derived from go/internal/gcimporter/ureader.go
 
-//go:build go1.18
-// +build go1.18
-
 package gcimporter
 
 import (
+	"fmt"
 	"go/token"
 	"go/types"
-	"strings"
+	"sort"
 
+	"golang.org/x/tools/internal/aliases"
 	"golang.org/x/tools/internal/pkgbits"
 )
 
@@ -26,6 +25,7 @@ type pkgReader struct {
 
 	ctxt    *types.Context
 	imports map[string]*types.Package // previously imported packages, indexed by path
+	aliases bool                      // create types.Alias nodes
 
 	// lazily initialized arrays corresponding to the unified IR
 	// PosBase, Pkg, and Type sections, respectively.
@@ -51,8 +51,7 @@ func (pr *pkgReader) later(fn func()) {
 
 // See cmd/compile/internal/noder.derivedInfo.
 type derivedInfo struct {
-	idx    pkgbits.Index
-	needed bool
+	idx pkgbits.Index
 }
 
 // See cmd/compile/internal/noder.typeInfo.
@@ -62,8 +61,15 @@ type typeInfo struct {
 }
 
 func UImportData(fset *token.FileSet, imports map[string]*types.Package, data []byte, path string) (_ int, pkg *types.Package, err error) {
+	if !debug {
+		defer func() {
+			if x := recover(); x != nil {
+				err = fmt.Errorf("internal error in importing %q (%v); please report an issue", path, x)
+			}
+		}()
+	}
+
 	s := string(data)
-	s = s[:strings.LastIndex(s, "\n$$\n")]
 	input := pkgbits.NewPkgDecoder(path, s)
 	pkg = readUnifiedPackage(fset, nil, imports, input)
 	return
@@ -91,6 +97,7 @@ func readUnifiedPackage(fset *token.FileSet, ctxt *types.Context, imports map[st
 
 		ctxt:    ctxt,
 		imports: imports,
+		aliases: aliases.Enabled(),
 
 		posBases: make([]string, input.NumElems(pkgbits.RelocPosBase)),
 		pkgs:     make([]*types.Package, input.NumElems(pkgbits.RelocPkg)),
@@ -100,13 +107,17 @@ func readUnifiedPackage(fset *token.FileSet, ctxt *types.Context, imports map[st
 
 	r := pr.newReader(pkgbits.RelocMeta, pkgbits.PublicRootIdx, pkgbits.SyncPublic)
 	pkg := r.pkg()
-	r.Bool() // has init
+	if r.Version().Has(pkgbits.HasInit) {
+		r.Bool()
+	}
 
 	for i, n := 0, r.Len(); i < n; i++ {
 		// As if r.obj(), but avoiding the Scope.Lookup call,
 		// to avoid eager loading of imports.
 		r.Sync(pkgbits.SyncObject)
-		assert(!r.Bool())
+		if r.Version().Has(pkgbits.DerivedFuncInstance) {
+			assert(!r.Bool())
+		}
 		r.p.objIdx(r.Reloc(pkgbits.RelocObj))
 		assert(r.Len() == 0)
 	}
@@ -120,6 +131,16 @@ func readUnifiedPackage(fset *token.FileSet, ctxt *types.Context, imports map[st
 	for _, iface := range pr.ifaces {
 		iface.Complete()
 	}
+
+	// Imports() of pkg are all of the transitive packages that were loaded.
+	var imps []*types.Package
+	for _, imp := range pr.pkgs {
+		if imp != nil && imp != pkg {
+			imps = append(imps, imp)
+		}
+	}
+	sort.Sort(byPath(imps))
+	pkg.SetImports(imps)
 
 	pkg.MarkComplete()
 	return pkg
@@ -145,7 +166,7 @@ type readerDict struct {
 	// tparams is a slice of the constructed TypeParams for the element.
 	tparams []*types.TypeParam
 
-	// devived is a slice of types derived from tparams, which may be
+	// derived is a slice of types derived from tparams, which may be
 	// instantiated while reading the current element.
 	derived      []derivedInfo
 	derivedTypes []types.Type // lazily instantiated from derived
@@ -156,6 +177,17 @@ func (pr *pkgReader) newReader(k pkgbits.RelocKind, idx pkgbits.Index, marker pk
 		Decoder: pr.NewDecoder(k, idx, marker),
 		p:       pr,
 	}
+}
+
+func (pr *pkgReader) tempReader(k pkgbits.RelocKind, idx pkgbits.Index, marker pkgbits.SyncMarker) *reader {
+	return &reader{
+		Decoder: pr.TempDecoder(k, idx, marker),
+		p:       pr,
+	}
+}
+
+func (pr *pkgReader) retireReader(r *reader) {
+	pr.RetireDecoder(&r.Decoder)
 }
 
 // @@@ Positions
@@ -182,26 +214,29 @@ func (pr *pkgReader) posBaseIdx(idx pkgbits.Index) string {
 		return b
 	}
 
-	r := pr.newReader(pkgbits.RelocPosBase, idx, pkgbits.SyncPosBase)
+	var filename string
+	{
+		r := pr.tempReader(pkgbits.RelocPosBase, idx, pkgbits.SyncPosBase)
 
-	// Within types2, position bases have a lot more details (e.g.,
-	// keeping track of where //line directives appeared exactly).
-	//
-	// For go/types, we just track the file name.
+		// Within types2, position bases have a lot more details (e.g.,
+		// keeping track of where //line directives appeared exactly).
+		//
+		// For go/types, we just track the file name.
 
-	filename := r.String()
+		filename = r.String()
 
-	if r.Bool() { // file base
-		// Was: "b = token.NewTrimmedFileBase(filename, true)"
-	} else { // line base
-		pos := r.pos()
-		line := r.Uint()
-		col := r.Uint()
+		if r.Bool() { // file base
+			// Was: "b = token.NewTrimmedFileBase(filename, true)"
+		} else { // line base
+			pos := r.pos()
+			line := r.Uint()
+			col := r.Uint()
 
-		// Was: "b = token.NewLineBase(pos, filename, true, line, col)"
-		_, _, _ = pos, line, col
+			// Was: "b = token.NewLineBase(pos, filename, true, line, col)"
+			_, _, _ = pos, line, col
+		}
+		pr.retireReader(r)
 	}
-
 	b := filename
 	pr.posBases[idx] = b
 	return b
@@ -229,7 +264,12 @@ func (pr *pkgReader) pkgIdx(idx pkgbits.Index) *types.Package {
 func (r *reader) doPkg() *types.Package {
 	path := r.String()
 	switch path {
-	case "":
+	// cmd/compile emits path="main" for main packages because
+	// that's the linker symbol prefix it used; but we need
+	// the package's path as it would be reported by go list,
+	// hence "main" below.
+	// See test at go/packages.TestMainPackagePathInModeTypes.
+	case "", "main":
 		path = r.p.PkgPath()
 	case "builtin":
 		return nil // universe
@@ -246,37 +286,7 @@ func (r *reader) doPkg() *types.Package {
 	pkg := types.NewPackage(path, name)
 	r.p.imports[path] = pkg
 
-	imports := make([]*types.Package, r.Len())
-	for i := range imports {
-		imports[i] = r.pkg()
-	}
-	pkg.SetImports(flattenImports(imports))
-
 	return pkg
-}
-
-// flattenImports returns the transitive closure of all imported
-// packages rooted from pkgs.
-func flattenImports(pkgs []*types.Package) []*types.Package {
-	var res []*types.Package
-
-	seen := make(map[*types.Package]bool)
-	var add func(pkg *types.Package)
-	add = func(pkg *types.Package) {
-		if seen[pkg] {
-			return
-		}
-		seen[pkg] = true
-		res = append(res, pkg)
-		for _, imp := range pkg.Imports() {
-			add(imp)
-		}
-	}
-
-	for _, pkg := range pkgs {
-		add(pkg)
-	}
-	return res
 }
 
 // @@@ Types
@@ -307,12 +317,15 @@ func (pr *pkgReader) typIdx(info typeInfo, dict *readerDict) types.Type {
 		return typ
 	}
 
-	r := pr.newReader(pkgbits.RelocType, idx, pkgbits.SyncTypeIdx)
-	r.dict = dict
+	var typ types.Type
+	{
+		r := pr.tempReader(pkgbits.RelocType, idx, pkgbits.SyncTypeIdx)
+		r.dict = dict
 
-	typ := r.doTyp()
-	assert(typ != nil)
-
+		typ = r.doTyp()
+		assert(typ != nil)
+		pr.retireReader(r)
+	}
 	// See comment in pkgReader.typIdx explaining how this happens.
 	if prev := *where; prev != nil {
 		return prev
@@ -464,7 +477,9 @@ func (r *reader) param() *types.Var {
 func (r *reader) obj() (types.Object, []types.Type) {
 	r.Sync(pkgbits.SyncObject)
 
-	assert(!r.Bool())
+	if r.Version().Has(pkgbits.DerivedFuncInstance) {
+		assert(!r.Bool())
+	}
 
 	pkg, name := r.p.objIdx(r.Reloc(pkgbits.RelocObj))
 	obj := pkgScope(pkg).Lookup(name)
@@ -478,12 +493,19 @@ func (r *reader) obj() (types.Object, []types.Type) {
 }
 
 func (pr *pkgReader) objIdx(idx pkgbits.Index) (*types.Package, string) {
-	rname := pr.newReader(pkgbits.RelocName, idx, pkgbits.SyncObject1)
 
-	objPkg, objName := rname.qualifiedIdent()
-	assert(objName != "")
+	var objPkg *types.Package
+	var objName string
+	var tag pkgbits.CodeObj
+	{
+		rname := pr.tempReader(pkgbits.RelocName, idx, pkgbits.SyncObject1)
 
-	tag := pkgbits.CodeObj(rname.Code(pkgbits.SyncCodeObj))
+		objPkg, objName = rname.qualifiedIdent()
+		assert(objName != "")
+
+		tag = pkgbits.CodeObj(rname.Code(pkgbits.SyncCodeObj))
+		pr.retireReader(rname)
+	}
 
 	if tag == pkgbits.ObjStub {
 		assert(objPkg == nil || objPkg == types.Unsafe)
@@ -511,8 +533,12 @@ func (pr *pkgReader) objIdx(idx pkgbits.Index) (*types.Package, string) {
 
 		case pkgbits.ObjAlias:
 			pos := r.pos()
+			var tparams []*types.TypeParam
+			if r.Version().Has(pkgbits.AliasTypeParamNames) {
+				tparams = r.typeParamNames()
+			}
 			typ := r.typ()
-			declare(types.NewTypeName(pos, objPkg, objName, typ))
+			declare(aliases.NewAlias(r.p.aliases, pos, objPkg, objName, typ, tparams))
 
 		case pkgbits.ObjConst:
 			pos := r.pos()
@@ -535,22 +561,11 @@ func (pr *pkgReader) objIdx(idx pkgbits.Index) (*types.Package, string) {
 
 			named.SetTypeParams(r.typeParamNames())
 
-			rhs := r.typ()
-			pk := r.p
-			pk.laterFor(named, func() {
-				// First be sure that the rhs is initialized, if it needs to be initialized.
-				delete(pk.laterFors, named) // prevent cycles
-				if i, ok := pk.laterFors[rhs]; ok {
-					f := pk.laterFns[i]
-					pk.laterFns[i] = func() {} // function is running now, so replace it with a no-op
-					f()                        // initialize RHS
-				}
-				underlying := rhs.Underlying()
-
+			setUnderlying := func(underlying types.Type) {
 				// If the underlying type is an interface, we need to
 				// duplicate its methods so we can replace the receiver
 				// parameter's type (#49906).
-				if iface, ok := underlying.(*types.Interface); ok && iface.NumExplicitMethods() != 0 {
+				if iface, ok := types.Unalias(underlying).(*types.Interface); ok && iface.NumExplicitMethods() != 0 {
 					methods := make([]*types.Func, iface.NumExplicitMethods())
 					for i := range methods {
 						fn := iface.ExplicitMethod(i)
@@ -571,7 +586,31 @@ func (pr *pkgReader) objIdx(idx pkgbits.Index) (*types.Package, string) {
 				}
 
 				named.SetUnderlying(underlying)
-			})
+			}
+
+			// Since go.dev/cl/455279, we can assume rhs.Underlying() will
+			// always be non-nil. However, to temporarily support users of
+			// older snapshot releases, we continue to fallback to the old
+			// behavior for now.
+			//
+			// TODO(mdempsky): Remove fallback code and simplify after
+			// allowing time for snapshot users to upgrade.
+			rhs := r.typ()
+			if underlying := rhs.Underlying(); underlying != nil {
+				setUnderlying(underlying)
+			} else {
+				pk := r.p
+				pk.laterFor(named, func() {
+					// First be sure that the rhs is initialized, if it needs to be initialized.
+					delete(pk.laterFors, named) // prevent cycles
+					if i, ok := pk.laterFors[rhs]; ok {
+						f := pk.laterFns[i]
+						pk.laterFns[i] = func() {} // function is running now, so replace it with a no-op
+						f()                        // initialize RHS
+					}
+					setUnderlying(rhs.Underlying())
+				})
+			}
 
 			for i, n := 0, r.Len(); i < n; i++ {
 				named.AddMethod(r.method())
@@ -588,25 +627,31 @@ func (pr *pkgReader) objIdx(idx pkgbits.Index) (*types.Package, string) {
 }
 
 func (pr *pkgReader) objDictIdx(idx pkgbits.Index) *readerDict {
-	r := pr.newReader(pkgbits.RelocObjDict, idx, pkgbits.SyncObject1)
 
 	var dict readerDict
 
-	if implicits := r.Len(); implicits != 0 {
-		errorf("unexpected object with %v implicit type parameter(s)", implicits)
-	}
+	{
+		r := pr.tempReader(pkgbits.RelocObjDict, idx, pkgbits.SyncObject1)
+		if implicits := r.Len(); implicits != 0 {
+			errorf("unexpected object with %v implicit type parameter(s)", implicits)
+		}
 
-	dict.bounds = make([]typeInfo, r.Len())
-	for i := range dict.bounds {
-		dict.bounds[i] = r.typInfo()
-	}
+		dict.bounds = make([]typeInfo, r.Len())
+		for i := range dict.bounds {
+			dict.bounds[i] = r.typInfo()
+		}
 
-	dict.derived = make([]derivedInfo, r.Len())
-	dict.derivedTypes = make([]types.Type, len(dict.derived))
-	for i := range dict.derived {
-		dict.derived[i] = derivedInfo{r.Reloc(pkgbits.RelocType), r.Bool()}
-	}
+		dict.derived = make([]derivedInfo, r.Len())
+		dict.derivedTypes = make([]types.Type, len(dict.derived))
+		for i := range dict.derived {
+			dict.derived[i] = derivedInfo{idx: r.Reloc(pkgbits.RelocType)}
+			if r.Version().Has(pkgbits.DerivedInfoNeeded) {
+				assert(!r.Bool())
+			}
+		}
 
+		pr.retireReader(r)
+	}
 	// function references follow, but reader doesn't need those
 
 	return &dict
@@ -695,4 +740,18 @@ func pkgScope(pkg *types.Package) *types.Scope {
 		return pkg.Scope()
 	}
 	return types.Universe
+}
+
+// See cmd/compile/internal/types.SplitVargenSuffix.
+func splitVargenSuffix(name string) (base, suffix string) {
+	i := len(name)
+	for i > 0 && name[i-1] >= '0' && name[i-1] <= '9' {
+		i--
+	}
+	const dot = "·"
+	if i >= len(dot) && name[i-len(dot):i] == dot {
+		i -= len(dot)
+		return name[:i], name[i:]
+	}
+	return name, ""
 }
