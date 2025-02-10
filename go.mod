@@ -9,7 +9,7 @@ require (
 	github.com/go-logr/logr v1.2.4
 	github.com/stretchr/testify v1.8.4
 	golang.org/x/tools v0.16.1 // indirect
-	k8s.io/api v0.26.10
+	k8s.io/api v0.26.15
 	k8s.io/apimachinery v0.27.16
 	k8s.io/client-go v0.26.10
 	k8s.io/code-generator v0.27.16
