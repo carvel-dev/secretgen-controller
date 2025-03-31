@@ -1,10 +1,11 @@
 module carvel.dev/secretgen-controller
 
 go 1.23.3
+toolchain go1.24.1
 
 require (
-	github.com/cloudfoundry/bosh-utils v0.0.534 // indirect
-	github.com/cloudfoundry/config-server v0.1.237
+	github.com/cloudfoundry/bosh-utils v0.0.538 // indirect
+	github.com/cloudfoundry/config-server v0.1.240
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-logr/logr v1.4.2
 	github.com/stretchr/testify v1.10.0
