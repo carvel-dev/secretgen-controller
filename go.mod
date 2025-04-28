@@ -4,7 +4,7 @@ go 1.23.3
 
 require (
 	github.com/cloudfoundry/bosh-utils v0.0.538 // indirect
-	github.com/cloudfoundry/config-server v0.1.246
+	github.com/cloudfoundry/config-server v0.1.247
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-logr/logr v1.4.2
 	github.com/stretchr/testify v1.10.0
