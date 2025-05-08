@@ -58,8 +58,8 @@ github.com/chzyer/test v0.0.0-20180213035817-a1ea475d72b1/go.mod h1:Q3SI9o4m/ZMn
 github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDkc90ppPyw=
 github.com/cloudfoundry/bosh-utils v0.0.538 h1:5J99nCN0NynRK9lUcIAXeswW4pv2bkhyLLevajjHb/s=
 github.com/cloudfoundry/bosh-utils v0.0.538/go.mod h1:ohCt2Llxkj8/sgG3zipUhpHdB2bYgwCcFTzkkRNDpo8=
-github.com/cloudfoundry/config-server v0.1.246 h1:ejRI1QdICIU7xRy3fINB4AgTIzsFWexuG4KjVkc22MY=
-github.com/cloudfoundry/config-server v0.1.246/go.mod h1:NIpwynSOb2ehF/Cj2SL9XIaDti6TvBVB4hr45DaEO3s=
+github.com/cloudfoundry/config-server v0.1.247 h1:iXh0Meh2j74/oOrI2lYGqRIPq/3XeP+f1g+5aNGK3d0=
+github.com/cloudfoundry/config-server v0.1.247/go.mod h1:ZgXw9VfDKqI+fxKh+3wyjriLlN9FidB13dWScqyg+1Y=
 github.com/cncf/udpa/go v0.0.0-20191209042840-269d4d468f6f/go.mod h1:M8M6+tZqaGXZJjfX53e64911xZQV5JYwmTeXPW+k8Sc=
 github.com/cncf/udpa/go v0.0.0-20201120205902-5459f2c99403/go.mod h1:WmhPx2Nbnhtbo57+VJT5O0JRkEi1Wbu0z5j0R8u5Hbk=
 github.com/cncf/xds/go v0.0.0-20210312221358-fbca930ec8ed/go.mod h1:eXthEFrGJvWHgFFCl3hGmgk+/aYT6PnTQLykKQRLhEs=
@@ -181,8 +181,8 @@ github.com/google/pprof v0.0.0-20200212024743-f11f1df84d12/go.mod h1:ZgVRPoUq/hf
 github.com/google/pprof v0.0.0-20200229191704-1ebb73c60ed3/go.mod h1:ZgVRPoUq/hfqzAqh7sHMqb3I9Rq5C59dIz2SbBwJ4eM=
 github.com/google/pprof v0.0.0-20200430221834-fc25d7d30c6d/go.mod h1:ZgVRPoUq/hfqzAqh7sHMqb3I9Rq5C59dIz2SbBwJ4eM=
 github.com/google/pprof v0.0.0-20200708004538-1a94d8640e99/go.mod h1:ZgVRPoUq/hfqzAqh7sHMqb3I9Rq5C59dIz2SbBwJ4eM=
-github.com/google/pprof v0.0.0-20250418163039-24c5476c6587 h1:b/8HpQhvKLSNzH5oTXN2WkNcMl6YB5K3FRbb+i+Ml34=
-github.com/google/pprof v0.0.0-20250418163039-24c5476c6587/go.mod h1:boTsfXsheKC2y+lKOCMpSfarhxDeIzfZG1jqGcPl3cA=
+github.com/google/pprof v0.0.0-20250423184734-337e5dd93bb4 h1:gD0vax+4I+mAj+jEChEf25Ia07Jq7kYOFO5PPhAxFl4=
+github.com/google/pprof v0.0.0-20250423184734-337e5dd93bb4/go.mod h1:5hDyRhoBCxViHszMt12TnOpEI4VVi+U8Gm9iphldiMA=
 github.com/google/renameio v0.1.0/go.mod h1:KWCgfxg9yswjAJkECMjeO8J8rahYeXnNhOm40UhjYkI=
 github.com/google/uuid v1.1.2/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
 github.com/google/uuid v1.3.0 h1:t6JiXgmwXMjEs8VusXIJk2BXHsn+wx8BZdTaoZ5fu7I=
