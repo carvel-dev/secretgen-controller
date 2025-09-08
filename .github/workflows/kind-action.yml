@@ -17,11 +17,25 @@ jobs:
   run-tests:
     name: e2e tests on kind
     runs-on: ubuntu-latest
+    env:
+      KIND_CLUSTER_NAME: kinder
+      K8S_VERSION: v1.34.0
     steps:
-      - name: Create k8s Kind Cluster
-        uses: helm/kind-action@v1
-        with:
-          cluster_name: kinder
+      - name: Install kind
+        run: |
+          KIND_VERSION="v0.30.0"
+          curl -Lo ./kind https://kind.sigs.k8s.io/dl/${KIND_VERSION}/kind-linux-amd64
+          chmod +x ./kind
+          sudo mv ./kind /usr/local/bin/kind
+          kind --version
+      - name: Create Kind Cluster
+        run: |
+          kind create cluster --name $KIND_CLUSTER_NAME --image kindest/node:${K8S_VERSION}
+      - name: Verify kind and k8s version
+        run: |
+          kind version
+          kubectl version
+          kubectl cluster-info --context kind-kinder
       - name: Check out code into the Go module directory
         uses: actions/checkout@v4
         with:
@@ -35,9 +49,9 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           only: ytt, kapp, kbld
-          ytt: v0.45.4
-          kapp: v0.58.0
-          kbld: v0.37.5
+          ytt: v0.52.0
+          kapp: v0.64.2
+          kbld: v0.46.0
       # Run benchmark with `go test -bench` and stores the output to a file
       - name: Install sg and run e2e tests on kind
         run: |
