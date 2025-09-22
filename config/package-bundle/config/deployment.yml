@@ -32,7 +32,7 @@ spec:
         image: secretgen-controller
         resources:
           requests:
-            cpu: 120m
+            cpu: 50m
             memory: 100Mi
         securityContext:
           allowPrivilegeEscalation: false
