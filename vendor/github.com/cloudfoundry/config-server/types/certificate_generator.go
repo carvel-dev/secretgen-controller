@@ -187,7 +187,7 @@ func generateCertTemplate(cParams certParams) (x509.Certificate, error) {
 	template := x509.Certificate{
 		SerialNumber: serialNumber,
 		Subject: pkix.Name{
-			Country:      []string{"USA"},
+			Country:      []string{"US"},
 			Organization: organizations,
 			CommonName:   cParams.CommonName,
 		},
