@@ -21,7 +21,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Install Go
+      - name: Install + Setup Go
         uses: actions/setup-go@v5
         with:
           go-version-file: go.mod

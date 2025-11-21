@@ -1,6 +1,6 @@
 module carvel.dev/secretgen-controller
 
-go 1.24.9
+go 1.24.10
 
 require (
 	github.com/cloudfoundry/bosh-utils v0.0.538 // indirect
