@@ -21,12 +21,12 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Set up Go 1.x
+      - name: Install + Setup Go
         uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v3.4.0
+        uses: golangci/golangci-lint-action@v6
         with:
-          version: v1.52.2
+          version: v1.64
           args: -v

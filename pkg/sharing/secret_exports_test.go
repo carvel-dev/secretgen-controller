@@ -178,7 +178,7 @@ func TestSecretExports(t *testing.T) {
 			se.MatchedSecretsForImport(sharing.SecretMatcher{
 				ToNamespace: "dst-ns",
 				SecretType:  corev1.SecretType("Opaque"),
-			}, func(ns string) bool { return true }))
+			}, func(_ string) bool { return true }))
 	})
 
 	t.Run("returns secrets in specific order (last secret is most preferred)", func(t *testing.T) {
