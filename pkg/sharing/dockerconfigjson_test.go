@@ -63,4 +63,28 @@ func Test_NewCombinedDockerConfigJSON(t *testing.T) {
 		assert.Equal(t, 1, len(result))
 		assert.Equal(t, expected, result[corev1.DockerConfigJsonKey])
 	})
+
+	t.Run("skips entries with no auth data", func(t *testing.T) {
+		// Secret with 1 valid and 1 empty auths
+		secrets := []*corev1.Secret{
+			&corev1.Secret{
+				Data: map[string][]byte{
+					corev1.DockerConfigJsonKey: []byte(`{"auths":{"valid-server1":{"username":"user1","password":"pass1","auth":"auth1"},"empty-server1":{"username":"","password":"","auth":""}}}`),
+				},
+			},
+			// Another Secret with 1 valid and 1 empty auths
+			&corev1.Secret{
+				Data: map[string][]byte{
+					corev1.DockerConfigJsonKey: []byte(`{"auths":{"valid-server2":{"username":"user2","password":"pass2","auth":"auth2"},"empty-server2":{"username":"","password":"","auth":""}}}`),
+				},
+			},
+		}
+		result, err := NewCombinedDockerConfigJSON(secrets)
+		require.NoError(t, err)
+
+		// Expected result should have only the valid auths
+		expected := []byte(`{"auths":{"valid-server1":{"username":"user1","password":"pass1","auth":"auth1"},"valid-server2":{"username":"user2","password":"pass2","auth":"auth2"}}}`)
+		assert.Equal(t, 1, len(result))
+		assert.Equal(t, expected, result[corev1.DockerConfigJsonKey])
+	})
 }
