@@ -43,6 +43,10 @@ func NewCombinedDockerConfigJSON(secrets []*corev1.Secret) (map[string][]byte, e
 
 		// TODO should we have more complex merging here?
 		for server, auth := range auths.Auths {
+			// Skip entries that have no auth data
+			if auth.Username == "" && auth.Password == "" && auth.Auth == "" {
+				continue
+			}
 			combined.Auths[server] = auth
 		}
 	}
