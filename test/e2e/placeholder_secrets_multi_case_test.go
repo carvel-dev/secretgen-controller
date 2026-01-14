@@ -360,15 +360,18 @@ data:
 
 	name := "test-placeholder-export-successful"
 	cleanUp := func() {
-		kapp.RunWithOpts([]string{"delete", "-a", name}, RunOpts{AllowError: true})
+		_, _ = kapp.RunWithOpts([]string{"delete", "-a", name}, RunOpts{AllowError: true})
 	}
 
 	cleanUp()
 	defer cleanUp()
 
 	logger.Section("Initial Deploy", func() {
-		kapp.RunWithOpts([]string{"deploy", "-f", "-", "-a", name},
+		_, err := kapp.RunWithOpts([]string{"deploy", "-f", "-", "-a", name},
 			RunOpts{StdinReader: strings.NewReader(yaml1)})
+		if err != nil {
+			t.Fatalf("Deploy failed: %v", err)
+		}
 	})
 
 	// both ns have the exclusion annotation, but sg-test3 is also named explicitly.

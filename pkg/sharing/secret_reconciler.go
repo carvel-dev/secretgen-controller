@@ -57,7 +57,7 @@ func (r *SecretReconciler) AttachWatches(controller controller.Controller) error
 		Log:           r.log,
 	})
 	if err != nil {
-		return fmt.Errorf("Watching secretExports: %s", err)
+		return fmt.Errorf("watching secretExports: %s", err)
 	}
 
 	// Watch namespaces partly so that we cache them because we migh be doing a lot of lookups

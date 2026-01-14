@@ -8,11 +8,11 @@ import (
 	"strings"
 	"testing"
 
+	sgv1alpha1 "carvel.dev/secretgen-controller/pkg/apis/secretgen/v1alpha1"
+	sg2v1alpha1 "carvel.dev/secretgen-controller/pkg/apis/secretgen2/v1alpha1"
 	"github.com/ghodss/yaml"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	sgv1alpha1 "carvel.dev/secretgen-controller/pkg/apis/secretgen/v1alpha1"
-	sg2v1alpha1 "carvel.dev/secretgen-controller/pkg/apis/secretgen2/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -72,15 +72,15 @@ stringData:
 
 	name := "test-secrettemplate-full-lifecycle"
 	cleanUp := func() {
-		kapp.RunWithOpts([]string{"delete", "-a", name + "-template"}, RunOpts{AllowError: true})
-		kapp.RunWithOpts([]string{"delete", "-a", name + "-inputs"}, RunOpts{AllowError: true})
+		_, _ = kapp.RunWithOpts([]string{"delete", "-a", name + "-template"}, RunOpts{AllowError: true})
+		_, _ = kapp.RunWithOpts([]string{"delete", "-a", name + "-inputs"}, RunOpts{AllowError: true})
 	}
 
 	cleanUp()
 	defer cleanUp()
 
 	logger.Section("Create Template", func() {
-		kapp.RunWithOpts([]string{"deploy", "-f", "-", "-a", name + "-template"},
+		_, _ = kapp.RunWithOpts([]string{"deploy", "-f", "-", "-a", name + "-template"},
 			RunOpts{StdinReader: strings.NewReader(testSecretTemplateYaml)})
 	})
 
@@ -100,7 +100,7 @@ stringData:
 	})
 
 	logger.Section("Create Input Resources", func() {
-		kapp.RunWithOpts([]string{"deploy", "-f", "-", "-a", name + "-inputs"},
+		_, _ = kapp.RunWithOpts([]string{"deploy", "-f", "-", "-a", name + "-inputs"},
 			RunOpts{StdinReader: strings.NewReader(testInputResourcesYaml)})
 	})
 
@@ -118,7 +118,7 @@ stringData:
 	})
 
 	logger.Section("Delete Input Resources", func() {
-		kapp.RunWithOpts([]string{"delete", "-a", name + "-inputs"}, RunOpts{AllowError: true})
+		_, _ = kapp.RunWithOpts([]string{"delete", "-a", name + "-inputs"}, RunOpts{AllowError: true})
 	})
 
 	logger.Section("Check template has ReconcileFailed but secret remains", func() {
@@ -223,14 +223,14 @@ spec:
 
 	name := "test-secrettemplate-service-account-successful"
 	cleanUp := func() {
-		kapp.RunWithOpts([]string{"delete", "-a", name}, RunOpts{AllowError: true})
+		_, _ = kapp.RunWithOpts([]string{"delete", "-a", name}, RunOpts{AllowError: true})
 	}
 
 	cleanUp()
 	defer cleanUp()
 
 	logger.Section("Deploy", func() {
-		kapp.RunWithOpts([]string{"deploy", "-f", "-", "-a", name},
+		_, _ = kapp.RunWithOpts([]string{"deploy", "-f", "-", "-a", name},
 			RunOpts{StdinReader: strings.NewReader(testYaml)})
 	})
 
@@ -323,14 +323,14 @@ spec:
 
 	name := "test-secrettemplate-service-account-failure"
 	cleanUp := func() {
-		kapp.RunWithOpts([]string{"delete", "-a", name}, RunOpts{AllowError: true})
+		_, _ = kapp.RunWithOpts([]string{"delete", "-a", name}, RunOpts{AllowError: true})
 	}
 
 	cleanUp()
 	defer cleanUp()
 
 	logger.Section("Deploy", func() {
-		kapp.RunWithOpts([]string{"deploy", "-f", "-", "-a", name},
+		_, _ = kapp.RunWithOpts([]string{"deploy", "-f", "-", "-a", name},
 			RunOpts{StdinReader: strings.NewReader(testYaml)})
 	})
 
@@ -354,7 +354,7 @@ func waitForSecretTemplate(t *testing.T, kubectl Kubectl, name string, condition
 	waitArgs := []string{"wait", fmt.Sprintf("--for=condition=%s=%s", condition.Type, condition.Status), "secrettemplate", name}
 	getArgs := []string{"get", "secrettemplate", name, "-o", "yaml"}
 
-	kubectl.RunWithOpts(waitArgs, RunOpts{AllowError: true})
+	_, _ = kubectl.RunWithOpts(waitArgs, RunOpts{AllowError: true})
 
 	out, err := kubectl.RunWithOpts(getArgs, RunOpts{AllowError: true})
 	if err == nil {

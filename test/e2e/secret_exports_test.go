@@ -416,7 +416,7 @@ stringData:
 
 	logger.Section("Delete export to see exported secrets deleted", func() {
 		for _, secretName := range []string{"secret", "secret-test5", "secret-test6", "secret-test7", "secret-test8"} {
-			kubectl.RunWithOpts([]string{"delete", "secretexport.secretgen.carvel.dev", secretName, "-n", "sg-test1"},
+			_, _ = kubectl.RunWithOpts([]string{"delete", "secretexport.secretgen.carvel.dev", secretName, "-n", "sg-test1"},
 				RunOpts{NoNamespace: true})
 		}
 

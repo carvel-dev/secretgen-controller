@@ -45,9 +45,9 @@ type SelectorOperator string
 // SelectorOperator values
 const (
 	SelectorOperatorIn           SelectorOperator = "In"
-	SelectorOperatorNotIn                         = "NotIn"
-	SelectorOperatorExists                        = "Exists"
-	SelectorOperatorDoesNotExist                  = "DoesNotExist"
+	SelectorOperatorNotIn        SelectorOperator = "NotIn"
+	SelectorOperatorExists       SelectorOperator = "Exists"
+	SelectorOperatorDoesNotExist SelectorOperator = "DoesNotExist"
 )
 
 // SelectorMatchField is a selector field to match against namespace definition
@@ -91,22 +91,22 @@ func (e SecretExport) Validate() error {
 	toSmf := e.Spec.ToNamespacesSelector
 
 	if len(toNses) == 0 && len(toSmf) == 0 {
-		errs = append(errs, fmt.Errorf("Expected to have at least one non-empty to namespace or to namespace annotation"))
+		errs = append(errs, fmt.Errorf("expected to have at least one non-empty to namespace or to namespace annotation"))
 	}
 	for _, ns := range toNses {
 		if len(ns) == 0 {
-			errs = append(errs, fmt.Errorf("Expected to namespace to be non-empty"))
+			errs = append(errs, fmt.Errorf("expected to namespace to be non-empty"))
 		}
 	}
 	for _, s := range toSmf {
 		switch s.Operator {
 		case SelectorOperatorIn, SelectorOperatorNotIn:
 			if len(s.Values) == 0 {
-				errs = append(errs, fmt.Errorf("Values must be specified when `operator` is 'In' or 'NotIn'"))
+				errs = append(errs, fmt.Errorf("values must be specified when `operator` is 'In' or 'NotIn'"))
 			}
 		case SelectorOperatorExists, SelectorOperatorDoesNotExist:
 			if len(s.Values) > 0 {
-				errs = append(errs, fmt.Errorf("Values may not be specified when `operator` is 'Exists' or 'DoesNotExist'"))
+				errs = append(errs, fmt.Errorf("values may not be specified when `operator` is 'Exists' or 'DoesNotExist'"))
 			}
 		}
 	}

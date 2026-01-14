@@ -167,15 +167,18 @@ spec:
 
 	name := "test-length-password-template"
 	cleanUp := func() {
-		kapp.RunWithOpts([]string{"delete", "-a", name}, RunOpts{AllowError: true})
+		_, _ = kapp.RunWithOpts([]string{"delete", "-a", name}, RunOpts{AllowError: true})
 	}
 
 	cleanUp()
 	defer cleanUp()
 
 	logger.Section("Deploy", func() {
-		kapp.RunWithOpts([]string{"deploy", "-f", "-", "-a", name},
+		_, err := kapp.RunWithOpts([]string{"deploy", "-f", "-", "-a", name},
 			RunOpts{IntoNs: true, StdinReader: strings.NewReader(yaml1)})
+		if err != nil {
+			t.Fatalf("Deploy failed: %v", err)
+		}
 	})
 
 	logger.Section("Check secret", func() {
@@ -232,15 +235,18 @@ spec:
 
 	name := "test-complex-password-template"
 	cleanUp := func() {
-		kapp.RunWithOpts([]string{"delete", "-a", name}, RunOpts{AllowError: true})
+		_, _ = kapp.RunWithOpts([]string{"delete", "-a", name}, RunOpts{AllowError: true})
 	}
 
 	cleanUp()
 	defer cleanUp()
 
 	logger.Section("Deploy", func() {
-		kapp.RunWithOpts([]string{"deploy", "-f", "-", "-a", name},
+		_, err := kapp.RunWithOpts([]string{"deploy", "-f", "-", "-a", name},
 			RunOpts{IntoNs: true, StdinReader: strings.NewReader(yaml1)})
+		if err != nil {
+			t.Fatalf("Deploy failed: %v", err)
+		}
 	})
 
 	logger.Section("Check secret", func() {
@@ -294,15 +300,18 @@ spec:
 
 	name := "test-symbol-password-template"
 	cleanUp := func() {
-		kapp.RunWithOpts([]string{"delete", "-a", name}, RunOpts{AllowError: true})
+		_, _ = kapp.RunWithOpts([]string{"delete", "-a", name}, RunOpts{AllowError: true})
 	}
 
 	cleanUp()
 	defer cleanUp()
 
 	logger.Section("Deploy", func() {
-		kapp.RunWithOpts([]string{"deploy", "-f", "-", "-a", name},
+		_, err := kapp.RunWithOpts([]string{"deploy", "-f", "-", "-a", name},
 			RunOpts{IntoNs: true, StdinReader: strings.NewReader(yaml1)})
+		if err != nil {
+			t.Fatalf("Deploy failed: %v", err)
+		}
 	})
 
 	logger.Section("Check secret", func() {

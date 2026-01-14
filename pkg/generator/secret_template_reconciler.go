@@ -116,7 +116,7 @@ func (r *SecretTemplateReconciler) Reconcile(ctx context.Context, request reconc
 	}
 
 	status.SetReconciling(secretTemplate.ObjectMeta)
-	defer r.updateStatus(ctx, &secretTemplate)
+	defer func() { _ = r.updateStatus(ctx, &secretTemplate) }()
 
 	return status.WithReconcileCompleted(r.reconcile(ctx, &secretTemplate))
 }
@@ -144,8 +144,8 @@ func (r *SecretTemplateReconciler) reconcile(ctx context.Context, secretTemplate
 	if _, err = controllerutil.CreateOrUpdate(ctx, r.client, &secret, func() error {
 		secret.Data = evaluatedTemplateSecret.Data
 		secret.StringData = evaluatedTemplateSecret.StringData
-		secret.ObjectMeta.Annotations = evaluatedTemplateSecret.Annotations
-		secret.ObjectMeta.Labels = evaluatedTemplateSecret.Labels
+		secret.Annotations = evaluatedTemplateSecret.Annotations
+		secret.Labels = evaluatedTemplateSecret.Labels
 
 		// Secret Type is immutable, so cannot be updated. TODO what to do here?
 		secret.Type = evaluatedTemplateSecret.Type

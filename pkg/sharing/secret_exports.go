@@ -119,7 +119,14 @@ func (nm NamespacesMatcher) MatchNamespace(matcher SecretMatcher, log logr.Logge
 
 	jsonNsString, _ := json.Marshal(namespace)
 	var jsonNsObject interface{}
-	json.Unmarshal(jsonNsString, &jsonNsObject)
+	if uErr := json.Unmarshal(jsonNsString, &jsonNsObject); uErr != nil {
+		log.Error(uErr, "failed to unmarshal namespace JSON")
+		return false
+	}
+	if err != nil {
+		log.Error(err, fmt.Sprintf("failed to get namespace %s", nsName))
+		return false
+	}
 
 	if err != nil {
 		log.Error(err, fmt.Sprintf("failed to get namespace %s", nsName))
@@ -135,6 +142,9 @@ func (nm NamespacesMatcher) MatchNamespace(matcher SecretMatcher, log logr.Logge
 		}
 		var valueBuffer bytes.Buffer
 		err = jp.Execute(&valueBuffer, jsonNsObject)
+		if err != nil {
+			return false
+		}
 		value := valueBuffer.String()
 
 		switch s.Operator {

@@ -45,7 +45,7 @@ func TestSecretExports(t *testing.T) {
 			},
 		}
 
-		k8sClient := fakeClient.NewFakeClient(secret1, secret2, export1, export2)
+		k8sClient := fakeClient.NewClientBuilder().WithRuntimeObjects(secret1, secret2, export1, export2).Build()
 		se := sharing.NewSecretExports(k8sClient, logr.Discard())
 
 		se.Export(export1, secret1)
@@ -256,7 +256,7 @@ func TestSecretExports(t *testing.T) {
 			Spec: sg2v1alpha1.SecretExportSpec{ToNamespace: "dst-ns", ToNamespaces: []string{"*"}},
 		}
 
-		k8sClient := fakeClient.NewFakeClient(secret1, secret2, export1, export2)
+		k8sClient := fakeClient.NewClientBuilder().WithRuntimeObjects(secret1, secret2, export1, export2).Build()
 		se := sharing.NewSecretExports(k8sClient, logr.Discard())
 
 		// Wildcard ns match in same namespace

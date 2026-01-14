@@ -780,8 +780,12 @@ func configMap(name string, data map[string]string) *corev1.ConfigMap {
 }
 
 func newReconciler(objects ...client.Object) (secretTemplateReconciler *generator.SecretTemplateReconciler, k8sClient client.Client) {
-	sg2v1alpha1.AddToScheme(scheme.Scheme)
-	corev1.AddToScheme(scheme.Scheme)
+	if err := sg2v1alpha1.AddToScheme(scheme.Scheme); err != nil {
+		panic(err)
+	}
+	if err := corev1.AddToScheme(scheme.Scheme); err != nil {
+		panic(err)
+	}
 	testLogr := zap.New(zap.UseDevMode(true))
 	k8sClient = fakeClient.NewClientBuilder().WithObjects(objects...).WithScheme(scheme.Scheme).Build()
 

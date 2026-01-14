@@ -22,7 +22,9 @@ import (
 var testLogr logr.Logger
 
 func init() {
-	sg2v1alpha1.AddToScheme(scheme.Scheme)
+	if err := sg2v1alpha1.AddToScheme(scheme.Scheme); err != nil {
+		panic(err)
+	}
 	testLogr = zap.New(zap.UseDevMode(true))
 }
 

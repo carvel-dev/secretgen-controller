@@ -128,9 +128,9 @@ func Test_SecretReconciler_updatesStatus(t *testing.T) {
 
 		reload(t, &placeholderSecret, k8sClient)
 		assert.Equal(t, sourceSecret.Data[".dockerconfigjson"], placeholderSecret.Data[".dockerconfigjson"])
-		assert.NotNil(t, placeholderSecret.ObjectMeta.Annotations["secretgen.carvel.dev/status"])
+		assert.NotNil(t, placeholderSecret.Annotations["secretgen.carvel.dev/status"])
 		var observedStatus map[string]interface{}
-		require.NoError(t, json.Unmarshal([]byte(placeholderSecret.ObjectMeta.Annotations["secretgen.carvel.dev/status"]), &observedStatus))
+		require.NoError(t, json.Unmarshal([]byte(placeholderSecret.Annotations["secretgen.carvel.dev/status"]), &observedStatus))
 		expectedStatus := map[string]interface{}{"conditions": []interface{}{map[string]interface{}{"status": "True", "type": "ReconcileSucceeded"}}, "secretNames": []interface{}{"test-source/test-secret"}}
 		assert.Equal(t, expectedStatus, observedStatus)
 
@@ -154,9 +154,9 @@ func Test_SecretReconciler_updatesStatus(t *testing.T) {
 
 		reload(t, &placeholderSecret, k8sClient)
 		assert.Equal(t, originalPlaceholderData, placeholderSecret.Data[".dockerconfigjson"])
-		assert.NotNil(t, placeholderSecret.ObjectMeta.Annotations["secretgen.carvel.dev/status"])
+		assert.NotNil(t, placeholderSecret.Annotations["secretgen.carvel.dev/status"])
 		var observedStatus map[string]interface{}
-		require.NoError(t, json.Unmarshal([]byte(placeholderSecret.ObjectMeta.Annotations["secretgen.carvel.dev/status"]), &observedStatus))
+		require.NoError(t, json.Unmarshal([]byte(placeholderSecret.Annotations["secretgen.carvel.dev/status"]), &observedStatus))
 		expectedStatus := map[string]interface{}{"conditions": []interface{}{map[string]interface{}{"message": "Expected secret to have type=corev1.SecretTypeDockerConfigJson, but did not", "status": "True", "type": "ReconcileFailed"}}}
 		assert.Equal(t, expectedStatus, observedStatus)
 
@@ -180,9 +180,9 @@ func Test_SecretReconciler_updatesStatus(t *testing.T) {
 
 		reload(t, &placeholderSecret, k8sClient)
 		assert.Equal(t, originalPlaceholderData, placeholderSecret.Data[".dockerconfigjson"])
-		assert.NotNil(t, placeholderSecret.ObjectMeta.Annotations["secretgen.carvel.dev/status"])
+		assert.NotNil(t, placeholderSecret.Annotations["secretgen.carvel.dev/status"])
 		var observedStatus map[string]interface{}
-		require.NoError(t, json.Unmarshal([]byte(placeholderSecret.ObjectMeta.Annotations["secretgen.carvel.dev/status"]), &observedStatus))
+		require.NoError(t, json.Unmarshal([]byte(placeholderSecret.Annotations["secretgen.carvel.dev/status"]), &observedStatus))
 		// Note placeholder secret Status has no "secretNames" key
 		expectedStatus := map[string]interface{}{"conditions": []interface{}{map[string]interface{}{"status": "True", "type": "ReconcileSucceeded"}}}
 		assert.Equal(t, expectedStatus, observedStatus)
@@ -211,7 +211,7 @@ func Test_SecretReconciler_updatesStatus(t *testing.T) {
 		reload(t, &placeholderSecret, k8sClient)
 
 		var observedStatus map[string]interface{}
-		require.NoError(t, json.Unmarshal([]byte(placeholderSecret.ObjectMeta.Annotations["secretgen.carvel.dev/status"]), &observedStatus))
+		require.NoError(t, json.Unmarshal([]byte(placeholderSecret.Annotations["secretgen.carvel.dev/status"]), &observedStatus))
 		expectedStatus := map[string]interface{}{"conditions": []interface{}{map[string]interface{}{"status": "True", "type": "ReconcileSucceeded"}}, "secretNames": []interface{}{"test-source/test-secret", "test-source/test-secret-2"}}
 		assert.Equal(t, expectedStatus, observedStatus)
 		expectedData := []byte(`{"auths":{"server":{"username":"correctUser","password":"correctPassword","auth":"correctAuth"},"server2":{"username":"correctUser2","password":"correctPassword2","auth":"correctAuth2"}}}`)
@@ -219,7 +219,7 @@ func Test_SecretReconciler_updatesStatus(t *testing.T) {
 	})
 }
 func placeholderReconcilers(objects ...runtime.Object) (secretExportReconciler *sharing.SecretExportReconciler, secretReconciler *sharing.SecretReconciler, k8sClient client.Client) {
-	k8sClient = fakeClient.NewFakeClient(objects...)
+	k8sClient = fakeClient.NewClientBuilder().WithRuntimeObjects(objects...).Build()
 	secretExports := sharing.NewSecretExportsWarmedUp(sharing.NewSecretExports(k8sClient, testLogr))
 	secretExportReconciler = sharing.NewSecretExportReconciler(k8sClient, secretExports, testLogr)
 	secretExports.WarmUpFunc = secretExportReconciler.WarmUp
