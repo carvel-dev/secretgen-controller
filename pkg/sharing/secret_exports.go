@@ -143,7 +143,7 @@ func (nm NamespacesMatcher) MatchNamespace(matcher SecretMatcher, log logr.Logge
 		var valueBuffer bytes.Buffer
 		err = jp.Execute(&valueBuffer, jsonNsObject)
 		if err != nil {
-			return false
+			log.V(1).Info(fmt.Sprintf("jsonpath execution failed (key likely missing), using empty value: %v", err))
 		}
 		value := valueBuffer.String()
 
