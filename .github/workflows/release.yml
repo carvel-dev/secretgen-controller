@@ -28,12 +28,12 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           only: ytt, kapp, kbld, imgpkg, kctrl, vendir
-          ytt: v0.52.1
-          kapp: v0.64.2
-          kbld: v0.47.0
-          imgpkg: v0.47.0
-          kctrl: v0.59.0
-          vendir: v0.45.0
+          ytt: v0.53.0
+          kapp: v0.65.1
+          kbld: v0.47.1
+          imgpkg: v0.47.1
+          kctrl: v0.59.2
+          vendir: v0.45.1
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v2
         with:
