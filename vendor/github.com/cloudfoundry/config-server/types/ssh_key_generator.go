@@ -31,7 +31,7 @@ type SSHKey struct {
 func (g SSHKeyGenerator) Generate(parameters interface{}) (interface{}, error) {
 	priv, pub, err := g.generateRSAKeyPair()
 	if err != nil {
-		return nil, fmt.Errorf("Generating RSA key pair: %s", err)
+		return nil, fmt.Errorf("Generating RSA key pair: %s", err) //nolint:staticcheck
 	}
 
 	sshPubKey, err := ssh.NewPublicKey(pub)
