@@ -13,7 +13,7 @@ func NewMultiError(errors ...error) error {
 }
 
 func (e MultiError) Error() string {
-	errors := make([]string, len(e.Errors), len(e.Errors)) //nolint:gosimple
+	errors := make([]string, len(e.Errors))
 	for i, err := range e.Errors {
 		errors[i] = err.Error()
 	}

@@ -15,6 +15,10 @@ import (
 	"github.com/cloudfoundry/bosh-utils/errors"
 )
 
+const DefaultKeyLength = 3072
+
+var validKeyLengths = []int{2048, 3072, 4096}
+
 type CertificateGenerator struct {
 	loader CertsLoader
 }
@@ -34,6 +38,7 @@ type certParams struct {
 	CAName           string   `yaml:"ca"`
 	ExtKeyUsage      []string `yaml:"extended_key_usage"`
 	Duration         int64    `yaml:"duration"`
+	KeyLength        int      `yaml:"key_length"`
 }
 
 var supportedCertParameters = []string{
@@ -44,6 +49,7 @@ var supportedCertParameters = []string{
 	"ca",
 	"extended_key_usage",
 	"duration",
+	"key_length",
 }
 
 func NewCertificateGenerator(loader CertsLoader) CertificateGenerator {
@@ -69,7 +75,25 @@ func (cfg CertificateGenerator) bigIntHash(n *big.Int) []byte {
 func (cfg CertificateGenerator) generateCertificate(cParams certParams) (CertResponse, error) {
 	var certResponse CertResponse
 
-	privateKey, err := rsa.GenerateKey(rand.Reader, 3072)
+	keyLength := cParams.KeyLength
+	if keyLength == 0 {
+		keyLength = DefaultKeyLength
+	}
+
+	// Validate that key length is one of the standard RSA key sizes
+	isValid := false
+	for _, length := range validKeyLengths {
+		if keyLength == length {
+			isValid = true
+			break
+		}
+	}
+	if !isValid {
+		return certResponse, errors.Errorf("Invalid key_length: %d.  Must be one of: %v",
+			keyLength, validKeyLengths)
+	}
+
+	privateKey, err := rsa.GenerateKey(rand.Reader, keyLength)
 	if err != nil {
 		return certResponse, errors.WrapError(err, "Generating Key")
 	}
