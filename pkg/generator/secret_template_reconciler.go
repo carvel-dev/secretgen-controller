@@ -25,6 +25,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
@@ -61,15 +62,17 @@ func NewSecretTemplateReconciler(client client.Client, loader ClientLoader, secr
 }
 
 // AttachWatches adds starts watches this reconciler requires.
-func (r *SecretTemplateReconciler) AttachWatches(controller controller.Controller) error {
+func (r *SecretTemplateReconciler) AttachWatches(controller controller.Controller, mgr manager.Manager) error {
 	// Watch for changes to created Secrets
-	if err := controller.Watch(&source.Kind{Type: &corev1.Secret{}}, &handler.EnqueueRequestForOwner{OwnerType: &sg2v1alpha1.SecretTemplate{}}); err != nil {
+	if err := controller.Watch(source.Kind[client.Object](mgr.GetCache(), &corev1.Secret{},
+		handler.EnqueueRequestForOwner(mgr.GetScheme(), mgr.GetRESTMapper(), &sg2v1alpha1.SecretTemplate{}, handler.OnlyControllerOwner()),
+	)); err != nil {
 		return err
 	}
 
 	// Watch for secrets that are being Tracked
-	err := controller.Watch(&source.Kind{Type: &corev1.Secret{}}, handler.EnqueueRequestsFromMapFunc(
-		func(a client.Object) []reconcile.Request {
+	err := controller.Watch(source.Kind[client.Object](mgr.GetCache(), &corev1.Secret{}, handler.EnqueueRequestsFromMapFunc(
+		func(_ context.Context, a client.Object) []reconcile.Request {
 			var requests []reconcile.Request
 			secretKey := types.NamespacedName{Namespace: a.GetNamespace(), Name: a.GetName()}
 			for _, tracking := range r.secretTracker.GetTracking(secretKey) {
@@ -80,12 +83,12 @@ func (r *SecretTemplateReconciler) AttachWatches(controller controller.Controlle
 			}
 			return requests
 		},
-	))
+	)))
 	if err != nil {
 		return err
 	}
 
-	return controller.Watch(&source.Kind{Type: &sg2v1alpha1.SecretTemplate{}}, &handler.EnqueueRequestForObject{})
+	return controller.Watch(source.Kind[client.Object](mgr.GetCache(), &sg2v1alpha1.SecretTemplate{}, &handler.EnqueueRequestForObject{}))
 }
 
 // Reconcile is the entrypoint for incoming requests from k8s

@@ -445,6 +445,8 @@ func Test_SecretTemplate(t *testing.T) {
 			}, &actualSecret)
 			require.NoError(t, err)
 
+			actualSecret.TypeMeta = metav1.TypeMeta{}
+			tc.expectedSecret.TypeMeta = metav1.TypeMeta{}
 			assert.Equal(t, tc.expectedSecret, actualSecret)
 			assert.Equal(t, secretTemplate.GetName(), secretTemplate.Status.Secret.Name, "reference secret name incorrect")
 		})
@@ -783,7 +785,7 @@ func newReconciler(objects ...client.Object) (secretTemplateReconciler *generato
 	sg2v1alpha1.AddToScheme(scheme.Scheme)
 	corev1.AddToScheme(scheme.Scheme)
 	testLogr := zap.New(zap.UseDevMode(true))
-	k8sClient = fakeClient.NewClientBuilder().WithObjects(objects...).WithScheme(scheme.Scheme).Build()
+	k8sClient = fakeClient.NewClientBuilder().WithObjects(objects...).WithScheme(scheme.Scheme).WithStatusSubresource(&sg2v1alpha1.SecretTemplate{}).Build()
 
 	fakeClientLoader := fakeClientLoader{client: k8sClient}
 	secretTemplateReconciler = generator.NewSecretTemplateReconciler(k8sClient, &fakeClientLoader, tracker.NewTracker(), testLogr)

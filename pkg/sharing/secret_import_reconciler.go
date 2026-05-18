@@ -18,6 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
@@ -37,16 +38,16 @@ func NewSecretImportReconciler(client client.Client,
 	return &SecretImportReconciler{client, secretExports, log}
 }
 
-func (r *SecretImportReconciler) AttachWatches(controller controller.Controller) error {
-	err := controller.Watch(&source.Kind{Type: &sg2v1alpha1.SecretImport{}}, &handler.EnqueueRequestForObject{})
+func (r *SecretImportReconciler) AttachWatches(controller controller.Controller, mgr manager.Manager) error {
+	err := controller.Watch(source.Kind[client.Object](mgr.GetCache(), &sg2v1alpha1.SecretImport{}, &handler.EnqueueRequestForObject{}))
 	if err != nil {
 		return fmt.Errorf("Watching secret request: %s", err)
 	}
 
 	// Watch secrets and enqueue for same named SecretImport
 	// to make sure imported secret is up-to-date
-	err = controller.Watch(&source.Kind{Type: &corev1.Secret{}}, handler.EnqueueRequestsFromMapFunc(
-		func(a client.Object) []reconcile.Request {
+	err = controller.Watch(source.Kind[client.Object](mgr.GetCache(), &corev1.Secret{}, handler.EnqueueRequestsFromMapFunc(
+		func(_ context.Context, a client.Object) []reconcile.Request {
 			return []reconcile.Request{
 				{NamespacedName: types.NamespacedName{
 					Name:      a.GetName(),
@@ -54,18 +55,18 @@ func (r *SecretImportReconciler) AttachWatches(controller controller.Controller)
 				}},
 			}
 		},
-	))
+	)))
 	if err != nil {
 		return err
 	}
 
 	// Watch SecretExport and enqueue for related SecretImport
 	// based on export namespace configuration
-	err = controller.Watch(&source.Kind{Type: &sg2v1alpha1.SecretExport{}}, &enqueueSecretExportToSecret{
+	err = controller.Watch(source.Kind[client.Object](mgr.GetCache(), &sg2v1alpha1.SecretExport{}, &enqueueSecretExportToSecret{
 		SecretExports: r.secretExports,
 		Log:           r.log,
 
-		ToRequests: func(_ client.Object) []reconcile.Request {
+		ToRequests: func(_ context.Context, _ client.Object) []reconcile.Request {
 			var secretReqList sg2v1alpha1.SecretImportList
 
 			// TODO expensive call on every secret export update
@@ -91,20 +92,20 @@ func (r *SecretImportReconciler) AttachWatches(controller controller.Controller)
 
 			return result
 		},
-	})
+	}))
 	if err != nil {
 		return err
 	}
 
 	// Watch namespaces partly so that we cache them because we might be doing a lot of lookups
 	// note that for now we are using the same enqueueDueToNamespaceChange as the secretReconciler
-	return controller.Watch(&source.Kind{Type: &corev1.Namespace{}}, &enqueueDueToNamespaceChange{
+	return controller.Watch(source.Kind[client.Object](mgr.GetCache(), &corev1.Namespace{}, &enqueueDueToNamespaceChange{
 		ToRequests: r.mapNamespaceToSecretImports,
 		Log:        r.log,
-	})
+	}))
 }
 
-func (r *SecretImportReconciler) mapNamespaceToSecretImports(ns client.Object) []reconcile.Request {
+func (r *SecretImportReconciler) mapNamespaceToSecretImports(_ context.Context, ns client.Object) []reconcile.Request {
 	var secretImportList sg2v1alpha1.SecretImportList
 	err := r.client.List(context.Background(), &secretImportList, client.InNamespace(ns.GetName()))
 	if err != nil {
