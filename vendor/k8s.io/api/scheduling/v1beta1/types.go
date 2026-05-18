@@ -39,8 +39,9 @@ type PriorityClass struct {
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 
-	// The value of this priority class. This is the actual priority that pods
+	// value represents the integer value of this priority class. This is the actual priority that pods
 	// receive when they have the name of this class in their pod spec.
+	// +optional
 	Value int32 `json:"value" protobuf:"bytes,2,opt,name=value"`
 
 	// globalDefault specifies whether this PriorityClass should be considered as
@@ -56,7 +57,7 @@ type PriorityClass struct {
 	// +optional
 	Description string `json:"description,omitempty" protobuf:"bytes,4,opt,name=description"`
 
-	// PreemptionPolicy is the Policy for preempting pods with lower priority.
+	// preemptionPolicy is the Policy for preempting pods with lower priority.
 	// One of Never, PreemptLowerPriority.
 	// Defaults to PreemptLowerPriority if unset.
 	// +optional
