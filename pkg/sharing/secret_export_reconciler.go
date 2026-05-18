@@ -39,6 +39,7 @@ func NewSecretExportReconciler(client client.Client,
 	return &SecretExportReconciler{client, secretExports, log}
 }
 
+// AttachWatches adds starts watches this reconciler requires.
 func (r *SecretExportReconciler) AttachWatches(controller controller.Controller, mgr manager.Manager) error {
 	err := controller.Watch(source.Kind[client.Object](mgr.GetCache(), &sg2v1alpha1.SecretExport{}, &handler.EnqueueRequestForObject{}))
 	if err != nil {

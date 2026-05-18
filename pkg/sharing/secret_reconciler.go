@@ -46,6 +46,7 @@ func NewSecretReconciler(client client.Client,
 	return &SecretReconciler{client, secretExports, log}
 }
 
+// AttachWatches adds starts watches this reconciler requires.
 func (r *SecretReconciler) AttachWatches(controller controller.Controller, mgr manager.Manager) error {
 	err := controller.Watch(source.Kind[client.Object](mgr.GetCache(), &corev1.Secret{}, &handler.EnqueueRequestForObject{}))
 	if err != nil {

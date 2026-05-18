@@ -38,6 +38,7 @@ func NewSecretImportReconciler(client client.Client,
 	return &SecretImportReconciler{client, secretExports, log}
 }
 
+// AttachWatches adds starts watches this reconciler requires.
 func (r *SecretImportReconciler) AttachWatches(controller controller.Controller, mgr manager.Manager) error {
 	err := controller.Watch(source.Kind[client.Object](mgr.GetCache(), &sg2v1alpha1.SecretImport{}, &handler.EnqueueRequestForObject{}))
 	if err != nil {
