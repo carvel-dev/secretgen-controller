@@ -13,6 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 // makeNamespaceWildcardExclusionCheck returns a function that uses reconciler-level tools (k8s client, logger, context) to
@@ -48,30 +49,30 @@ type enqueueDueToNamespaceChange struct {
 }
 
 // Create doesn't do anything
-func (e *enqueueDueToNamespaceChange) Create(_ event.CreateEvent, _ workqueue.RateLimitingInterface) {
+func (e *enqueueDueToNamespaceChange) Create(_ context.Context, _ event.CreateEvent, _ workqueue.TypedRateLimitingInterface[reconcile.Request]) {
 }
 
 // Update checks whether the exclusion annotation has been added or removed and then queues the secrets in that namespace
-func (e *enqueueDueToNamespaceChange) Update(evt event.UpdateEvent, q workqueue.RateLimitingInterface) {
+func (e *enqueueDueToNamespaceChange) Update(ctx context.Context, evt event.UpdateEvent, q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
 	typedNsOld, okOld := evt.ObjectOld.(*corev1.Namespace)
 	typedNsNew, okNew := evt.ObjectNew.(*corev1.Namespace)
 	if okOld && okNew && (nsHasExclusionAnnotation(*typedNsOld) == nsHasExclusionAnnotation(*typedNsNew)) {
 		return // Skip when exclusion annotation did not change
 	}
 
-	e.mapAndEnqueue(q, evt.ObjectNew)
+	e.mapAndEnqueue(ctx, q, evt.ObjectNew)
 }
 
 // Delete doesn't do anything
-func (e *enqueueDueToNamespaceChange) Delete(_ event.DeleteEvent, _ workqueue.RateLimitingInterface) {
+func (e *enqueueDueToNamespaceChange) Delete(_ context.Context, _ event.DeleteEvent, _ workqueue.TypedRateLimitingInterface[reconcile.Request]) {
 }
 
 // Generic doesn't do anything
-func (e *enqueueDueToNamespaceChange) Generic(_ event.GenericEvent, _ workqueue.RateLimitingInterface) {
+func (e *enqueueDueToNamespaceChange) Generic(_ context.Context, _ event.GenericEvent, _ workqueue.TypedRateLimitingInterface[reconcile.Request]) {
 }
 
-func (e *enqueueDueToNamespaceChange) mapAndEnqueue(q workqueue.RateLimitingInterface, object client.Object) {
-	for _, req := range e.ToRequests(object) {
+func (e *enqueueDueToNamespaceChange) mapAndEnqueue(ctx context.Context, q workqueue.TypedRateLimitingInterface[reconcile.Request], object client.Object) {
+	for _, req := range e.ToRequests(ctx, object) {
 		q.Add(req)
 	}
 }

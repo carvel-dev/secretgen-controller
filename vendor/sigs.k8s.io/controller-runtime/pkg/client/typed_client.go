@@ -18,23 +18,24 @@ package client
 
 import (
 	"context"
+	"fmt"
 
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/json"
+	"k8s.io/client-go/util/apply"
 )
 
 var _ Reader = &typedClient{}
 var _ Writer = &typedClient{}
 
-// client is a client.Client that reads and writes directly from/to an API server.  It lazily initializes
-// new clients at the time they are used, and caches the client.
 type typedClient struct {
-	cache      *clientCache
+	resources  *clientRestResources
 	paramCodec runtime.ParameterCodec
 }
 
 // Create implements client.Client.
 func (c *typedClient) Create(ctx context.Context, obj Object, opts ...CreateOption) error {
-	o, err := c.cache.getObjMeta(obj)
+	o, err := c.resources.getObjMeta(obj)
 	if err != nil {
 		return err
 	}
@@ -43,7 +44,7 @@ func (c *typedClient) Create(ctx context.Context, obj Object, opts ...CreateOpti
 	createOpts.ApplyOptions(opts)
 
 	return o.Post().
-		NamespaceIfScoped(o.GetNamespace(), o.isNamespaced()).
+		NamespaceIfScoped(o.namespace, o.isNamespaced()).
 		Resource(o.resource()).
 		Body(obj).
 		VersionedParams(createOpts.AsCreateOptions(), c.paramCodec).
@@ -53,7 +54,7 @@ func (c *typedClient) Create(ctx context.Context, obj Object, opts ...CreateOpti
 
 // Update implements client.Client.
 func (c *typedClient) Update(ctx context.Context, obj Object, opts ...UpdateOption) error {
-	o, err := c.cache.getObjMeta(obj)
+	o, err := c.resources.getObjMeta(obj)
 	if err != nil {
 		return err
 	}
@@ -62,9 +63,9 @@ func (c *typedClient) Update(ctx context.Context, obj Object, opts ...UpdateOpti
 	updateOpts.ApplyOptions(opts)
 
 	return o.Put().
-		NamespaceIfScoped(o.GetNamespace(), o.isNamespaced()).
+		NamespaceIfScoped(o.namespace, o.isNamespaced()).
 		Resource(o.resource()).
-		Name(o.GetName()).
+		Name(o.name).
 		Body(obj).
 		VersionedParams(updateOpts.AsUpdateOptions(), c.paramCodec).
 		Do(ctx).
@@ -73,7 +74,7 @@ func (c *typedClient) Update(ctx context.Context, obj Object, opts ...UpdateOpti
 
 // Delete implements client.Client.
 func (c *typedClient) Delete(ctx context.Context, obj Object, opts ...DeleteOption) error {
-	o, err := c.cache.getObjMeta(obj)
+	o, err := c.resources.getObjMeta(obj)
 	if err != nil {
 		return err
 	}
@@ -82,9 +83,9 @@ func (c *typedClient) Delete(ctx context.Context, obj Object, opts ...DeleteOpti
 	deleteOpts.ApplyOptions(opts)
 
 	return o.Delete().
-		NamespaceIfScoped(o.GetNamespace(), o.isNamespaced()).
+		NamespaceIfScoped(o.namespace, o.isNamespaced()).
 		Resource(o.resource()).
-		Name(o.GetName()).
+		Name(o.name).
 		Body(deleteOpts.AsDeleteOptions()).
 		Do(ctx).
 		Error()
@@ -92,7 +93,7 @@ func (c *typedClient) Delete(ctx context.Context, obj Object, opts ...DeleteOpti
 
 // DeleteAllOf implements client.Client.
 func (c *typedClient) DeleteAllOf(ctx context.Context, obj Object, opts ...DeleteAllOfOption) error {
-	o, err := c.cache.getObjMeta(obj)
+	o, err := c.resources.getObjMeta(obj)
 	if err != nil {
 		return err
 	}
@@ -111,7 +112,7 @@ func (c *typedClient) DeleteAllOf(ctx context.Context, obj Object, opts ...Delet
 
 // Patch implements client.Client.
 func (c *typedClient) Patch(ctx context.Context, obj Object, patch Patch, opts ...PatchOption) error {
-	o, err := c.cache.getObjMeta(obj)
+	o, err := c.resources.getObjMeta(obj)
 	if err != nil {
 		return err
 	}
@@ -125,18 +126,55 @@ func (c *typedClient) Patch(ctx context.Context, obj Object, patch Patch, opts .
 	patchOpts.ApplyOptions(opts)
 
 	return o.Patch(patch.Type()).
-		NamespaceIfScoped(o.GetNamespace(), o.isNamespaced()).
+		NamespaceIfScoped(o.namespace, o.isNamespaced()).
 		Resource(o.resource()).
-		Name(o.GetName()).
+		Name(o.name).
 		VersionedParams(patchOpts.AsPatchOptions(), c.paramCodec).
 		Body(data).
 		Do(ctx).
 		Into(obj)
 }
 
+func (c *typedClient) Apply(ctx context.Context, obj runtime.ApplyConfiguration, opts ...ApplyOption) error {
+	o, err := c.resources.getObjMeta(obj)
+	if err != nil {
+		return err
+	}
+	req, err := apply.NewRequest(o, obj)
+	if err != nil {
+		return fmt.Errorf("failed to create apply request: %w", err)
+	}
+	applyOpts := &ApplyOptions{}
+	applyOpts.ApplyOptions(opts)
+
+	resp := req.
+		NamespaceIfScoped(o.namespace, o.isNamespaced()).
+		Resource(o.resource()).
+		Name(o.name).
+		VersionedParams(applyOpts.AsPatchOptions(), c.paramCodec).
+		Do(ctx)
+	if err := resp.Error(); err != nil {
+		return err
+	}
+
+	var contentType string
+	body, err := resp.
+		ContentType(&contentType).
+		Raw()
+	if err != nil {
+		return err
+	}
+
+	if contentType != "application/json" {
+		return fmt.Errorf("unexpected content type %q in apply response, expected application/json", contentType)
+	}
+
+	return json.Unmarshal(body, obj)
+}
+
 // Get implements client.Client.
 func (c *typedClient) Get(ctx context.Context, key ObjectKey, obj Object, opts ...GetOption) error {
-	r, err := c.cache.getResource(obj)
+	r, err := c.resources.getResource(obj)
 	if err != nil {
 		return err
 	}
@@ -151,7 +189,7 @@ func (c *typedClient) Get(ctx context.Context, key ObjectKey, obj Object, opts .
 
 // List implements client.Client.
 func (c *typedClient) List(ctx context.Context, obj ObjectList, opts ...ListOption) error {
-	r, err := c.cache.getResource(obj)
+	r, err := c.resources.getResource(obj)
 	if err != nil {
 		return err
 	}
@@ -168,7 +206,7 @@ func (c *typedClient) List(ctx context.Context, obj ObjectList, opts ...ListOpti
 }
 
 func (c *typedClient) GetSubResource(ctx context.Context, obj, subResourceObj Object, subResource string, opts ...SubResourceGetOption) error {
-	o, err := c.cache.getObjMeta(obj)
+	o, err := c.resources.getObjMeta(obj)
 	if err != nil {
 		return err
 	}
@@ -181,9 +219,9 @@ func (c *typedClient) GetSubResource(ctx context.Context, obj, subResourceObj Ob
 	getOpts.ApplyOptions(opts)
 
 	return o.Get().
-		NamespaceIfScoped(o.GetNamespace(), o.isNamespaced()).
+		NamespaceIfScoped(o.namespace, o.isNamespaced()).
 		Resource(o.resource()).
-		Name(o.GetName()).
+		Name(o.name).
 		SubResource(subResource).
 		VersionedParams(getOpts.AsGetOptions(), c.paramCodec).
 		Do(ctx).
@@ -191,7 +229,7 @@ func (c *typedClient) GetSubResource(ctx context.Context, obj, subResourceObj Ob
 }
 
 func (c *typedClient) CreateSubResource(ctx context.Context, obj Object, subResourceObj Object, subResource string, opts ...SubResourceCreateOption) error {
-	o, err := c.cache.getObjMeta(obj)
+	o, err := c.resources.getObjMeta(obj)
 	if err != nil {
 		return err
 	}
@@ -204,9 +242,9 @@ func (c *typedClient) CreateSubResource(ctx context.Context, obj Object, subReso
 	createOpts.ApplyOptions(opts)
 
 	return o.Post().
-		NamespaceIfScoped(o.GetNamespace(), o.isNamespaced()).
+		NamespaceIfScoped(o.namespace, o.isNamespaced()).
 		Resource(o.resource()).
-		Name(o.GetName()).
+		Name(o.name).
 		SubResource(subResource).
 		Body(subResourceObj).
 		VersionedParams(createOpts.AsCreateOptions(), c.paramCodec).
@@ -216,7 +254,7 @@ func (c *typedClient) CreateSubResource(ctx context.Context, obj Object, subReso
 
 // UpdateSubResource used by SubResourceWriter to write status.
 func (c *typedClient) UpdateSubResource(ctx context.Context, obj Object, subResource string, opts ...SubResourceUpdateOption) error {
-	o, err := c.cache.getObjMeta(obj)
+	o, err := c.resources.getObjMeta(obj)
 	if err != nil {
 		return err
 	}
@@ -239,9 +277,9 @@ func (c *typedClient) UpdateSubResource(ctx context.Context, obj Object, subReso
 	}
 
 	return o.Put().
-		NamespaceIfScoped(o.GetNamespace(), o.isNamespaced()).
+		NamespaceIfScoped(o.namespace, o.isNamespaced()).
 		Resource(o.resource()).
-		Name(o.GetName()).
+		Name(o.name).
 		SubResource(subResource).
 		Body(body).
 		VersionedParams(updateOpts.AsUpdateOptions(), c.paramCodec).
@@ -251,7 +289,7 @@ func (c *typedClient) UpdateSubResource(ctx context.Context, obj Object, subReso
 
 // PatchSubResource used by SubResourceWriter to write subresource.
 func (c *typedClient) PatchSubResource(ctx context.Context, obj Object, subResource string, patch Patch, opts ...SubResourcePatchOption) error {
-	o, err := c.cache.getObjMeta(obj)
+	o, err := c.resources.getObjMeta(obj)
 	if err != nil {
 		return err
 	}
@@ -270,12 +308,57 @@ func (c *typedClient) PatchSubResource(ctx context.Context, obj Object, subResou
 	}
 
 	return o.Patch(patch.Type()).
-		NamespaceIfScoped(o.GetNamespace(), o.isNamespaced()).
+		NamespaceIfScoped(o.namespace, o.isNamespaced()).
 		Resource(o.resource()).
-		Name(o.GetName()).
+		Name(o.name).
 		SubResource(subResource).
 		Body(data).
 		VersionedParams(patchOpts.AsPatchOptions(), c.paramCodec).
 		Do(ctx).
 		Into(body)
+}
+
+func (c *typedClient) ApplySubResource(ctx context.Context, obj runtime.ApplyConfiguration, subResource string, opts ...SubResourceApplyOption) error {
+	o, err := c.resources.getObjMeta(obj)
+	if err != nil {
+		return err
+	}
+
+	applyOpts := &SubResourceApplyOptions{}
+	applyOpts.ApplyOpts(opts)
+
+	body := obj
+	if applyOpts.SubResourceBody != nil {
+		body = applyOpts.SubResourceBody
+	}
+
+	req, err := apply.NewRequest(o, body)
+	if err != nil {
+		return fmt.Errorf("failed to create apply request: %w", err)
+	}
+
+	resp := req.
+		NamespaceIfScoped(o.namespace, o.isNamespaced()).
+		Resource(o.resource()).
+		Name(o.name).
+		SubResource(subResource).
+		VersionedParams(applyOpts.AsPatchOptions(), c.paramCodec).
+		Do(ctx)
+	if err := resp.Error(); err != nil {
+		return err
+	}
+
+	var contentType string
+	respBody, err := resp.
+		ContentType(&contentType).
+		Raw()
+	if err != nil {
+		return err
+	}
+
+	if contentType != "application/json" {
+		return fmt.Errorf("unexpected content type %q in apply response, expected application/json", contentType)
+	}
+
+	return json.Unmarshal(respBody, obj)
 }

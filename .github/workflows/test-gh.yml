@@ -27,7 +27,7 @@ jobs:
       with:
         fetch-depth: 0
     - name: Set up Go 
-      uses: actions/setup-go@v5
+      uses: actions/setup-go@v6
       with:
         go-version-file: go.mod
     - name: Resolve Kubernetes version
@@ -57,9 +57,9 @@ jobs:
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         only: ytt, kapp, kbld
-        ytt: v0.53.0
-        kapp: v0.65.1
-        kbld: v0.47.1
+        ytt: v0.55.0
+        kapp: v0.65.3
+        kbld: v0.48.0
     - name: Run Tests
       run: |
         set -e -x

@@ -148,11 +148,6 @@ type Options struct {
 	// DestWriter controls the destination of the log output.  Defaults to
 	// os.Stderr.
 	DestWriter io.Writer
-	// DestWritter controls the destination of the log output.  Defaults to
-	// os.Stderr.
-	//
-	// Deprecated: Use DestWriter instead
-	DestWritter io.Writer
 	// Level configures the verbosity of the logging.
 	// Defaults to Debug when Development is true and Info otherwise.
 	// A zap log level should be multiplied by -1 to get the logr verbosity.
@@ -174,11 +169,8 @@ type Options struct {
 
 // addDefaults adds defaults to the Options.
 func (o *Options) addDefaults() {
-	if o.DestWriter == nil && o.DestWritter == nil {
+	if o.DestWriter == nil {
 		o.DestWriter = os.Stderr
-	} else if o.DestWriter == nil && o.DestWritter != nil {
-		// while misspelled DestWritter is deprecated but still not removed
-		o.DestWriter = o.DestWritter
 	}
 
 	if o.Development {
@@ -255,7 +247,7 @@ func NewRaw(opts ...Opts) *zap.Logger {
 //     Development Mode defaults(encoder=consoleEncoder,logLevel=Debug,stackTraceLevel=Warn)
 //     Production Mode defaults(encoder=jsonEncoder,logLevel=Info,stackTraceLevel=Error)
 //   - zap-encoder: Zap log encoding (one of 'json' or 'console')
-//   - zap-log-level: Zap Level to configure the verbosity of logging. Can be one of 'debug', 'info', 'error',
+//   - zap-log-level: Zap Level to configure the verbosity of logging. Can be one of 'debug', 'info', 'error', 'panic'
 //     or any integer value > 0 which corresponds to custom debug levels of increasing verbosity").
 //   - zap-stacktrace-level: Zap Level at and above which stacktraces are captured (one of 'info', 'error' or 'panic')
 //   - zap-time-encoding: Zap time encoding (one of 'epoch', 'millis', 'nano', 'iso8601', 'rfc3339' or 'rfc3339nano'),
@@ -279,8 +271,8 @@ func (o *Options) BindFlags(fs *flag.FlagSet) {
 		o.Level = fromFlag
 	}
 	fs.Var(&levelVal, "zap-log-level",
-		"Zap Level to configure the verbosity of logging. Can be one of 'debug', 'info', 'error', "+
-			"or any integer value > 0 which corresponds to custom debug levels of increasing verbosity")
+		"Zap Level to configure the verbosity of logging. Can be one of 'debug', 'info', 'error', 'panic'"+
+			" or any integer value > 0 which corresponds to custom debug levels of increasing verbosity")
 
 	// Set the StrackTrace Level
 	var stackVal stackTraceFlag

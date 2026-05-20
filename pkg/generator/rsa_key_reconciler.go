@@ -16,8 +16,10 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
@@ -36,8 +38,8 @@ func NewRSAKeyReconciler(sgClient sgclient.Interface,
 }
 
 // AttachWatches adds starts watches this reconciler requires.
-func (r *RSAKeyReconciler) AttachWatches(controller controller.Controller) error {
-	return controller.Watch(&source.Kind{Type: &sgv1alpha1.RSAKey{}}, &handler.EnqueueRequestForObject{})
+func (r *RSAKeyReconciler) AttachWatches(controller controller.Controller, mgr manager.Manager) error {
+	return controller.Watch(source.Kind[client.Object](mgr.GetCache(), &sgv1alpha1.RSAKey{}, &handler.EnqueueRequestForObject{}))
 }
 
 // Reconcile is the entrypoint for incoming requests from k8s

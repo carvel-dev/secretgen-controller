@@ -23,6 +23,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
@@ -45,31 +46,32 @@ func NewSecretReconciler(client client.Client,
 	return &SecretReconciler{client, secretExports, log}
 }
 
-func (r *SecretReconciler) AttachWatches(controller controller.Controller) error {
-	err := controller.Watch(&source.Kind{Type: &corev1.Secret{}}, &handler.EnqueueRequestForObject{})
+// AttachWatches adds starts watches this reconciler requires.
+func (r *SecretReconciler) AttachWatches(controller controller.Controller, mgr manager.Manager) error {
+	err := controller.Watch(source.Kind[client.Object](mgr.GetCache(), &corev1.Secret{}, &handler.EnqueueRequestForObject{}))
 	if err != nil {
 		return fmt.Errorf("Watching secrets: %s", err)
 	}
 
-	err = controller.Watch(&source.Kind{Type: &sg2v1alpha1.SecretExport{}}, &enqueueSecretExportToSecret{
+	err = controller.Watch(source.Kind[client.Object](mgr.GetCache(), &sg2v1alpha1.SecretExport{}, &enqueueSecretExportToSecret{
 		SecretExports: r.secretExports,
 		ToRequests:    r.mapSecretExportToSecret,
 		Log:           r.log,
-	})
+	}))
 	if err != nil {
 		return fmt.Errorf("Watching secretExports: %s", err)
 	}
 
 	// Watch namespaces partly so that we cache them because we migh be doing a lot of lookups
 	// note that for now we are using the same enqueueDueToNamespaceChange as the secretImportReconciler
-	return controller.Watch(&source.Kind{Type: &corev1.Namespace{}}, &enqueueDueToNamespaceChange{
+	return controller.Watch(source.Kind[client.Object](mgr.GetCache(), &corev1.Namespace{}, &enqueueDueToNamespaceChange{
 		ToRequests: r.mapNamespaceToSecret,
 		Log:        r.log,
-	})
+	}))
 }
 
 // mapNamespaceToSecret implements the logic inside of the enqueueDueToNamespaceChange.mapAndEnqueue function.
-func (r *SecretReconciler) mapNamespaceToSecret(ns client.Object) []reconcile.Request {
+func (r *SecretReconciler) mapNamespaceToSecret(_ context.Context, ns client.Object) []reconcile.Request {
 	var secretList corev1.SecretList
 	err := r.client.List(context.Background(), &secretList, client.InNamespace(ns.GetName()))
 	if err != nil {
@@ -93,7 +95,7 @@ func (r *SecretReconciler) mapNamespaceToSecret(ns client.Object) []reconcile.Re
 	return result
 }
 
-func (r *SecretReconciler) mapSecretExportToSecret(_ client.Object) []reconcile.Request {
+func (r *SecretReconciler) mapSecretExportToSecret(_ context.Context, _ client.Object) []reconcile.Request {
 	var secretList corev1.SecretList
 
 	// TODO expensive call on every secret export update
@@ -252,22 +254,22 @@ type enqueueSecretExportToSecret struct {
 
 // Create does not do anything since SecretExport's status
 // will be updated when it's ready to be consumed
-func (e *enqueueSecretExportToSecret) Create(evt event.CreateEvent, q workqueue.RateLimitingInterface) {
+func (e *enqueueSecretExportToSecret) Create(_ context.Context, _ event.CreateEvent, _ workqueue.TypedRateLimitingInterface[reconcile.Request]) {
 }
 
 // Update only enqueues when SecretExport's status has changed
-func (e *enqueueSecretExportToSecret) Update(evt event.UpdateEvent, q workqueue.RateLimitingInterface) {
+func (e *enqueueSecretExportToSecret) Update(ctx context.Context, evt event.UpdateEvent, q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
 	typedExportOld, okOld := evt.ObjectOld.(*sg2v1alpha1.SecretExport)
 	typedExportNew, okNew := evt.ObjectNew.(*sg2v1alpha1.SecretExport)
 	if okOld && okNew && reflect.DeepEqual(typedExportOld.Status, typedExportNew.Status) {
 		e.Log.WithValues("request", types.NamespacedName{Namespace: typedExportOld.Namespace, Name: typedExportOld.Name}).Info("Skipping SecretExport update since status did not change")
 		return // Skip when status of SecretExport did not change
 	}
-	e.mapAndEnqueue(q, evt.ObjectNew)
+	e.mapAndEnqueue(ctx, q, evt.ObjectNew)
 }
 
 // Delete always enqueues but first clears the export cache
-func (e *enqueueSecretExportToSecret) Delete(evt event.DeleteEvent, q workqueue.RateLimitingInterface) {
+func (e *enqueueSecretExportToSecret) Delete(ctx context.Context, evt event.DeleteEvent, q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
 	// TODO this does not belong here from "layering" perspective
 	// however it's currently necessary because SecretReconciler
 	// may react to deleted secret export before SecretExports reconciler
@@ -278,15 +280,15 @@ func (e *enqueueSecretExportToSecret) Delete(evt event.DeleteEvent, q workqueue.
 			Namespace: evt.Object.GetNamespace(),
 		},
 	})
-	e.mapAndEnqueue(q, evt.Object)
+	e.mapAndEnqueue(ctx, q, evt.Object)
 }
 
 // Generic does not do anything
-func (e *enqueueSecretExportToSecret) Generic(evt event.GenericEvent, q workqueue.RateLimitingInterface) {
+func (e *enqueueSecretExportToSecret) Generic(_ context.Context, _ event.GenericEvent, _ workqueue.TypedRateLimitingInterface[reconcile.Request]) {
 }
 
-func (e *enqueueSecretExportToSecret) mapAndEnqueue(q workqueue.RateLimitingInterface, object client.Object) {
-	for _, req := range e.ToRequests(object) {
+func (e *enqueueSecretExportToSecret) mapAndEnqueue(ctx context.Context, q workqueue.TypedRateLimitingInterface[reconcile.Request], object client.Object) {
+	for _, req := range e.ToRequests(ctx, object) {
 		q.Add(req)
 	}
 }

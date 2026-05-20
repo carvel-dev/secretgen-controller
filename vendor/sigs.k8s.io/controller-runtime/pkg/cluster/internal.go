@@ -18,32 +18,28 @@ package cluster
 
 import (
 	"context"
+	"net/http"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/events"
 	"k8s.io/client-go/tools/record"
 
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	intrec "sigs.k8s.io/controller-runtime/pkg/internal/recorder"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 )
 
 type cluster struct {
 	// config is the rest.config used to talk to the apiserver.  Required.
 	config *rest.Config
 
-	// scheme is the scheme injected into Controllers, EventHandlers, Sources and Predicates.  Defaults
-	// to scheme.scheme.
-	scheme *runtime.Scheme
-
-	cache cache.Cache
-
-	// TODO(directxman12): Provide an escape hatch to get individual indexers
-	// client is the client injected into Controllers (and EventHandlers, Sources and Predicates).
-	client client.Client
+	httpClient *http.Client
+	scheme     *runtime.Scheme
+	cache      cache.Cache
+	client     client.Client
 
 	// apiReader is the reader that will make requests to the api server and not the cache.
 	apiReader client.Reader
@@ -64,30 +60,12 @@ type cluster struct {
 	logger logr.Logger
 }
 
-func (c *cluster) SetFields(i interface{}) error {
-	if _, err := inject.ConfigInto(c.config, i); err != nil {
-		return err
-	}
-	if _, err := inject.ClientInto(c.client, i); err != nil {
-		return err
-	}
-	if _, err := inject.APIReaderInto(c.apiReader, i); err != nil {
-		return err
-	}
-	if _, err := inject.SchemeInto(c.scheme, i); err != nil {
-		return err
-	}
-	if _, err := inject.CacheInto(c.cache, i); err != nil {
-		return err
-	}
-	if _, err := inject.MapperInto(c.mapper, i); err != nil {
-		return err
-	}
-	return nil
-}
-
 func (c *cluster) GetConfig() *rest.Config {
 	return c.config
+}
+
+func (c *cluster) GetHTTPClient() *http.Client {
+	return c.httpClient
 }
 
 func (c *cluster) GetClient() client.Client {
@@ -108,6 +86,10 @@ func (c *cluster) GetCache() cache.Cache {
 
 func (c *cluster) GetEventRecorderFor(name string) record.EventRecorder {
 	return c.recorderProvider.GetEventRecorderFor(name)
+}
+
+func (c *cluster) GetEventRecorder(name string) events.EventRecorder {
+	return c.recorderProvider.GetEventRecorder(name)
 }
 
 func (c *cluster) GetRESTMapper() meta.RESTMapper {

@@ -18,6 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
@@ -38,21 +39,22 @@ func NewSecretExportReconciler(client client.Client,
 	return &SecretExportReconciler{client, secretExports, log}
 }
 
-func (r *SecretExportReconciler) AttachWatches(controller controller.Controller) error {
-	err := controller.Watch(&source.Kind{Type: &sg2v1alpha1.SecretExport{}}, &handler.EnqueueRequestForObject{})
+// AttachWatches adds starts watches this reconciler requires.
+func (r *SecretExportReconciler) AttachWatches(controller controller.Controller, mgr manager.Manager) error {
+	err := controller.Watch(source.Kind[client.Object](mgr.GetCache(), &sg2v1alpha1.SecretExport{}, &handler.EnqueueRequestForObject{}))
 	if err != nil {
 		return fmt.Errorf("Watching secret exports: %s", err)
 	}
 
 	// Watch exported secrets and enqueue for same named SecretExports
-	return controller.Watch(&source.Kind{Type: &corev1.Secret{}}, handler.EnqueueRequestsFromMapFunc(func(a client.Object) []reconcile.Request {
+	return controller.Watch(source.Kind[client.Object](mgr.GetCache(), &corev1.Secret{}, handler.EnqueueRequestsFromMapFunc(func(_ context.Context, a client.Object) []reconcile.Request {
 		return []reconcile.Request{
 			{NamespacedName: types.NamespacedName{
 				Name:      a.GetName(),
 				Namespace: a.GetNamespace(),
 			}},
 		}
-	}))
+	})))
 }
 
 // WarmUp hydrates SecretExports given to this SecretExportReconciler with latest

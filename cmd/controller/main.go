@@ -23,13 +23,14 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"k8s.io/client-go/util/workqueue"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
-	"sigs.k8s.io/controller-runtime/pkg/ratelimiter"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -58,7 +59,17 @@ func main() {
 	sgv1alpha1.AddToScheme(scheme.Scheme)
 	sg2v1alpha1.AddToScheme(scheme.Scheme)
 
-	mgr, err := manager.New(restConfig, manager.Options{Namespace: ctrlNamespace, MetricsBindAddress: metricsBindAddress})
+	mgrOpts := manager.Options{
+		Metrics: metricsserver.Options{
+			BindAddress: metricsBindAddress,
+		},
+	}
+	if ctrlNamespace != "" {
+		mgrOpts.Cache = cache.Options{
+			DefaultNamespaces: map[string]cache.Config{ctrlNamespace: {}},
+		}
+	}
+	mgr, err := manager.New(restConfig, mgrOpts)
 	exitIfErr(entryLog, "unable to set up controller manager", err)
 
 	entryLog.Info("setting up controllers")
@@ -84,7 +95,7 @@ func main() {
 	saLoader := generator.NewServiceAccountLoader(satoken.NewManager(coreClient, log.WithName("template")))
 
 	// Set SecretTemplate's maximum exponential to reduce reconcile time for inputresource errors
-	rateLimiter := workqueue.NewItemExponentialFailureRateLimiter(100*time.Millisecond, 120*time.Second)
+	rateLimiter := workqueue.NewTypedItemExponentialFailureRateLimiter[reconcile.Request](100*time.Millisecond, 120*time.Second)
 	secretTemplateReconciler := generator.NewSecretTemplateReconciler(mgr.GetClient(), saLoader, tracker.NewTracker(), log.WithName("template"))
 	exitIfErr(entryLog, "registering", registerCtrlWithRateLimiter("template", mgr, secretTemplateReconciler, rateLimiter))
 
@@ -114,14 +125,14 @@ func main() {
 
 type reconcilerWithWatches interface {
 	reconcile.Reconciler
-	AttachWatches(controller.Controller) error
+	AttachWatches(controller.Controller, manager.Manager) error
 }
 
 func registerCtrl(desc string, mgr manager.Manager, reconciler reconcilerWithWatches) error {
-	return registerCtrlWithRateLimiter(desc, mgr, reconciler, workqueue.DefaultControllerRateLimiter())
+	return registerCtrlWithRateLimiter(desc, mgr, reconciler, workqueue.DefaultTypedControllerRateLimiter[reconcile.Request]())
 }
 
-func registerCtrlWithRateLimiter(desc string, mgr manager.Manager, reconciler reconcilerWithWatches, ratelimiter ratelimiter.RateLimiter) error {
+func registerCtrlWithRateLimiter(desc string, mgr manager.Manager, reconciler reconcilerWithWatches, rl workqueue.TypedRateLimiter[reconcile.Request]) error {
 	ctrlName := "sg-" + desc
 
 	ctrlOpts := controller.Options{
@@ -129,7 +140,7 @@ func registerCtrlWithRateLimiter(desc string, mgr manager.Manager, reconciler re
 		// Default MaxConcurrentReconciles is 1. Keeping at that
 		// since we are not doing anything that we need to parallelize for.
 
-		RateLimiter: ratelimiter,
+		RateLimiter: rl,
 	}
 
 	ctrl, err := controller.New(ctrlName, mgr, ctrlOpts)
@@ -137,7 +148,7 @@ func registerCtrlWithRateLimiter(desc string, mgr manager.Manager, reconciler re
 		return fmt.Errorf("%s: unable to set up: %s", ctrlName, err)
 	}
 
-	err = reconciler.AttachWatches(ctrl)
+	err = reconciler.AttachWatches(ctrl, mgr)
 	if err != nil {
 		return fmt.Errorf("%s: unable to attaches watches: %s", ctrlName, err)
 	}

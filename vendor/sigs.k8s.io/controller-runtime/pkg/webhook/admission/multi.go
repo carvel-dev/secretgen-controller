@@ -25,14 +25,13 @@ import (
 	jsonpatch "gomodules.xyz/jsonpatch/v2"
 	admissionv1 "k8s.io/api/admission/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 )
 
 type multiMutating []Handler
 
 func (hs multiMutating) Handle(ctx context.Context, req Request) Response {
 	patches := []jsonpatch.JsonPatchOperation{}
+	warnings := []string{}
 	for _, handler := range hs {
 		resp := handler.Handle(ctx, req)
 		if !resp.Allowed {
@@ -44,6 +43,7 @@ func (hs multiMutating) Handle(ctx context.Context, req Request) Response {
 					resp.PatchType, admissionv1.PatchTypeJSONPatch))
 		}
 		patches = append(patches, resp.Patches...)
+		warnings = append(warnings, resp.Warnings...)
 	}
 	var err error
 	marshaledPatch, err := json.Marshal(patches)
@@ -57,34 +57,10 @@ func (hs multiMutating) Handle(ctx context.Context, req Request) Response {
 				Code: http.StatusOK,
 			},
 			Patch:     marshaledPatch,
+			Warnings:  warnings,
 			PatchType: func() *admissionv1.PatchType { pt := admissionv1.PatchTypeJSONPatch; return &pt }(),
 		},
 	}
-}
-
-// InjectFunc injects the field setter into the handlers.
-func (hs multiMutating) InjectFunc(f inject.Func) error {
-	// inject directly into the handlers.  It would be more correct
-	// to do this in a sync.Once in Handle (since we don't have some
-	// other start/finalize-type method), but it's more efficient to
-	// do it here, presumably.
-	for _, handler := range hs {
-		if err := f(handler); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-// InjectDecoder injects the decoder into the handlers.
-func (hs multiMutating) InjectDecoder(d *Decoder) error {
-	for _, handler := range hs {
-		if _, err := InjectDecoderInto(d, handler); err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 // MultiMutatingHandler combines multiple mutating webhook handlers into a single
@@ -98,11 +74,13 @@ func MultiMutatingHandler(handlers ...Handler) Handler {
 type multiValidating []Handler
 
 func (hs multiValidating) Handle(ctx context.Context, req Request) Response {
+	warnings := []string{}
 	for _, handler := range hs {
 		resp := handler.Handle(ctx, req)
 		if !resp.Allowed {
 			return resp
 		}
+		warnings = append(warnings, resp.Warnings...)
 	}
 	return Response{
 		AdmissionResponse: admissionv1.AdmissionResponse{
@@ -110,6 +88,7 @@ func (hs multiValidating) Handle(ctx context.Context, req Request) Response {
 			Result: &metav1.Status{
 				Code: http.StatusOK,
 			},
+			Warnings: warnings,
 		},
 	}
 }
@@ -119,29 +98,4 @@ func (hs multiValidating) Handle(ctx context.Context, req Request) Response {
 // `allowed: false`	response may short-circuit the rest.
 func MultiValidatingHandler(handlers ...Handler) Handler {
 	return multiValidating(handlers)
-}
-
-// InjectFunc injects the field setter into the handlers.
-func (hs multiValidating) InjectFunc(f inject.Func) error {
-	// inject directly into the handlers.  It would be more correct
-	// to do this in a sync.Once in Handle (since we don't have some
-	// other start/finalize-type method), but it's more efficient to
-	// do it here, presumably.
-	for _, handler := range hs {
-		if err := f(handler); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-// InjectDecoder injects the decoder into the handlers.
-func (hs multiValidating) InjectDecoder(d *Decoder) error {
-	for _, handler := range hs {
-		if _, err := InjectDecoderInto(d, handler); err != nil {
-			return err
-		}
-	}
-	return nil
 }

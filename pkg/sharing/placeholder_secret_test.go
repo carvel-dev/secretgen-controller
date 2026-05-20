@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	sg2v1alpha1 "carvel.dev/secretgen-controller/pkg/apis/secretgen2/v1alpha1"
 	"carvel.dev/secretgen-controller/pkg/sharing"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -219,7 +220,10 @@ func Test_SecretReconciler_updatesStatus(t *testing.T) {
 	})
 }
 func placeholderReconcilers(objects ...runtime.Object) (secretExportReconciler *sharing.SecretExportReconciler, secretReconciler *sharing.SecretReconciler, k8sClient client.Client) {
-	k8sClient = fakeClient.NewFakeClient(objects...)
+	k8sClient = fakeClient.NewClientBuilder().
+		WithStatusSubresource(&sg2v1alpha1.SecretExport{}).
+		WithRuntimeObjects(objects...).
+		Build()
 	secretExports := sharing.NewSecretExportsWarmedUp(sharing.NewSecretExports(k8sClient, testLogr))
 	secretExportReconciler = sharing.NewSecretExportReconciler(k8sClient, secretExports, testLogr)
 	secretExports.WarmUpFunc = secretExportReconciler.WarmUp
