@@ -5,6 +5,7 @@ package generator
 
 import (
 	"context"
+	"crypto/fips140"
 	"fmt"
 
 	sgv1alpha1 "carvel.dev/secretgen-controller/pkg/apis/secretgen/v1alpha1"
@@ -185,7 +186,15 @@ func (r *CertificateReconciler) generate(ctx context.Context, params certParams,
 
 	gen := cfgtypes.NewCertificateGenerator(singleCertLoader{caCertSecret})
 
-	certVal, err := gen.Generate(params)
+	// cfgtypes.CertificateGenerator.Generate uses crypto/sha1 to derive the certificate's
+	// SubjectKeyId (RFC 5280 4.2.1.2, method (1)): a non-cryptographic key identifier used
+	// for chain-building/lookup, not for signing or trust decisions. WithoutEnforcement
+	// scopes the FIPS 140-3 "only" exemption to just this call, so it has no effect when
+	// strict enforcement isn't active.
+	var certVal interface{}
+	fips140.WithoutEnforcement(func() {
+		certVal, err = gen.Generate(params)
+	})
 	if err != nil {
 		return cfgtypes.CertResponse{}, err
 	}
