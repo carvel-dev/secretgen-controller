@@ -5,6 +5,7 @@ package generator
 
 import (
 	"context"
+	"crypto/fips140"
 	"fmt"
 
 	sgv1alpha1 "carvel.dev/secretgen-controller/pkg/apis/secretgen/v1alpha1"
@@ -122,7 +123,15 @@ func (r *SSHKeyReconciler) generate(sshKey *sgv1alpha1.SSHKey) (cfgtypes.SSHKey,
 	gen := cfgtypes.NewSSHKeyGenerator()
 
 	// TODO allow type and number of bits?
-	sshKeyVal, err := gen.Generate(nil)
+	// cfgtypes.SSHKeyGenerator.Generate uses crypto/md5 to compute PublicKeyFingerprint,
+	// a display-only identifier (same convention as `ssh-keygen -l -E md5`), not a
+	// cryptographic operation. WithoutEnforcement scopes the FIPS 140-3 "only" exemption
+	// to just this call, so it has no effect when strict enforcement isn't active.
+	var sshKeyVal interface{}
+	var err error
+	fips140.WithoutEnforcement(func() {
+		sshKeyVal, err = gen.Generate(nil)
+	})
 	if err != nil {
 		return cfgtypes.SSHKey{}, err
 	}
