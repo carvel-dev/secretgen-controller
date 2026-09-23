@@ -7,13 +7,15 @@ sources:
 - image: secretgen-controller
   path: .
   docker:
-    buildx:
-      #@ if data.values.dev.rapid_deploy:
+    #@ if data.values.dev.rapid_deploy:
+    build:
       pull: false
       noCache: false
       file: Dockerfile.dev
       buildkit: true
-      #@ elif data.values.dev.push_images:
+    #@ elif data.values.dev.push_images:
+    #! Multi-arch/push builds need Buildx; only exercised when actually pushing.
+    buildx:
       #! Always rebuild image
       pull: true
       noCache: true
@@ -21,7 +23,12 @@ sources:
       - #@ "--build-arg=SGCTRL_VER="+data.values.dev.version
       #@ if/end data.values.dev.platform != "":
       - #@ "--platform="+data.values.dev.platform
-      #@ end
+    #@ else:
+    #! Classic `docker build` avoids bootstrapping a Buildx builder, which
+    #! fails to inspect its builder image under minikube's docker-env when
+    #! the node's container runtime is containerd.
+    build: {}
+    #@ end
 
 #@ if/end data.values.dev.push_images:
 ---
