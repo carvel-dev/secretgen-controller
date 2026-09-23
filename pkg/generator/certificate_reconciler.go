@@ -220,14 +220,14 @@ func (r *CertificateReconciler) getCARefSecret(
 func (r *CertificateReconciler) updateStatus(ctx context.Context, cert *sgv1alpha1.Certificate) error {
 	existingCert, err := r.sgClient.SecretgenV1alpha1().Certificates(cert.Namespace).Get(ctx, cert.Name, metav1.GetOptions{})
 	if err != nil {
-		return fmt.Errorf("Fetching cert: %s", err)
+		return fmt.Errorf("fetching cert: %s", err)
 	}
 
 	existingCert.Status = cert.Status
 
 	_, err = r.sgClient.SecretgenV1alpha1().Certificates(existingCert.Namespace).UpdateStatus(ctx, existingCert, metav1.UpdateOptions{})
 	if err != nil {
-		return fmt.Errorf("Updating cert status: %s", err)
+		return fmt.Errorf("updating cert status: %s", err)
 	}
 
 	return nil

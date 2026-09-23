@@ -95,7 +95,7 @@ func (e SecretExport) Validate() error {
 	}
 	for _, ns := range toNses {
 		if len(ns) == 0 {
-			errs = append(errs, fmt.Errorf("Expected to namespace to be non-empty"))
+			errs = append(errs, fmt.Errorf("Expected namespace to be non-empty"))
 		}
 	}
 	for _, s := range toSmf {

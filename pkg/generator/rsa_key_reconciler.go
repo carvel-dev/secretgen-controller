@@ -133,14 +133,14 @@ func (r *RSAKeyReconciler) generate(rsaKey *sgv1alpha1.RSAKey) (cfgtypes.RSAKey,
 func (r *RSAKeyReconciler) updateStatus(ctx context.Context, rsaKey *sgv1alpha1.RSAKey) error {
 	existingRSAKey, err := r.sgClient.SecretgenV1alpha1().RSAKeys(rsaKey.Namespace).Get(ctx, rsaKey.Name, metav1.GetOptions{})
 	if err != nil {
-		return fmt.Errorf("Fetching rsakey: %s", err)
+		return fmt.Errorf("fetching rsakey: %s", err)
 	}
 
 	existingRSAKey.Status = rsaKey.Status
 
 	_, err = r.sgClient.SecretgenV1alpha1().RSAKeys(existingRSAKey.Namespace).UpdateStatus(ctx, existingRSAKey, metav1.UpdateOptions{})
 	if err != nil {
-		return fmt.Errorf("Updating rsakey status: %s", err)
+		return fmt.Errorf("updating rsakey status: %s", err)
 	}
 
 	return nil

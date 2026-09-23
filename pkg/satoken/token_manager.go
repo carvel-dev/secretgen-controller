@@ -85,11 +85,11 @@ func (m *Manager) GetServiceAccountToken(ctx context.Context, namespace, name st
 	if err != nil {
 		switch {
 		case !ok:
-			return nil, fmt.Errorf("Fetch token: %v", err)
+			return nil, fmt.Errorf("fetch token: %v", err)
 		case m.expired(ctr):
-			return nil, fmt.Errorf("Token %s expired and refresh failed: %v", key, err)
+			return nil, fmt.Errorf("token %s expired and refresh failed: %v", key, err)
 		default:
-			m.log.Error(err, "Update token", "cacheKey", key)
+			m.log.Error(err, "update token", "cacheKey", key)
 			return ctr, nil
 		}
 	}
