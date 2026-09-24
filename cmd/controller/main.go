@@ -150,7 +150,7 @@ func registerCtrlWithRateLimiter(desc string, mgr manager.Manager, reconciler re
 
 	err = reconciler.AttachWatches(ctrl, mgr)
 	if err != nil {
-		return fmt.Errorf("%s: unable to attaches watches: %s", ctrlName, err)
+		return fmt.Errorf("%s: unable to attach watches: %s", ctrlName, err)
 	}
 
 	return nil

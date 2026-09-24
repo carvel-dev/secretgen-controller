@@ -6,6 +6,7 @@ package sharing
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 )
@@ -47,7 +48,10 @@ func NewCombinedDockerConfigJSON(secrets []*corev1.Secret) (map[string][]byte, e
 			if auth.Username == "" && auth.Password == "" && auth.Auth == "" {
 				continue
 			}
-			combined.Auths[server] = auth
+			// Registry hostnames are case-insensitive (RFC 1035/1123), so normalize
+			// the key to ensure a later, more-specific Secret's entry for the same
+			// registry always overrides an earlier one regardless of casing.
+			combined.Auths[strings.ToLower(server)] = auth
 		}
 	}
 

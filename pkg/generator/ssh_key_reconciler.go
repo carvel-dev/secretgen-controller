@@ -142,14 +142,14 @@ func (r *SSHKeyReconciler) generate(sshKey *sgv1alpha1.SSHKey) (cfgtypes.SSHKey,
 func (r *SSHKeyReconciler) updateStatus(ctx context.Context, sshKey *sgv1alpha1.SSHKey) error {
 	existingSSHKey, err := r.sgClient.SecretgenV1alpha1().SSHKeys(sshKey.Namespace).Get(ctx, sshKey.Name, metav1.GetOptions{})
 	if err != nil {
-		return fmt.Errorf("Fetching sshkey: %s", err)
+		return fmt.Errorf("fetching sshkey: %s", err)
 	}
 
 	existingSSHKey.Status = sshKey.Status
 
 	_, err = r.sgClient.SecretgenV1alpha1().SSHKeys(existingSSHKey.Namespace).UpdateStatus(ctx, existingSSHKey, metav1.UpdateOptions{})
 	if err != nil {
-		return fmt.Errorf("Updating sshkey status: %s", err)
+		return fmt.Errorf("updating sshkey status: %s", err)
 	}
 
 	return nil

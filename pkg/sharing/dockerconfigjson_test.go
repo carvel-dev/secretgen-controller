@@ -64,6 +64,28 @@ func Test_NewCombinedDockerConfigJSON(t *testing.T) {
 		assert.Equal(t, expected, result[corev1.DockerConfigJsonKey])
 	})
 
+	t.Run("normalizes registry hostname case so a later secret overrides an earlier one regardless of casing", func(t *testing.T) {
+		secrets := []*corev1.Secret{
+			&corev1.Secret{
+				Data: map[string][]byte{
+					corev1.DockerConfigJsonKey: []byte(`{"auths":{"Harbor.Example.COM":{"username":"staleUser","password":"stalePassword","auth":"staleAuth"}}}`),
+				},
+			},
+			// Same registry, different case, ordered last -> should win per "last one wins".
+			&corev1.Secret{
+				Data: map[string][]byte{
+					corev1.DockerConfigJsonKey: []byte(`{"auths":{"harbor.example.com":{"username":"correctUser","password":"correctPassword","auth":"correctAuth"}}}`),
+				},
+			},
+		}
+		result, err := NewCombinedDockerConfigJSON(secrets)
+		require.NoError(t, err)
+
+		expected := []byte(`{"auths":{"harbor.example.com":{"username":"correctUser","password":"correctPassword","auth":"correctAuth"}}}`)
+		assert.Equal(t, 1, len(result))
+		assert.Equal(t, expected, result[corev1.DockerConfigJsonKey])
+	})
+
 	t.Run("skips entries with no auth data", func(t *testing.T) {
 		// Secret with 1 valid and 1 empty auths
 		secrets := []*corev1.Secret{
