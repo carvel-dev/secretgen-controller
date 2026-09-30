@@ -1,5 +1,8 @@
 #@ load("@ytt:data", "data")
 #@ load("@ytt:assert", "assert")
+#@ if data.values.namespace != data.values.namespace.lower():
+#@   assert.fail("Validation Error: namespace must be lowercase (RFC 1123 DNS label), got '" + data.values.namespace + "'")
+#@ end
 ---
 apiVersion: apps/v1
 kind: Deployment

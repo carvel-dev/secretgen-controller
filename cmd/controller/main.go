@@ -9,6 +9,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	sgv1alpha1 "carvel.dev/secretgen-controller/pkg/apis/secretgen/v1alpha1"
@@ -44,12 +45,17 @@ var (
 )
 
 func main() {
-	flag.StringVar(&ctrlNamespace, "namespace", "", "Namespace to watch")
+	flag.StringVar(&ctrlNamespace, "namespace", "", "Namespace to watch (must be lowercase RFC 1123 DNS label)")
 	flag.StringVar(&metricsBindAddress, "metrics-bind-address", ":8080", "Address for metrics server. If 0, then metrics server doesnt listen on any port.")
 	flag.Parse()
 
 	logf.SetLogger(zap.New(zap.UseDevMode(false)))
 	entryLog := log.WithName("entrypoint")
+
+	var err error
+	ctrlNamespace, err = normalizeNamespace(ctrlNamespace)
+	exitIfErr(entryLog, "invalid namespace flag", err)
+
 	entryLog.Info("secretgen-controller", "version", Version)
 
 	entryLog.Info("setting up manager")
@@ -154,6 +160,21 @@ func registerCtrlWithRateLimiter(desc string, mgr manager.Manager, reconciler re
 	}
 
 	return nil
+}
+
+// normalizeNamespace validates the operator-supplied namespace. Namespace names are
+// RFC 1123 labels (always lowercase); the cache keys its namespaces by exact string,
+// so a mixed-case value would fail to watch anything. It returns an error if the
+// namespace is not lowercase after trimming whitespace.
+func normalizeNamespace(ns string) (string, error) {
+	trimmed := strings.TrimSpace(ns)
+	if trimmed == "" {
+		return "", nil
+	}
+	if trimmed != strings.ToLower(trimmed) {
+		return "", fmt.Errorf("namespace must be lowercase (RFC 1123 DNS label), got '%s'", trimmed)
+	}
+	return trimmed, nil
 }
 
 func exitIfErr(entryLog logr.Logger, desc string, err error) {
