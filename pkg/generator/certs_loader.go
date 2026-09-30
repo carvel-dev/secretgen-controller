@@ -37,7 +37,7 @@ func (l singleCertLoader) LoadCerts(_ string) (*x509.Certificate, *rsa.PrivateKe
 func (singleCertLoader) parseCertificate(data string) (*x509.Certificate, error) {
 	cpb, _ := pem.Decode([]byte(data))
 	if cpb == nil {
-		return nil, fmt.Errorf("Certificate did not contain PEM formatted block")
+		return nil, fmt.Errorf("Certificate did not contain a PEM-formatted block")
 	}
 
 	crt, err := x509.ParseCertificate(cpb.Bytes)
@@ -51,7 +51,7 @@ func (singleCertLoader) parseCertificate(data string) (*x509.Certificate, error)
 func (singleCertLoader) parsePrivateKey(data string) (*rsa.PrivateKey, error) {
 	kpb, _ := pem.Decode([]byte(data))
 	if kpb == nil {
-		return nil, fmt.Errorf("Private key did not contain PEM formatted block")
+		return nil, fmt.Errorf("Private key did not contain a PEM-formatted block")
 	}
 
 	key, err := x509.ParsePKCS1PrivateKey(kpb.Bytes)

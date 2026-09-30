@@ -86,7 +86,7 @@ func getCACert(cfg *rest.Config) ([]byte, error) {
 		}
 	}
 	if _, err := certutil.NewPoolFromBytes(caData); err != nil {
-		return nil, fmt.Errorf("expected to load root CA config, but got err: %v", err)
+		return nil, fmt.Errorf("expected to load root CA config, but got error: %v", err)
 	}
 
 	return caData, nil

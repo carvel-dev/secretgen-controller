@@ -91,7 +91,7 @@ func (e SecretExport) Validate() error {
 	toSmf := e.Spec.ToNamespacesSelector
 
 	if len(toNses) == 0 && len(toSmf) == 0 {
-		errs = append(errs, fmt.Errorf("Expected to have at least one non-empty to namespace or to namespace annotation"))
+		errs = append(errs, fmt.Errorf("Expected to have at least one non-empty 'toNamespace' or 'toNamespaces' value, or a 'dangerousToNamespacesSelector'"))
 	}
 	for _, ns := range toNses {
 		if len(ns) == 0 {
@@ -102,11 +102,11 @@ func (e SecretExport) Validate() error {
 		switch s.Operator {
 		case SelectorOperatorIn, SelectorOperatorNotIn:
 			if len(s.Values) == 0 {
-				errs = append(errs, fmt.Errorf("Values must be specified when `operator` is 'In' or 'NotIn'"))
+				errs = append(errs, fmt.Errorf("Values must be specified when 'operator' is 'In' or 'NotIn'"))
 			}
 		case SelectorOperatorExists, SelectorOperatorDoesNotExist:
 			if len(s.Values) > 0 {
-				errs = append(errs, fmt.Errorf("Values may not be specified when `operator` is 'Exists' or 'DoesNotExist'"))
+				errs = append(errs, fmt.Errorf("Values may not be specified when 'operator' is 'Exists' or 'DoesNotExist'"))
 			}
 		}
 	}

@@ -169,7 +169,7 @@ func (r *SecretReconciler) reconcile(ctx context.Context, secret, originalSecret
 			Conditions: []sgv1alpha1.Condition{{
 				Type:    sgv1alpha1.ReconcileFailed,
 				Status:  corev1.ConditionTrue,
-				Message: "Expected secret to have type=corev1.SecretTypeDockerConfigJson, but did not",
+				Message: "Expected secret to have type 'kubernetes.io/dockerconfigjson', but it does not",
 			}},
 		}
 		return r.updateSecret(ctx, secret, status, originalSecret, log)

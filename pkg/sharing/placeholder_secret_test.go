@@ -158,7 +158,7 @@ func Test_SecretReconciler_updatesStatus(t *testing.T) {
 		assert.NotNil(t, placeholderSecret.ObjectMeta.Annotations["secretgen.carvel.dev/status"])
 		var observedStatus map[string]interface{}
 		require.NoError(t, json.Unmarshal([]byte(placeholderSecret.ObjectMeta.Annotations["secretgen.carvel.dev/status"]), &observedStatus))
-		expectedStatus := map[string]interface{}{"conditions": []interface{}{map[string]interface{}{"message": "Expected secret to have type=corev1.SecretTypeDockerConfigJson, but did not", "status": "True", "type": "ReconcileFailed"}}}
+		expectedStatus := map[string]interface{}{"conditions": []interface{}{map[string]interface{}{"message": "Expected secret to have type 'kubernetes.io/dockerconfigjson', but it does not", "status": "True", "type": "ReconcileFailed"}}}
 		assert.Equal(t, expectedStatus, observedStatus)
 
 		// from secret export's perspective it still reconciled successfully.
