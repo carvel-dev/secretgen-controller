@@ -12,3 +12,45 @@ metadata:
 #@overlay/remove
 #@overlay/match missing_ok=True
 status:
+
+#! controller-gen copies the description of corev1.LocalObjectReference.Name verbatim, including an
+#! unresolved upstream "TODO:" note that then shows up in `kubectl explain`. Strip it here so that
+#! regenerating the CRDs does not bring it back.
+#@ TODO_SUFFIX = " TODO: Add other useful fields. apiVersion, kind, uid?"
+#@ def strip_todo(left, right):
+#@   return left.replace(TODO_SUFFIX, "")
+#@ end
+
+#@overlay/match by=overlay.subset({"kind": "CustomResourceDefinition", "metadata": {"name": "secrettemplates.secretgen.carvel.dev"}}), expects=1
+---
+spec:
+  versions:
+  #@overlay/match by="name"
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        properties:
+          status:
+            properties:
+              secret:
+                properties:
+                  name:
+                    #@overlay/replace via=strip_todo
+                    description: ""
+
+#@overlay/match by=overlay.subset({"kind": "CustomResourceDefinition", "metadata": {"name": "certificates.secretgen.k14s.io"}}), expects=1
+---
+spec:
+  versions:
+  #@overlay/match by="name"
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        properties:
+          spec:
+            properties:
+              caRef:
+                properties:
+                  name:
+                    #@overlay/replace via=strip_todo
+                    description: ""
