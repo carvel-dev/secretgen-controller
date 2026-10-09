@@ -74,7 +74,7 @@ spec:
                       description: Human-readable message indicating details about last transition.
                       type: string
                     reason:
-                      description: Unique, this should be a short, machine understandable string that gives the reason for condition's last transition. If it reports "ResizeStarted" that means the underlying persistent volume is being resized.
+                      description: Unique; this should be a short, machine-understandable string that gives the reason for condition's last transition. If it reports "ResizeStarted" that means the underlying persistent volume is being resized.
                       type: string
                     status:
                       type: string
@@ -146,7 +146,7 @@ spec:
                       description: Human-readable message indicating details about last transition.
                       type: string
                     reason:
-                      description: Unique, this should be a short, machine understandable string that gives the reason for condition's last transition. If it reports "ResizeStarted" that means the underlying persistent volume is being resized.
+                      description: Unique; this should be a short, machine-understandable string that gives the reason for condition's last transition. If it reports "ResizeStarted" that means the underlying persistent volume is being resized.
                       type: string
                     status:
                       type: string
@@ -209,7 +209,7 @@ spec:
               inputResources:
                 description: A list of input resources that are used to construct a new secret. Input Resources can refer to ANY Kubernetes API. If loading more than Secrets types ensure that `.spec.ServiceAccountName` is set to an appropriate value. Input resources are read in the order they are defined. An Input resource's name can be evaluated dynamically from data in a previously evaluated input resource.
                 items:
-                  description: InputResource is references a single Kubernetes resource along with a identifying name
+                  description: InputResource references a single Kubernetes resource along with an identifying name
                   properties:
                     name:
                       description: The name of InputResource. This is used as the identifying name in templating to refer to this Input Resource.
@@ -222,7 +222,7 @@ spec:
                         kind:
                           type: string
                         name:
-                          description: The name of the input resource. This field can itself contain JSONPATH syntax to load the name dynamically from other input resources. For example this field could be set to a static value of "my-secret" or a dynamic valid of "$(.anotherinputresource.spec.name)".
+                          description: The name of the input resource. This field can itself contain JSONPATH syntax to load the name dynamically from other input resources. For example this field could be set to a static value of "my-secret" or a dynamic value of "$(.anotherinputresource.spec.name)".
                           type: string
                       required:
                       - apiVersion
@@ -281,7 +281,7 @@ spec:
                       description: Human-readable message indicating details about last transition.
                       type: string
                     reason:
-                      description: Unique, this should be a short, machine understandable string that gives the reason for condition's last transition. If it reports "ResizeStarted" that means the underlying persistent volume is being resized.
+                      description: Unique; this should be a short, machine-understandable string that gives the reason for condition's last transition. If it reports "ResizeStarted" that means the underlying persistent volume is being resized.
                       type: string
                     status:
                       type: string
@@ -300,7 +300,7 @@ spec:
                 description: LocalObjectReference contains enough information to let you locate the referenced object inside the same namespace.
                 properties:
                   name:
-                    description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names TODO: Add other useful fields. apiVersion, kind, uid?'
+                    description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
                     type: string
                 type: object
                 x-kubernetes-map-type: atomic
@@ -357,7 +357,7 @@ spec:
                 description: LocalObjectReference contains enough information to let you locate the referenced object inside the same namespace.
                 properties:
                   name:
-                    description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names TODO: Add other useful fields. apiVersion, kind, uid?'
+                    description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
                     type: string
                 type: object
                 x-kubernetes-map-type: atomic
@@ -404,7 +404,7 @@ spec:
                       description: Human-readable message indicating details about last transition.
                       type: string
                     reason:
-                      description: Unique, this should be a short, machine understandable string that gives the reason for condition's last transition. If it reports "ResizeStarted" that means the underlying persistent volume is being resized.
+                      description: Unique; this should be a short, machine-understandable string that gives the reason for condition's last transition. If it reports "ResizeStarted" that means the underlying persistent volume is being resized.
                       type: string
                     status:
                       type: string
@@ -508,7 +508,7 @@ spec:
                       description: Human-readable message indicating details about last transition.
                       type: string
                     reason:
-                      description: Unique, this should be a short, machine understandable string that gives the reason for condition's last transition. If it reports "ResizeStarted" that means the underlying persistent volume is being resized.
+                      description: Unique; this should be a short, machine-understandable string that gives the reason for condition's last transition. If it reports "ResizeStarted" that means the underlying persistent volume is being resized.
                       type: string
                     status:
                       type: string
@@ -594,7 +594,7 @@ spec:
                       description: Human-readable message indicating details about last transition.
                       type: string
                     reason:
-                      description: Unique, this should be a short, machine understandable string that gives the reason for condition's last transition. If it reports "ResizeStarted" that means the underlying persistent volume is being resized.
+                      description: Unique; this should be a short, machine-understandable string that gives the reason for condition's last transition. If it reports "ResizeStarted" that means the underlying persistent volume is being resized.
                       type: string
                     status:
                       type: string
@@ -680,7 +680,7 @@ spec:
                       description: Human-readable message indicating details about last transition.
                       type: string
                     reason:
-                      description: Unique, this should be a short, machine understandable string that gives the reason for condition's last transition. If it reports "ResizeStarted" that means the underlying persistent volume is being resized.
+                      description: Unique; this should be a short, machine-understandable string that gives the reason for condition's last transition. If it reports "ResizeStarted" that means the underlying persistent volume is being resized.
                       type: string
                     status:
                       type: string

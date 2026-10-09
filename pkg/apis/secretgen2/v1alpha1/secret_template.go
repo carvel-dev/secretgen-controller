@@ -56,7 +56,7 @@ type SecretTemplateSpec struct {
 	ServiceAccountName string `json:"serviceAccountName,omitempty"`
 }
 
-// InputResource is references a single Kubernetes resource along with a identifying name
+// InputResource references a single Kubernetes resource along with an identifying name
 type InputResource struct {
 	// The name of InputResource. This is used as the identifying name in templating to refer to this Input Resource.
 	Name string `json:"name"`
@@ -70,7 +70,7 @@ type InputResourceRef struct {
 	Kind       string `json:"kind"`
 
 	// The name of the input resource. This field can itself contain JSONPATH syntax to load the name dynamically
-	// from other input resources. For example this field could be set to a static value of "my-secret" or a dynamic valid of "$(.anotherinputresource.spec.name)".
+	// from other input resources. For example this field could be set to a static value of "my-secret" or a dynamic value of "$(.anotherinputresource.spec.name)".
 	Name string `json:"name"`
 }
 

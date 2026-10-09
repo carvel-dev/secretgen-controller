@@ -717,7 +717,7 @@ func Test_SecretTemplate_Errors(t *testing.T) {
 					"inputKey1": "value1",
 				}),
 			},
-			expectedError: "unable to load non-secrets without a specified serviceaccount",
+			expectedError: "unable to load resources other than Secrets without a specified service account",
 		},
 	}
 

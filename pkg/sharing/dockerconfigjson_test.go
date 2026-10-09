@@ -21,7 +21,17 @@ func Test_NewCombinedDockerConfigJSON(t *testing.T) {
 			},
 		}})
 		assert.Error(t, err)
-		assert.EqualError(t, err, "Unmarshaling secret 'ns1/secret1': unexpected end of JSON input")
+		assert.EqualError(t, err, "Unmarshaling secret 'ns1/secret1': data is not valid dockerconfigjson")
+	})
+
+	t.Run("error does not echo any part of unparseable credential data", func(t *testing.T) {
+		_, err := NewCombinedDockerConfigJSON([]*corev1.Secret{{
+			ObjectMeta: metav1.ObjectMeta{Name: "secret1", Namespace: "ns1"},
+			Data:       map[string][]byte{corev1.DockerConfigJsonKey: []byte("hunter2-not-json")},
+		}})
+		assert.Error(t, err)
+		assert.NotContains(t, err.Error(), "hunter2")
+		assert.NotContains(t, err.Error(), "'h'")
 	})
 
 	t.Run("returns combined set of credentials, preferring last secret for duplicate servers", func(t *testing.T) {

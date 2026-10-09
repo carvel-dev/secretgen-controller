@@ -200,7 +200,7 @@ func (r *SecretTemplateReconciler) clientForSecretTemplate(ctx context.Context, 
 func (r *SecretTemplateReconciler) resolveInputResources(ctx context.Context, secretTemplate *sg2v1alpha1.SecretTemplate) (map[string]interface{}, error) {
 	inputResourceclient, err := r.clientForSecretTemplate(ctx, secretTemplate)
 	if err != nil {
-		return nil, fmt.Errorf("unable to load client for reading Input Resources: %w", err)
+		return nil, fmt.Errorf("unable to load client for reading input resources: %w", err)
 	}
 
 	secretTemplateKey := types.NamespacedName{Namespace: secretTemplate.Namespace, Name: secretTemplate.Name}
@@ -220,7 +220,7 @@ func (r *SecretTemplateReconciler) resolveInputResources(ctx context.Context, se
 	for _, inputResource := range secretTemplate.Spec.InputResources {
 		// Ensure we only load Secrets if using the default Client.
 		if secretTemplate.Spec.ServiceAccountName == "" && (inputResource.Ref.Kind != "Secret" || inputResource.Ref.APIVersion != "v1") {
-			return nil, fmt.Errorf("unable to load non-secrets without a specified serviceaccount")
+			return nil, fmt.Errorf("unable to load resources other than Secrets without a specified service account")
 		}
 
 		unstructuredResource, err := resolveInputResource(inputResource.Ref, secretTemplate.Namespace, resolvedInputResources)

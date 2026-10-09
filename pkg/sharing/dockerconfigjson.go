@@ -39,7 +39,9 @@ func NewCombinedDockerConfigJSON(secrets []*corev1.Secret) (map[string][]byte, e
 
 		err := json.Unmarshal(secretData, &auths)
 		if err != nil {
-			return nil, fmt.Errorf("Unmarshaling secret '%s/%s': %s", secret.Namespace, secret.Name, err)
+			// Do not include err: encoding/json syntax errors echo offending input characters,
+			// and this data holds registry credentials.
+			return nil, fmt.Errorf("Unmarshaling secret '%s/%s': data is not valid dockerconfigjson", secret.Namespace, secret.Name)
 		}
 
 		// TODO should we have more complex merging here?
