@@ -33,7 +33,8 @@ func (p JSONPath) EvaluateWith(values interface{}) (*bytes.Buffer, error) {
 	buf := new(bytes.Buffer)
 	err = parser.Execute(buf, values)
 	if err != nil {
-		return nil, err
+		// Evaluation errors can embed entire input resources, including Secret data.
+		return nil, fmt.Errorf("JSONPath evaluation failed; check that referenced fields exist and filters are applied to arrays")
 	}
 
 	return buf, nil
