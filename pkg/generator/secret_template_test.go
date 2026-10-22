@@ -11,6 +11,7 @@ import (
 	sgv1alpha1 "carvel.dev/secretgen-controller/pkg/apis/secretgen/v1alpha1"
 	sg2v1alpha1 "carvel.dev/secretgen-controller/pkg/apis/secretgen2/v1alpha1"
 	"carvel.dev/secretgen-controller/pkg/client2/clientset/versioned/scheme"
+	"carvel.dev/secretgen-controller/pkg/generator"
 	"carvel.dev/secretgen-controller/pkg/tracker"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -21,8 +22,6 @@ import (
 	fakeClient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-
-	"carvel.dev/secretgen-controller/pkg/generator"
 )
 
 func Test_SecretTemplate(t *testing.T) {
@@ -557,7 +556,7 @@ func Test_SecretTemplate_Errors(t *testing.T) {
 					"key3": "value3",
 				}),
 			},
-			expectedError: "templating data: doesntExist1 is not found",
+			expectedError: "templating data: JSONPath evaluation failed; check that referenced fields exist and filters are applied to arrays",
 		},
 		{
 			name: "reconciling secret template with jsonpath that doesn't evaluate in stringdata",
@@ -591,7 +590,7 @@ func Test_SecretTemplate_Errors(t *testing.T) {
 					"key1": "prefix-value1-suffix",
 				}),
 			},
-			expectedError: "templating stringData: doesntExist is not found",
+			expectedError: "templating stringData: JSONPath evaluation failed; check that referenced fields exist and filters are applied to arrays",
 		},
 		{
 			name: "reconciling secret template with jsonpath that doesn't evaluate in annotations",
@@ -624,7 +623,7 @@ func Test_SecretTemplate_Errors(t *testing.T) {
 					"inputKey1": "value1",
 				}),
 			},
-			expectedError: "templating annotations: doesntExist is not found",
+			expectedError: "templating annotations: JSONPath evaluation failed; check that referenced fields exist and filters are applied to arrays",
 		},
 		{
 			name: "reconciling secret template with jsonpath that doesn't evaluate in labels",
@@ -657,7 +656,7 @@ func Test_SecretTemplate_Errors(t *testing.T) {
 					"inputKey1": "value1",
 				}),
 			},
-			expectedError: "templating labels: doesntExist is not found",
+			expectedError: "templating labels: JSONPath evaluation failed; check that referenced fields exist and filters are applied to arrays",
 		},
 		{
 			name: "reconciling secret template with jsonpath that doesn't evaluate in labels",
@@ -686,7 +685,7 @@ func Test_SecretTemplate_Errors(t *testing.T) {
 					"inputKey1": "Opaque",
 				}),
 			},
-			expectedError: "templating type: doesntExist is not found",
+			expectedError: "templating type: JSONPath evaluation failed; check that referenced fields exist and filters are applied to arrays",
 		},
 		{
 			name: "reconciling secret template referencing non-secret without service account",
