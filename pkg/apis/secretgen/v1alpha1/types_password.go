@@ -48,22 +48,32 @@ type PasswordList struct {
 type PasswordSpec struct {
 	// +optional
 	// +kubebuilder:default:=40
+	// +kubebuilder:validation:Minimum:=0
+	// +kubebuilder:validation:Maximum:=4096
 	Length int `json:"length"`
 
 	// +optional
 	// +kubebuilder:default:=0
+	// +kubebuilder:validation:Minimum:=0
+	// +kubebuilder:validation:Maximum:=4096
 	Digits int `json:"digits"`
 
 	// +optional
 	// +kubebuilder:default:=0
+	// +kubebuilder:validation:Minimum:=0
+	// +kubebuilder:validation:Maximum:=4096
 	Symbols int `json:"symbols"`
 
 	// +optional
 	// +kubebuilder:default:=0
+	// +kubebuilder:validation:Minimum:=0
+	// +kubebuilder:validation:Maximum:=4096
 	UppercaseLetters int `json:"uppercaseLetters"`
 
 	// +optional
 	// +kubebuilder:default:=0
+	// +kubebuilder:validation:Minimum:=0
+	// +kubebuilder:validation:Maximum:=4096
 	LowercaseLetters int `json:"lowercaseLetters"`
 
 	// +optional
