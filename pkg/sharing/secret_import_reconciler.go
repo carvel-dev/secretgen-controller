@@ -13,7 +13,7 @@ import (
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -232,6 +232,12 @@ func (r *SecretImportReconciler) copyAssociatedSecret(
 			return reconcile.Result{Requeue: true}, fmt.Errorf("Getting imported secret: %s", err)
 		}
 
+		if !metav1.IsControlledBy(&existingSecret, &imp) {
+			// Do not overwrite a secret this SecretImport did not create
+			return reconcile.Result{}, reconciler.TerminalReconcileErr{fmt.Errorf(
+				"Secret '%s/%s' already exists and is not controlled by this SecretImport", imp.Namespace, imp.Name)}
+		}
+
 		secret.AssociateExistingSecret(existingSecret)
 
 		err = r.client.Update(ctx, secret.AsSecret())
@@ -257,6 +263,11 @@ func (r *SecretImportReconciler) deleteAssociatedSecret(
 
 	err := r.client.Get(ctx, secretNN, &secret)
 	if err != nil {
+		return nil
+	}
+
+	if !metav1.IsControlledBy(&secret, &imp) {
+		// Do not delete a secret this SecretImport did not create
 		return nil
 	}
 
