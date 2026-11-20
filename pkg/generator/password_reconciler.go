@@ -26,6 +26,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
+// maxPasswordSpecValue bounds each integer field of PasswordSpec. It mirrors
+// the CRD schema maximum and guards against oversized allocations.
+const maxPasswordSpecValue = 4096
+
 type PasswordReconciler struct {
 	sgClient   sgclient.Interface
 	coreClient kubernetes.Interface
@@ -126,6 +130,13 @@ func (r *PasswordReconciler) generate(password *sgv1alpha1.Password) (string, er
 		digitSet     = "0123456789"
 	)
 	spec := password.Spec
+
+	for _, v := range []int{spec.Length, spec.Digits, spec.Symbols, spec.UppercaseLetters, spec.LowercaseLetters} {
+		if v < 0 || v > maxPasswordSpecValue {
+			return "", fmt.Errorf("spec.length, spec.digits, spec.symbols, spec.uppercaseLetters and spec.lowercaseLetters must each be between 0 and %d", maxPasswordSpecValue)
+		}
+	}
+
 	var generatedPassword strings.Builder
 
 	//Set symbol character
