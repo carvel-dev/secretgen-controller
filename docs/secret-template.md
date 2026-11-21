@@ -119,7 +119,8 @@ spec:
         key2: $(.pod.metadata.name)
     #! the type is immutable for now and can't be updated in subsequent reconciliations
     type: postgresql
-    #! stringData is used for templating in data that is not base64 encoded
+    #! stringData is used for templating in data that is not base64 encoded.
+    #! The .data values of input Secrets are base64 decoded before being used here.
     stringData:
       port: $(.service.spec.ports[?(@.name=="tcp-postgresql")].port)
       database: postgres
