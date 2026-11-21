@@ -193,6 +193,54 @@ func Test_SecretTemplate(t *testing.T) {
 			},
 		},
 		{
+			name: "reconciling secret template with embedded stringData template from secret decodes the secret data",
+			template: sg2v1alpha1.SecretTemplate{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "secretTemplate",
+					Namespace: "test",
+				},
+				Spec: sg2v1alpha1.SecretTemplateSpec{
+					InputResources: []sg2v1alpha1.InputResource{{
+						Name: "creds",
+						Ref: sg2v1alpha1.InputResourceRef{
+							APIVersion: "v1",
+							Kind:       "Secret",
+							Name:       "existingSecret",
+						},
+					}},
+					JSONPathTemplate: &sg2v1alpha1.JSONPathTemplate{
+						StringData: map[string]string{
+							"key1": "prefix-$(.creds.data.inputKey1)-suffix",
+							"key2": "$(.creds.metadata.name)",
+						},
+					},
+				},
+			},
+			existingObjects: []client.Object{
+				secret("existingSecret", map[string]string{
+					"inputKey1": "value1",
+				}),
+			},
+			expectedSecret: corev1.Secret{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Secret",
+					APIVersion: "v1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:            "secretTemplate",
+					Namespace:       "test",
+					ResourceVersion: "1",
+					OwnerReferences: []metav1.OwnerReference{
+						secretTemplateOwnerRef("secretTemplate"),
+					},
+				},
+				StringData: map[string]string{
+					"key1": "prefix-value1-suffix",
+					"key2": "existingSecret",
+				},
+			},
+		},
+		{
 			name: "reconciling secret template with embedded stringData template in annotations",
 			template: sg2v1alpha1.SecretTemplate{
 				ObjectMeta: metav1.ObjectMeta{

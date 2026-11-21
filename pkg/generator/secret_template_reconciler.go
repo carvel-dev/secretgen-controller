@@ -286,7 +286,7 @@ func evaluateTemplate(template *sg2v1alpha1.JSONPathTemplate, values map[string]
 	}
 
 	// Template Secret StringData
-	stringData, err := evaluate(template.StringData, values)
+	stringData, err := evaluateStringData(template.StringData, values)
 	if err != nil {
 		return corev1.Secret{}, fmt.Errorf("templating stringData: %w", err)
 	}
@@ -332,6 +332,48 @@ func evaluate(mapping map[string]string, values map[string]interface{}) (map[str
 	}
 
 	return evaluatedMapping, nil
+}
+
+// evaluateStringData evaluates stringData expressions against values in which the
+// .data of every input Secret is base64 decoded, so Secret values are not encoded twice.
+// Other input kinds (e.g. ConfigMaps) are left untouched.
+func evaluateStringData(mapping map[string]string, values map[string]interface{}) (map[string]string, error) {
+	decodedValues := make(map[string]interface{}, len(values))
+	for name, value := range values {
+		decodedValues[name] = value
+
+		resource, ok := value.(map[string]interface{})
+		if !ok || resource["kind"] != "Secret" || resource["apiVersion"] != "v1" {
+			continue
+		}
+		data, ok := resource["data"].(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		decodedData := make(map[string]interface{}, len(data))
+		for key, encoded := range data {
+			encodedStr, ok := encoded.(string)
+			if !ok {
+				decodedData[key] = encoded
+				continue
+			}
+			decoded, err := base64.StdEncoding.DecodeString(encodedStr)
+			if err != nil {
+				return nil, fmt.Errorf("failed decoding base64 from a Secret: %w", err)
+			}
+			decodedData[key] = string(decoded)
+		}
+
+		decodedResource := make(map[string]interface{}, len(resource))
+		for k, v := range resource {
+			decodedResource[k] = v
+		}
+		decodedResource["data"] = decodedData
+		decodedValues[name] = decodedResource
+	}
+
+	return evaluate(mapping, decodedValues)
 }
 
 func evaluateBytes(mapping map[string]string, values map[string]interface{}) (map[string][]byte, error) {
